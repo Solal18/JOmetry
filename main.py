@@ -75,10 +75,10 @@ class Main:
         self.liste_derniers_clics = []
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
-                     ['point', 'intersection'],
+                     ['point', 'intersection', 'milieu'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent'],
                      ['courbe'], ['soumettre'],
-                     ['droite', 'bissec', 'perp', 'tangente', 'tangentes_communes'],
+                     ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'polyregul'],
                      ['editeur_objets'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['aide'],
@@ -154,6 +154,7 @@ class Main:
                         'moins' : (self.moins, 0),
                         'main' : (self.move, 1, ('point',)),
                         'intersection' : (self.intersection, 1, ('courbe', 'courbe')),
+                        'milieu' : (self.milieu, 1, ('point', 'point')),
                         'poubelle' : (self.supprimer, 1, ('objet',)),
                         'soumettre' : (self.soumettre, 0),
                         'enregistrer' : (self.enregistrer, 0),
@@ -169,6 +170,8 @@ class Main:
                         'editeur_objets' : (self.edit_objets, 0),
                         'aide' : (self.aide, 0),
                         'perp' : (self.perp, 1, ('droite', 'point')),
+                        'media' : (self.media, 1, ('point', 'point')),
+                        'para' : (self.para, 1, ('droite', 'point')),
                         'ctrlz' : (self.act_ctrlz, 0),
                         'ctrly' : (self.act_ctrly, 0),
                         'rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
@@ -449,8 +452,16 @@ class Main:
         cercle.dessin()
     
     def perp(self):
-        d = self.plans[0].newPerp(1, self.liste_derniers_clics)
-        d.dessin()        
+        self.plans[0].newPerp(1, self.liste_derniers_clics)
+
+    def media(self):
+        self.plans[0].newMedia(1, self.liste_derniers_clics)
+
+    def milieu(self):
+        self.plans[0].newMilieu(1, self.liste_derniers_clics)
+     
+    def para(self):
+        self.plans[0].newPara(1, self.liste_derniers_clics)
 
     def cercle_inscr(self):
         p1, p2, p3 = self.liste_derniers_clics
