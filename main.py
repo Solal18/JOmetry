@@ -364,8 +364,8 @@ class Main:
         if self.men and time() - self.men_time > .1:
             self.men.destroy()
     
-    def maj_bouton(self):
-        for bout, liste in ((self.boutons[15], self.plans[0].ctrl_z), (self.boutons[16], self.plans[0].ctrl_y)):
+    def maj_bouton(self):        
+        for bout, liste in ((self.boutons[-3], self.plans[0].ctrl_z), (self.boutons[-2], self.plans[0].ctrl_y)):
             if len(liste) == 0:
                 bout['state'] = 'disabled'
             else:
