@@ -4,7 +4,7 @@
 import tkinter as tk
 from tkinter import filedialog as fd, colorchooser, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
-import Engine_w as Geo
+import Engine as Geo
 from PIL import Image, ImageDraw, ImageTk
 from math import sqrt, floor
 from time import time
