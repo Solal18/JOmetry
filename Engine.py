@@ -970,6 +970,22 @@ class Plan:
         p2 = Point(self, nom = self.nouveau_nom(0), method = 'ortho', args = (p1,), u = 0)
         d = Droite(self, nom = nom, method = 'inter', args = (args[1], p2), u = u)
         return d
+    
+    def newMilieu(self, nom, args, u = 1):
+        return Point(self, nom = nom, method = 'milieu', args = (args[0], args[1]), u = u)
+
+    def newMedia(self, nom, args, u = 1):
+        d1 = Droite(self, nom = self.nouveau_nom(0), method = 'inter', args = (args[0], args[1]), u = 0)
+        p1 = Point(self, nom = self.nouveau_nom(0), method = 'inf', args = (d1,), u = 0)
+        p2 = Point(self, nom = self.nouveau_nom(0), method = 'ortho', args = (p1,), u = 0)
+        p3= Point(self, nom = self.nouveau_nom(0), method = 'milieu', args = (args[0], args[1]), u = 0)
+        d = Droite(self, nom = nom, method = 'inter', args = (p2, p3), u = u)
+        return d
+    
+    def newPara(self, nom, args, u = 1):
+        p1 = Point(self, nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
+        d = Droite(self, nom = nom, method = 'inter', args = (args[1], p1), u = u)
+        return d
 
     def newCercleInscrit(self, nom, point1, point2, point3):
         p1, p2, p3 = self.objets[point1], self.objets[point2], self.objets[point3]
