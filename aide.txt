@@ -1,0 +1,11 @@
+boutons|actions
+boutons
+texte d'aide sur les commandes
+
+bonjour|fermer
+salut
+au revoir
+
+actions|geometrie
+commandes geometriques
+ca vous va la démo ?
