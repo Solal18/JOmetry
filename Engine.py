@@ -538,13 +538,13 @@ class Point(Creature):
                 xA*yB-xB*yA)
     
     def translation(self, A, v):
-        return translation2(A, v)
+        return translater(A, v)
     
     def rotation(self, A, B, theta):
-        return rotation2(A, B, theta)
+        return rotater(A, B, theta)
 
     def homothetie(self, A, B, rapport):
-        return rotation2(A, B, rapport)
+        return homotheter(A, B, rapport)
     
     def inter2(self, courbe1, courbe2, numero):
         coooords=(0,0,0)
