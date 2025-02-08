@@ -13,9 +13,32 @@ plan_default = 0
 def dist(a, b):
     return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
+def scale_m(k, m1):
+    for i in range(len(m1[0])):
+        m1[0][1] *= k
+    return m1
+
+'''def inverse_m(m):
+    x,y,z = m
+    a,b,c=x
+    d,e,f=y
+    g,h,i=z
+    return scale_m(1/(a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g)), [[e*i-f*h, c*h-b*i, b*f-c*e], [f*g-d*i, a*i-c*g, c*d-a*f], [d*h-e*g, b*g-a*h, a*e-b*d]])
+'''
+
+def inverse_m(m):
+    return numpy.linalg.inv(m)
+
+def multi_matrix2(m1, m2):
+    resultat =[[0,0,0], [0,0,0], [0,0,0]]
+    for i in range(3):
+        for j in range(3):
+            for k in range(3):
+                resultat[i][j] += m1[i][k]*m2[k][j]
+    return resultat
 
 def multi_matrix(m1, m2):
-    '''matrice 1-3 fois matrice 3-3'''
+    '''matrice 3-3 fois matrice 1-1'''
     xrint(m1)
     xrint(m2)
     x,y,z = m1
@@ -25,6 +48,17 @@ def multi_matrix(m1, m2):
     g,h,i=m
     return [a*x+b*y+c*z, d*x+e*y+f*z, g*x+h*y+i*z]
 
+def transfo_p(liste):
+    '''envoie liste sur [1,0,0] et les autres'''
+    p,q,r,s= liste
+    a,b,c = p
+    d,e,f = q
+    g,h,i = r
+    x,y,z = multi_matrix(s,inverse_m([[a,d,g],[b,e,h],[c,f,i]]))
+    return [[a*x, d*y, g*z], [b*x, e*y, h*z], [c*x, f*y, i*z]]
+
+def transfo_proj(A, liste1, liste2):
+    return multi_matrix(A,multi_matrix2(transfo_p(liste2),inverse_m(transfo_p(liste1))))
 
 def translater(A, v):
     a, b, c = A
@@ -59,9 +93,9 @@ def symetrer(A, B):
         d1 = Droite(plan=plan_default, method='coord', args = B, u= 0)
         x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (c/a,0, 1)), u = 0).coords()
         k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
-        return translater(multi_matrix(translater(A, (c/a, 0, 1)), k), (-c/a, 0, 1))
+        return translater(multi_matrix(translater(A, (c/a, 0, 1)), k), (-c/a, 0, 1))    
 
-transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer}
+transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer, 'projective' : transfo_proj}
 
 dico_binom = {(0, 0): 1}
 def binom(n, k):
@@ -563,7 +597,15 @@ class Point(Creature):
     def symetrie(self, A, B):
         return symetrer(A, B)
 
-    
+    def harmonique(self, A, B, C):
+        liste = [A, B, (14,11,1), (3,4,1)]
+        liste2 =[(-1, 0, 1), (1, 0,1), (14,11,1), (3,4,1)]
+        x,y = norm(transfo_proj(C, liste, liste2))
+        return transfo_proj((1/x, 0, 1), liste2, liste)
+
+    def projective(self, A, liste1, liste2):
+        return transfo_proj(A, liste1, liste2)
+
     def inter2(self, courbe1, courbe2, numero):
         coooords=(0,0,0)
         rooot=[]
@@ -950,7 +992,10 @@ class Plan:
         self.modifs = (True, True)
         return {i[0].valeur.nom for i in point.arbre.descente(point.arbre)}
 
-    
+    def new_harmonique(self, nom, A,B,C, u = 1):
+        d = Point(self, nom = nom, method = 'harmonique', args = (A,B,C), u = u)
+        return d
+
     def new_rotation(self, nom, obj, p, angle, u = 1):
         d = type(obj)(self, nom = nom, method = 'rotation', args = (obj, p, angle), u = u)
         return d
@@ -965,6 +1010,10 @@ class Plan:
     
     def new_symetrie(self, nom, obj, droite, u = 1):
         d = type(obj)(self, nom = nom, method = 'symetrie', args = (obj, droite), u = u)
+        return d
+    
+    def new_projective(self, nom, obj, liste1, liste2, u = 1):
+        d = type(obj)(self, nom = nom, method = 'projective', args =(obj, liste1, liste2), u = u)
         return d
 
     def newPoint_coord(self, nom, coord):#crée un point libre avec les coordonnées suivantes
