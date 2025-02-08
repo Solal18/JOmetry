@@ -75,11 +75,11 @@ class Main:
         self.liste_derniers_clics = []
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
-                     ['point', 'intersection', 'milieu', 'centre'],
+                     ['point', 'intersection', 'milieu', 'harmonique', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent'],
                      ['courbe'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
-                     ['rotation', 'homothetie', 'translation', 'symetrie', 'polyregul'],
+                     ['rotation', 'homothetie', 'translation', 'symetrie', 'projective', 'polyregul'],
                      ['editeur_objets'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['aide'],
                      ]
@@ -119,8 +119,8 @@ class Main:
             bout = tk.Button(self.barre_haut, image = image)
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
-            self.image_boutons.append(image)
-        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
+            self.image_boutons.append(image)        
+            self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
         self.menub.grid(row = 0, column = 0, padx = 20, pady = 5)
         for i, bouton in enumerate(self.boutons):
             bouton.grid(row = 0, column = i + 1)
@@ -163,6 +163,7 @@ class Main:
                         'enregistrer_sous' : (self.enregistrer_sous, 0),
                         'ouvrir' : (self.ouvrir, 0),
                         'cercle_cent' : (self.cercle_cent, 1, ('point', 'point')),
+                        'harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
                         'cercle_inscr' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
                         'bissec' : (self.bissec, 1, ('point', 'point', 'point')),
                         'tangente' : (self.tangente, 1, ('courbe', 'point')),
@@ -180,6 +181,7 @@ class Main:
                         'homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
                         'translation' : (self.translation, 1, ('objet', 'point', 'point')), 
                         'symetrie' : (self.symetrie, 1, ('objet', 'droite')),
+                        'projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
                         'polyregul' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
 
                         }
@@ -406,6 +408,9 @@ class Main:
             p.coords()
             d = self.plans[0].newDroite(1, (p,), 'dual')
 
+    def harmonique(self):
+        A,B,C = self.liste_derniers_clics
+        d = self.plans[0].new_harmonique(1, A,B,C)
 
     def rotation(self):
         obj, p, angle = self.liste_derniers_clics
@@ -414,6 +419,10 @@ class Main:
     def symetrie(self):
         obj, p = self.liste_derniers_clics
         d = self.plans[0].new_symetrie(1, obj, p)
+
+    def projective(self):
+        objet, a,b,c,d,p,q,r,s = self.liste_derniers_clics
+        d = self.plans[0].new_projective(1, objet, [a,b,c,d], [p,q,r,s])
     
     def homothetie(self):
         obj, p, rapport = self.liste_derniers_clics
