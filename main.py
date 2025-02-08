@@ -75,16 +75,17 @@ class Main:
         self.liste_derniers_clics = []
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
-                     ['point', 'intersection', 'milieu'],
+                     ['point', 'intersection', 'milieu', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent'],
                      ['courbe'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
-                     ['rotation', 'homothetie', 'translation', 'polyregul'],
+                     ['rotation', 'homothetie', 'translation', 'symetrie', 'polyregul'],
                      ['editeur_objets'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['aide'],
                      ]
         self.creer_canvas()
         self.plans = [Geo.Plan(self)]
+        Geo.plan_default = self.plans[0]
         self.nom_boutons = [l[0] for l in self.menu]
         self.creer_actions()
         self.creer_boutons()
@@ -155,6 +156,7 @@ class Main:
                         'main' : (self.move, 1, ('point',)),
                         'intersection' : (self.intersection, 1, ('courbe', 'courbe')),
                         'milieu' : (self.milieu, 1, ('point', 'point')),
+                        'centre' : (self.centre, 1, ('courbe',)),
                         'poubelle' : (self.supprimer, 1, ('objet',)),
                         'soumettre' : (self.soumettre, 0),
                         'enregistrer' : (self.enregistrer, 0),
@@ -177,6 +179,7 @@ class Main:
                         'rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
                         'homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
                         'translation' : (self.translation, 1, ('objet', 'point', 'point')), 
+                        'symetrie' : (self.symetrie, 1, ('objet', 'droite')),
                         'polyregul' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
 
                         }
@@ -213,6 +216,7 @@ class Main:
     def passer_plan(self, i):
         plan_act = self.plans[0]
         self.plans[0] = self.plans.pop(i)
+        Geo.plan_default = self.plans[0]
         self.plans.insert(1, plan_act)
         self.maj_menu()
         self.dessin_canvas()
@@ -258,6 +262,8 @@ class Main:
         plan.focal = texte_plan[3]
         plan.offset_x, plan.offset_y = texte_plan[4], texte_plan[5]
         self.plans[0] = plan
+        Geo.plan_default = self.plans[0]
+
         texte_objets = texte[1:]
         objets = []
         noms = []
@@ -314,6 +320,7 @@ class Main:
                 self.enregistrer()
         if len(self.plans) == 1:
             self.plans[0] = Geo.Plan(self)
+            Geo.plan_default = self.plans[0]
         else: 
             self.plans.pop(0)
         fenetre.title(f'JOmetry - {self.plans[0].nom}')
@@ -403,6 +410,10 @@ class Main:
     def rotation(self):
         obj, p, angle = self.liste_derniers_clics
         d = self.plans[0].new_rotation(1, obj, p, angle)
+
+    def symetrie(self):
+        obj, p = self.liste_derniers_clics
+        d = self.plans[0].new_symetrie(1, obj, p)
     
     def homothetie(self):
         obj, p, rapport = self.liste_derniers_clics
@@ -460,6 +471,9 @@ class Main:
     def milieu(self):
         self.plans[0].newMilieu(1, self.liste_derniers_clics)
      
+    def centre(self):
+        self.plans[0].newCentre(1, self.liste_derniers_clics)
+
     def para(self):
         self.plans[0].newPara(1, self.liste_derniers_clics)
 
