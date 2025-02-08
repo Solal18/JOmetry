@@ -275,16 +275,15 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, nom = '', method = '', args = [], deg = '', color = 'green', vis = 1, u = 0):
+    def __init__(self, plan, nom = '', method = '', args = [], deg = '', color = 'green', vis = 1, u = 0, complexe=True):
         self.plan = plan
-        if nom in (0, 1):
-            nom = plan.nouveau_nom(nom)
         self.nom = nom
         self.coord = None
         self.method = method
         self.args = args
         self.deg = deg
         self.color = color
+        self.complexe = complexe
         self.vis = vis
         self.u = u
         self.tkinter = [None, None] #[cercle, texte] pour les points
@@ -363,6 +362,11 @@ class Creature:
                 self.coord = self.inter(*args)
             else:
                 self.coord = getattr(self.__class__, method)(self, *args)
+        if not self.complexe:
+            print("saluttt")
+            print((self.coord[0]/self.coord[2], self.coord[1]/self.coord[2],1))
+            self.coord = (numpy.real(self.coord[0]/self.coord[2]), numpy.real(self.coord[1]/self.coord[2]),1)
+            print(self.coord)
         return self.coord
 
     def set_coords(self):
@@ -504,8 +508,10 @@ class Point(Creature):
     """Classe Point"""
     classe = 'Point'
     
-    def __init__(self, plan, nom="", method="", args=[], objet=None, color="green", u = 0, vis = 1):
-        super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=1, u = u, vis = vis)
+    def __init__(self, plan, nom="", method="", args=[], objet=None, color="green", u = 0, vis = 1, complexe=True):
+        if nom in (0, 1):
+            nom = plan.nouveau_nom(nom, "point")
+        super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=1, u = u, vis = vis, complexe=complexe)
         if method == "coord" and objet is not None and type(objet) is not Point:
             self.objet = objet
         plan.points[self.nom] = self
@@ -634,6 +640,8 @@ class Droite(Creature):
     classe = 'Droite'
 
     def __init__(self, plan, nom="", method="", args=[], objet=None, color="grey",u=0, vis = 1):
+        if nom in (0, 1):
+            nom = plan.nouveau_nom(nom)
         super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=1,u=u, vis = vis)
         if method == "coord" and objet is not None and type(objet) is not Droite:
             self.objet = objet
@@ -698,6 +706,8 @@ class CA(Creature):
     classe = 'Courbe'
 
     def __init__(self, plan, nom="", method="", args=[], deg="",color="green",u=0, vis = 1):
+        if nom in (0, 1):
+            nom = plan.nouveau_nom(nom)
         if method == "cercle":
             deg = 2
         elif method in transformation:
@@ -826,14 +836,18 @@ class Plan:
         self.derniere_action = None
 
 
-    def nouveau_nom(self, u = 1):
+    def nouveau_nom(self, u = 1, type="courbe"):
         lettre, chiffre = 0, 0
-        nom = 'A'
+        if type=='courbe':
+            nom_init="a"
+        else:
+            nom_init="A"
+        nom = nom_init
         while nom in self.noms:
             lettre += 1
             chiffre += lettre//26
             lettre = lettre%26
-            nom = ('' if u else '_') + chr(65 + lettre) + (str(chiffre) if chiffre else '')
+            nom = ('' if u else '_') + chr(ord(nom_init) + lettre) + (str(chiffre) if chiffre else '')
         return nom
 
     def contre_action(self, fonc, args):
@@ -973,6 +987,11 @@ class Plan:
     
     def newMilieu(self, nom, args, u = 1):
         return Point(self, nom = nom, method = 'milieu', args = (args[0], args[1]), u = u)
+    
+    def newCentre(self, nom, args, u = 1):
+        d1 = Droite(self, nom = self.nouveau_nom(0), method = 'tangente', args = (args[0], self.U), u = 0)
+        d2 = Droite(self, nom = self.nouveau_nom(0), method = 'tangente', args = (args[0], self.V), u = 0)
+        return Point(self, nom = nom, method = 'inter', args = (d1, d2), u = u, complexe = False)
 
     def newMedia(self, nom, args, u = 1):
         d1 = Droite(self, nom = self.nouveau_nom(0), method = 'inter', args = (args[0], args[1]), u = 0)
