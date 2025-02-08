@@ -8,6 +8,7 @@ def xrint(*args):
     #print(*args)
     return 
 
+plan_default = 0
 
 def dist(a, b):
     return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
@@ -45,7 +46,22 @@ def homotheter(A, B, rapport):
     k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
     return translater(multi_matrix(translater(A, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
 
-transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter}
+def symetrer(A, B):
+    if type(B) is not tuple:
+        B = B.coords()
+    a,b, c = B
+    if b!=0:
+        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0)
+        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (0, c/b, 1)), u = 0).coords()
+        k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
+        return translater(multi_matrix(translater(A, (0, c/b, 1)), k), (0, -c/b, 1))
+    elif a!=0:
+        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0)
+        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (c/a,0, 1)), u = 0).coords()
+        k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
+        return translater(multi_matrix(translater(A, (c/a, 0, 1)), k), (-c/a, 0, 1))
+
+transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer}
 
 dico_binom = {(0, 0): 1}
 def binom(n, k):
@@ -339,34 +355,24 @@ class Creature:
             method = self.method
             objet = self
             transformations = []
-            print(self, method, self.args)
             while method in transformation and not isinstance(objet, Point):
-                print(objet)
                 parent = objet.args[0]
                 transformations.append((method, objet.args[1:]))
                 method = parent.method
                 objet = parent
             args = [(i.coords(), 1) if isinstance(i, Creature) else (i, 0) for i in objet.args]
-            print(self, method, args, transformations)
             while transformations:
                 method_tr, args_tr = transformations.pop()
                 args = [(transformation[method_tr](i[0], *args_tr), 1) if i[1] else i for i in args]
-            print(self, method, args)
             args = [i[0] for i in args]
             if method == 'cercle':
                 self.coord = self.cercle(self.deg, *args)
             elif isinstance(self, CA):
                 self.coord = self.inter(self.deg, *args)
             elif isinstance(self, Droite) and method == 'inter':
-                print(self)
                 self.coord = self.inter(*args)
             else:
                 self.coord = getattr(self.__class__, method)(self, *args)
-        if not self.complexe:
-            print("saluttt")
-            print((self.coord[0]/self.coord[2], self.coord[1]/self.coord[2],1))
-            self.coord = (numpy.real(self.coord[0]/self.coord[2]), numpy.real(self.coord[1]/self.coord[2]),1)
-            print(self.coord)
         return self.coord
 
     def set_coords(self):
@@ -528,12 +534,14 @@ class Point(Creature):
     def __hash__(self):
         return id(self)
 
-    def coord(self, c):
+    def coord(self, c, d=0,e=0):
         """Définition d'un point par ses coordonnées"""
-        x, y, z = c
-        if x==y==z==0:
-            raise ValueError("Point (0,0,0) impossible")
-        return (x, y, z)
+        if isinstance(c, tuple):
+            x, y, z = c
+            if x==y==z==0:
+                raise ValueError("Point (0,0,0) impossible")
+            return (x, y, z)
+        return (c,d,e)
     
     def inter(self, A, B):
         """Définition d'un point par deux droites"""
@@ -551,6 +559,10 @@ class Point(Creature):
 
     def homothetie(self, A, B, rapport):
         return homotheter(A, B, rapport)
+    
+    def symetrie(self, A, B):
+        return symetrer(A, B)
+
     
     def inter2(self, courbe1, courbe2, numero):
         coooords=(0,0,0)
@@ -658,12 +670,14 @@ class Droite(Creature):
         xb, yb, zb = other.coords()
         return ya*zb-yb*za == za*xb-zb *xa == xa*yb-xb*ya == 0
     
-    def coord(self, c):
+    def coord(self, c,d=0, e=0):
         """Définition d'une droite par ses coordonnées"""
-        x, y, z = c
-        if x == y == z == 0:
-            raise ValueError("Droite (0,0,0) impossible")
-        return (x, y, z)
+        if isinstance(c, tuple):
+            x, y, z = c
+            if x == y == z == 0:
+                raise ValueError("Droite (0,0,0) impossible")
+            return (x, y, z)
+        return (c,d,e)
     
     def inter(self, A, B):
         """Définition d'une droite par deux points"""
@@ -928,8 +942,7 @@ class Plan:
         else:
             raise TypeError("Vous avez donné une largeur de trait non entière.")
 
-    def move(self, nom, coords):
-        point = self.objets[nom]
+    def move(self, point, coords):
         if point.arbre.parents == set():
             point.args=[coords]
             for i in sorted(list(Arbre.descente(self, point.arbre)), key=lambda x: x[1]):
@@ -950,6 +963,10 @@ class Plan:
         d = type(obj)(self, nom = nom, method = 'translation', args = (obj, vecteur), u = u)
         return d
     
+    def new_symetrie(self, nom, obj, droite, u = 1):
+        d = type(obj)(self, nom = nom, method = 'symetrie', args = (obj, droite), u = u)
+        return d
+
     def newPoint_coord(self, nom, coord):#crée un point libre avec les coordonnées suivantes
         p = Point(self, nom=nom, method="coord", args=[coord], u = 1)
         return p
