@@ -80,6 +80,7 @@ def homotheter(A, B, rapport):
     k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
     return translater(multi_matrix(translater(A, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
 
+#Tu crées de nouvelles droites à chaque calcul !
 def symetrer(A, B):
     if type(B) is not tuple:
         B = B.coords()
@@ -460,10 +461,6 @@ class Creature:
             self.plan.CAst[self.nom]=[]
             polynomex = coords.change_variables()
             polynomey = coords
-            #polynomex = find_eq_courbe(coords, self.deg, "x")
-            #polynomey = find_eq_courbe(coords, self.deg, "y")
-            #polynome2x = [0]*len(polynomex)
-            #polynome2y = [0]*len(polynomey)
             i = 0
 
             #while i<h:
