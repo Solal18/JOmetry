@@ -399,8 +399,8 @@ class Main:
         c1, c2 = self.liste_derniers_clics
         tangentes_c1 = [self.plans[0].newDroite(0, (c1, p), 'tangente', u = 0) for p in c1.args]
         tangentes_c2 = [self.plans[0].newDroite(0, (c2, p), 'tangente', u = 0) for p in c2.args]
-        c1_dual = courbe = self.plans[0].newCA(0, tangentes_c1, u = 0)
-        c2_dual = courbe = self.plans[0].newCA(0, tangentes_c2, u = 0)
+        c1_dual = self.plans[0].newCA(0, tangentes_c1, u = 0)
+        c2_dual = self.plans[0].newCA(0, tangentes_c2, u = 0)
         c1_dual.coords()
         c2_dual.coords()
         for i in range(c1_dual.deg * c2_dual.deg):
