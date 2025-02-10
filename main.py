@@ -4,12 +4,15 @@
 import tkinter as tk
 from tkinter import filedialog as fd, colorchooser, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
-import Engine_w as Geo
 from PIL import Image, ImageDraw, ImageTk
+
+import Engine_w as Geo
+
 from math import sqrt, floor
 from time import time
 import os.path as op
 import Frames as Fenetres
+from random import random, randint
 
 fenetre = tk.Tk()
 ttk.Style().theme_use('clam')
@@ -38,7 +41,7 @@ def txt(x):
 #à executer avant toute modification :
 #txt({Philemon : 34})
 
-def val(x):
+def val(x):#INVERSE DE TXT
     if ' ' in x: return x
     if (x[0] == '[' and x[-1] == ']') or (x[0] == '(' and x[-1] == ')'):
         l, t, ec, n = [], x[1:-1], '', 0
@@ -73,11 +76,12 @@ class Main:
     def __init__(self):
         self.editeur_objets = None
         self.liste_derniers_clics = []
+
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
                      ['point', 'intersection', 'milieu', 'harmonique', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent'],
-                     ['courbe'], ['soumettre'],
+                     ['courbe', 'caa'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'projective', 'polyregul'],
                      ['editeur_objets'],
@@ -86,6 +90,7 @@ class Main:
         self.creer_canvas()
         self.plans = [Geo.Plan(self)]
         Geo.plan_default = self.plans[0]
+
         self.nom_boutons = [l[0] for l in self.menu]
         self.creer_actions()
         self.creer_boutons()
@@ -178,6 +183,7 @@ class Main:
                         'ctrlz' : (self.act_ctrlz, 0),
                         'ctrly' : (self.act_ctrly, 0),
                         'rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
+                        'caa' : (self.caa, 0),
                         'homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
                         'translation' : (self.translation, 1, ('objet', 'point', 'point')), 
                         'symetrie' : (self.symetrie, 1, ('objet', 'droite')),
@@ -399,8 +405,8 @@ class Main:
         c1, c2 = self.liste_derniers_clics
         tangentes_c1 = [self.plans[0].newDroite(0, (c1, p), 'tangente', u = 0) for p in c1.args]
         tangentes_c2 = [self.plans[0].newDroite(0, (c2, p), 'tangente', u = 0) for p in c2.args]
-        c1_dual = self.plans[0].newCA(0, tangentes_c1, u = 0)
-        c2_dual = self.plans[0].newCA(0, tangentes_c2, u = 0)
+        c1_dual = courbe = self.plans[0].newCA(0, tangentes_c1, u = 0)
+        c2_dual = courbe = self.plans[0].newCA(0, tangentes_c2, u = 0)
         c1_dual.coords()
         c2_dual.coords()
         for i in range(c1_dual.deg * c2_dual.deg):
@@ -473,6 +479,14 @@ class Main:
     
     def perp(self):
         self.plans[0].newPerp(1, self.liste_derniers_clics)
+
+    def caa(self):
+        CA = [self.plans[0].newPoint_coord(1, (self.canvas.winfo_width()/4+random()*self.canvas.winfo_width()*3/4, self.canvas.winfo_height()/4+random()*3/4*self.canvas.winfo_height(),1), u=0) for _ in range([5, 9, 14, 20, 32][randint(0,4)])]
+        if randint(0,3)==2:
+            CA = [self.plans[0].U]+CA
+        if randint(0,3)==2:
+            CA = [self.plans[0].V]+CA
+        self.plans[0].newCA(1, CA).dessin()
 
     def media(self):
         self.plans[0].newMedia(1, self.liste_derniers_clics)
@@ -674,9 +688,6 @@ class Main:
     
 def ouvrir_erreur():
     tk_mb.showerror('Erreur', 'Impossible de lire ce fichier.')
-        
-
-
 
 if __name__ == '__main__':
     main = Main()
