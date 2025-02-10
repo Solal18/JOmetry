@@ -80,19 +80,18 @@ def homotheter(A, B, rapport):
     k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
     return translater(multi_matrix(translater(A, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
 
-#Tu crées de nouvelles droites à chaque calcul !
 def symetrer(A, B):
     if type(B) is not tuple:
         B = B.coords()
     a,b, c = B
     if b!=0:
-        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0)
-        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (0, c/b, 1)), u = 0).coords()
+        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0, inv=True)
+        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (0, c/b, 1)), u = 0, inv=True).coords()
         k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
         return translater(multi_matrix(translater(A, (0, c/b, 1)), k), (0, -c/b, 1))
     elif a!=0:
-        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0)
-        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (c/a,0, 1)), u = 0).coords()
+        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0, inv=True)
+        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (c/a,0, 1)), u = 0, inv=True).coords()
         k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
         return translater(multi_matrix(translater(A, (c/a, 0, 1)), k), (-c/a, 0, 1))    
 
@@ -407,6 +406,8 @@ class Creature:
             elif isinstance(self, Droite) and method == 'inter':
                 self.coord = self.inter(*args)
             else:
+                print(f'{self} : {self.nom} : {method} : {args}')
+                print(f'{type(self)}')
                 self.coord = getattr(self.__class__, method)(self, *args)
         return self.coord
 
@@ -455,12 +456,16 @@ class Creature:
         
         coords = self.coords() if calcul or self.coord is None else self.coord
          
-        if isinstance(self, CA) and self.deg !=1:
+        '''if isinstance(self, CA) and self.deg !=1:
             xrint("Calcul des points.")
             zzzz=time.time()
             self.plan.CAst[self.nom]=[]
             polynomex = coords.change_variables()
             polynomey = coords
+            #polynomex = find_eq_courbe(coords, self.deg, "x")
+            #polynomey = find_eq_courbe(coords, self.deg, "y")
+            #polynome2x = [0]*len(polynomex)
+            #polynome2y = [0]*len(polynomey)
             i = 0
 
             #while i<h:
@@ -511,7 +516,67 @@ class Creature:
                         self.plan.tkinter_object[z]=self
             for objet in self.tkinter:
                 if objet is not None: can.tag_lower(objet, 'limite2')
-            xrint(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
+            xrint(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')'''
+        
+        if isinstance(self, CA) and self.deg !=1:
+            print("Calcul des points.")
+            zzzz=time.time()
+            self.plan.CAst[self.nom]=[]
+            polynomex = find_eq_courbe(coords, self.deg, "x")
+            polynomey = find_eq_courbe(coords, self.deg, "y")
+            print("wesh")
+            print(polynomex, polynomey)
+            polynome2x = [0]*len(polynomex)
+            polynome2y = [0]*len(polynomey)
+            i = 0
+
+            #while i<h:
+            #    for j in range(len(polynomex)):
+            #        polynome2x[j] = eval(str(polynomex[j]).replace("y", str(i)))
+            #    roots = resoudre(polynome2x)
+            #    l_x = []
+            #    for x in roots:
+            #        if 0 <= x and w >= x:
+            #            c = [x, i]
+            #            l_x.append((x, i))
+            #    self.plan.CAst[self.nom].append(l_x)
+            #    i += 1
+            i = 0
+
+            while i<w:
+                for j in range(len(polynomey)):
+                    polynome2y[j] = eval(str(polynomey[j]).replace("x", str(i)))
+                roots = resoudre(polynome2y)
+                l_y = []
+                for y in roots:
+                    if 0 <= y <= h:
+                        c = [i, y]
+                        l_y.append((i, y))
+                self.plan.CAst[self.nom].append(l_y)
+                i += 1
+            print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
+            print("Début affichage des points")
+            zzzz = time.time()
+            points = self.plan.CAst[self.nom]
+            for x, l_p in enumerate(points[1:-1]):
+                p_moins = points[x]
+                p_plus = points[x+2]
+                for p in l_p:
+                    d_moins = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_moins] + [(float('inf'), 0)])
+                    d_plus = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_plus] + [(float('inf'), 0)])
+                    d_nor = min([(abs(p[1]-p_[1]), p_) for p_ in l_p if p_ != p] + [(float('inf'), 0)])
+                    if d_moins == d_nor == (float('inf'), 0):
+                        continue
+                    a_p = min([d_moins, d_nor])[1]
+                    p, a_p = focaliser(p), focaliser(a_p)
+                    if dist(p, a_p) < 50:
+                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color)
+                        self.tkinter.append(z)
+                        self.plan.tkinter_object[z]=self
+            for objet in self.tkinter:
+                if objet is not None: can.tag_lower(objet, 'limite')
+            print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
+
 
         if isinstance(self, Droite) or (isinstance(self, CA) and self.deg==1):
             print(coords)
@@ -603,7 +668,7 @@ class Point(Creature):
     def projective(self, A, liste1, liste2):
         return transfo_proj(A, liste1, liste2)
 
-    def inter2(self, courbe1, courbe2, numero):
+    '''def inter2(self, courbe1, courbe2, numero):
         coooords=(0,0,0)
         rooot=[]
         if isinstance(courbe1, tuple):
@@ -654,6 +719,54 @@ class Point(Creature):
                     rooot.append((r, k2 +r*k3))
         if numero <len(rooot):
             coooords= (rooot[numero][0], rooot[numero][1],1)
+        return coooords'''
+    
+    def inter2(self, courbe1, courbe2, numero):
+        coooords=(0,0,0)
+        rooot=[]
+        deg1 = round((-3+sqrt(9+8*len(courbe1)))/2)
+        deg2 = round((-3+sqrt(9+8*len(courbe2)))/2)
+        if (deg1-1)*(deg2-1) !=0:
+            poly1 = find_eq_homogene(courbe1,deg1)
+            poly2 = find_eq_homogene(courbe2, deg2)
+            b=groebner([poly1, poly2], x, y)
+            c=Poly(b[1]).all_coeffs()
+            root=resoudre(c)
+            for r in root:
+                k = str(b[0]).replace("y","("+ str(r)+")")
+                autre_roots = resoudre(Poly(k).all_coeffs())
+                for ax in autre_roots:
+                    rooot.append((ax,r))
+        else:
+            if deg2==1:
+                droite, courbe=courbe2, courbe1
+            else:
+                droite, courbe=courbe1, courbe2
+                deg2, deg1 = deg1, deg2
+            coord=droite
+            coord2=courbe
+            k2=-coord[2]/coord[1]
+            k3=-coord[0]/coord[1]
+            poly=[0]*(deg1+1)
+            if coord[1]==0:
+                polynomey = find_eq_courbe(courbe, deg1, "y")
+                for j in range(len(polynomey)):
+                    poly[j] = eval(str(polynomey[j]).replace("x", str(k2)))
+            else:
+                permut=permutations(deg1)
+                for i in range(len(permut)):
+                    k = (-1)**permut[i][1]/(coord[1]**permut[i][1])
+                    for j in range(permut[i][1]+1):
+                        poly[deg1-permut[i][0]-j]+= k* coord2[i]*coord[0]**j*coord[2]**(permut[i][1]-j) * binom(permut[i][1], j)
+            roots = resoudre(poly)
+            if coord[1]==0:
+                for r in roots:
+                    rooot.append((k2, r))
+            else:
+                for r in roots:
+                    rooot.append((r, k2 +r*k3))
+        if numero <len(rooot):
+            coooords= (rooot[numero][0], rooot[numero][1],1)
         return coooords
     
     def ortho(self, A):
@@ -690,14 +803,17 @@ class Droite(Creature):
     """Classe Droite"""
     classe = 'Droite'
 
-    def __init__(self, plan, nom="", method="", args=[], objet=None, color="grey",u=0, vis = 1):
+    def __init__(self, plan, nom="", method="", args=[], objet=None, color="grey",u=0, vis = 1, inv=False):
         if nom in (0, 1):
             nom = plan.nouveau_nom(nom)
         super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=1,u=u, vis = vis)
         if method == "coord" and objet is not None and type(objet) is not Droite:
             self.objet = objet
-        plan.droites[self.nom] = self
+        if not inv:
+            plan.droites[self.nom] = self
         
+    def __del__(self):
+        print("Salut")
 
     def __hash__(self):
         return id(self)
@@ -777,7 +893,7 @@ class CA(Creature):
     def __hash__(self):
         return id(self)
 
-    def inter(self, deg, *args):#INTERpolation
+    '''def inter(self, deg, *args):#INTERpolation
         xrint('Début interpolation')
         xrint(deg)
         zzzz=time.time()
@@ -818,7 +934,52 @@ class CA(Creature):
         poly = Polynome(nouv_coords)
         print('poly :', poly)
         xrint(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
-        return poly
+        return poly'''
+    
+    def inter(self, deg, *args):#INTERpolation
+        print('Début interpolation')
+        print(deg)
+        zzzz=time.time()
+        permut = permutations(deg)
+        detConi = []
+        print('args :', args)
+        for i in args:
+            detConibis = []
+            for j in permut:
+                detConibis.append(i[0]**j[0]*i[1]**j[1]* i[2]**j[2])
+            print(type(detConibis[0]))
+            detConi.append(detConibis)
+        coords = []
+        a = 0
+        if deg <=7:
+            a = deg + 3
+        else:
+            a = 2*deg - 5
+        for i in range(len(detConi)):
+            for j in range(len(detConi[i])):
+                detConi[i][j] = detConi[i][j]/(10**a)
+        print('detConi :', detConi)
+        for i in range(len(permut)):
+            sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
+            print('sous det', type(sousDet), sousDet)
+            coords.append((-1)**(i+1) * determinant(sousDet))
+            #print('determinant', type(determinant(sousDet)), type((-1)**(i+1) * determinant(sousDet)), determinant(sousDet), determinant(sousDet), determinant(sousDet))
+        nouv_coords = [0]*len(coords)
+        a = 0
+        i = 0
+        while a == 0 and i < len(coords):
+            if coords[i] != 0:
+                a = coords[i]
+            i+=1
+        print('nouv_coords :', nouv_coords)
+        if a != 0:
+            for j in range(len(coords)):
+                nouv_coords[j] = numpy.real((1/a)*coords[j])
+                print(f'si on lui passe {coords[j]}, de type {type(coords[j])}, numpy.real renvoie : {numpy.real((1/a)*coords[j])}')
+        print('nouv_coords :', nouv_coords)
+        print(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
+        return nouv_coords        
+
     
     def cercle(self, deg, *args):
         ''' crée une conique tangente à d1 en U et à d2 en V passant par le point B
@@ -1013,8 +1174,8 @@ class Plan:
         d = type(obj)(self, nom = nom, method = 'projective', args =(obj, liste1, liste2), u = u)
         return d
 
-    def newPoint_coord(self, nom, coord):#crée un point libre avec les coordonnées suivantes
-        p = Point(self, nom=nom, method="coord", args=[coord], u = 1)
+    def newPoint_coord(self, nom, coord, u=1):#crée un point libre avec les coordonnées suivantes
+        p = Point(self, nom=nom, method="coord", args=[coord], u=u)
         return p
 
     def newPoint_objets(self, nom, methode, objet1, objet2, numero, u = 1):#crée l'intersection de deux objets qui n'est pas dans inters
