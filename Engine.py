@@ -358,12 +358,12 @@ class Arbre:
                 self.parents.add(i)
                 i.arbre.descendants.add(objet)
 
-    def descente(self, objet, a = set(), n = 0):
-        a.add((objet, n))
-        for i in objet.descendants - a:
-            a |= Arbre.descente(self, i, a, n+1)
+    def descente(self, a = set(), n = 0):
+        a.add((self, n))
+        for i in self.descendants - a:
+            a |= i.descente(a, n+1)
         return a
-    
+        
     def supprimer(self):
         for i in self.parents:
             i.arbre.descendants.remove(self.valeur)
@@ -955,14 +955,19 @@ class Plan:
         else:
             raise TypeError("Vous avez donné une largeur de trait non entière.")
 
+    
     def move(self, point, coords):
         if point.arbre.parents == set():
+            self.contre_action(self.move, (point, point.coords()))
             point.args=[coords]
-            for i in sorted(list(Arbre.descente(self, point.arbre)), key=lambda x: x[1]):
-                Creature.set_coords(i[0].valeur)
-        self.modifs = (True, True)
-        return {i[0].valeur.nom for i in point.arbre.descente(point.arbre)}
+            for i in sorted(list(point.arbre.descente()), key=lambda x: x[1]):
+                i[0].valeur.coords(1)
+                i[0].valeur.dessin(1)
+            self.modifs = (True, True)
+            return {i[0].valeur for i in point.arbre.descente()}
+        return None
 
+    
     def new_harmonique(self, nom, A,B,C, u = 1):
         d = Creature(self, 'Point', nom = nom, method = 'harmonique', args = (A,B,C), u = u)
         return d
