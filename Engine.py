@@ -60,10 +60,19 @@ def transfo_p(liste):
 def transfo_proj(A, liste1, liste2):
     return multi_matrix(A,multi_matrix2(transfo_p(liste2),inverse_m(transfo_p(liste1))))
 
-def translater(A, v):
-    a, b, c = A
+def translater(classe, method, args, UV, v):
+    nouv_args = []
     tx, ty, tz = v
-    return (a + tx*c, b + ty*c, tz*c)
+    for i in args:
+        if i[0] == 'Point':
+            a, b, c = i[1]
+            nouv_args.append('Point', (a + tx*c, b + ty*c, tz*c))
+        if i[0] == 'Droite':
+            nouv_args.append(i)
+            #à modifier
+        else:
+            nouv_args.append(i)
+    return classe, method, nouv_args, UV
 
 def rotater(A, B, theta):
     theta = theta/180*pi
