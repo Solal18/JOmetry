@@ -1038,26 +1038,28 @@ class Plan:
         p3= Creature(self, 'Point', 0, method = 'milieu', args = (args[0], args[1]), u = 0)
         d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (p2, p3), u = u)
         return d
-    
+
+
     def newPsurCA(self, nom, args, u = 1):
         print("salut")
         defocaliser = self.main.coord_canvas
+        w, h = self.main.canvas.winfo_width(), self.main.canvas.winfo_height()
         c, (x, y) = args
+        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
         Liste = []
-        polynomey = c.coord
+        polynomey = c.coords()
         n = c.deg
-        i = x-20
-        while len(Liste) < 2*n**2+3*n and i<x+20:
+        i = x1 - 10
+        while len(Liste) < 2*n**2+3*n and i < x2 + 10:
             polynome2y = polynomey(i)
-            Liste += [(i,k) for k in polynome2y.resoudre() if y -1000 <= y <= y+1000]
+            Liste += [(i, y) for y in polynome2y.resoudre() if y1 - 50 <= y <= y2 + 50]
             i += 1
-        Liste2 = [self.newPoint_coord(0, self.newPerp(0, [self.newDroite(0, (c, i, 1), "tangente", u=0), (c,i)], u=0).coord, u=0) for i in Liste]
-        CA2 = self.newCA(0, Liste2, u=0)
-        A=[]
-        for i in inter2(CA2, self.newDroite(0, (x,y,1), "coord", u=0), -1):
-            A += inter2(c, self.newDroite(0, i, "coord", u=0), -1)
-        print(min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2))
-        return self.newPoint_coord(nom, min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2), u=1)
+        Liste2 = [self.newPerp(0, [self.newDroite(0, (c, i), "tangente", u = 0), (c,i)], "perp", u = 0) for i in Liste]
+        CA2 = self.newCA(0, Liste2, u = 0)
+        A = []
+        for i in inter2(CA2, self.newDroite(0, (x, y, 1), "coord", u = 0), -1):
+            A += inter2(c, self.newDroite(0, i, "coord", u = 0), -1)
+        return self.newPoint_coord(nom, min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2), u = 1)
         
     
     def newPara(self, nom, args, u = 1):
