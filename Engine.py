@@ -606,420 +606,247 @@ class Creature:
                 can.tag_raise(z, 'limite1')
 
 
-class Point(Creature):
-    """Classe Point"""
-    classe = 'Point'
-    
-    def __init__(self, plan, nom="", method="", args=[], objet=None, color="green", u = 0, vis = 1, complexe=True):
-        if nom in (0, 1):
-            nom = plan.nouveau_nom(nom, "point")
-        super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=1, u = u, vis = vis, complexe=complexe)
-        if method == "coord" and objet is not None and type(objet) is not Point:
-            self.objet = objet
-        plan.points[self.nom] = self
-        
+ 
+################################################################################
+###                        Méthodes de calcul                                ###
+################################################################################        
 
-    def __eq__(self, other):
-        """Définition de l'égalité de deux points"""
-        if type(other) != type(self):
-            return False
-        xA, yA, zA = self.coords()
-        xB, yB, zB = other.coords()
-        return yA*zB-yB*zA == zA*xB-zB*xA == xA*yB-xB*yA == 0
-    
-    def __hash__(self):
-        return id(self)
+def coord(c, d = 0, e = 0):
+    """Définition d'un point par ses coordonnées"""
+    if isinstance(c, tuple):
+        x, y, z = c
+        if x==y==z==0:
+            raise ValueError("Point (0,0,0) impossible")
+        return (x, y, z)
+    return (c, d, e)
 
-    def coord(self, c, d=0,e=0):
-        """Définition d'un point par ses coordonnées"""
-        if isinstance(c, tuple):
-            x, y, z = c
-            if x==y==z==0:
-                raise ValueError("Point (0,0,0) impossible")
-            return (x, y, z)
-        return (c,d,e)
-    
-    def inter(self, A, B):
-        """Définition d'un point par deux droites"""
-        xA, yA, zA = A
-        xB, yB, zB = B
-        return (yA*zB-yB*zA,
-                zA*xB-zB*xA,
-                xA*yB-xB*yA)
-    
-    def translation(self, A, v):
-        return translater(A, v)
-    
-    def rotation(self, A, B, theta):
-        return rotater(A, B, theta)
+def inter(A, B):
+    """Définition d'un point par deux droites"""
+    xA, yA, zA = A
+    xB, yB, zB = B
+    return (yA*zB-yB*zA,
+            zA*xB-zB*xA,
+            xA*yB-xB*yA)
 
-    def homothetie(self, A, B, rapport):
-        return homotheter(A, B, rapport)
-    
-    def symetrie(self, A, B):
-        return symetrer(A, B)
+def translation(A, v):
+    return translater(A, v)
 
-    def harmonique(self, A, B, C):
-        liste = [A, B, (14,11,1), (3,4,1)]
-        liste2 =[(-1, 0, 1), (1, 0,1), (14,11,1), (3,4,1)]
-        x,y = norm(transfo_proj(C, liste, liste2))
-        return transfo_proj((1/x, 0, 1), liste2, liste)
+def rotation(A, B, theta):
+    return rotater(A, B, theta)
 
-    def projective(self, A, liste1, liste2):
-        return transfo_proj(A, liste1, liste2)
+def homothetie(A, B, rapport):
+    return homotheter(A, B, rapport)
 
-    '''def inter2(self, courbe1, courbe2, numero):
-        coooords=(0,0,0)
-        rooot=[]
-        if isinstance(courbe1, tuple):
-            a, b, c = courbe1
-            courbe1 = Polynome(((c, b,), (a,)))
-        if isinstance(courbe2, tuple):
-            a, b, c = courbe2
-            courbe2 = Polynome(((c, b,), (a,)))
-        if True:
-            poly1, poly2 = courbe1.expr_rationals(('x', 'y')), courbe2.expr_rationals(('x', 'y'))
-            print(poly1, poly2)
-            b = groebner([poly1, poly2], x, y)
-            print(type(b[0]), type(b[1]),f'pol : {b[0]}', f'pol2 : {b[1]}')
-            c = Poly(b[1]).all_coeffs()
-            root = resoudre(c)
-            for r in root:
-                k = str(b[0]).replace("y","("+ str(r)+")")
-                autre_roots = resoudre(Poly(k).all_coeffs())
-                for ax in autre_roots:
-                    rooot.append((ax,r))
+def symetrie(A, B):
+    return symetrer(A, B)
+
+def harmonique(A, B, C):
+    liste = [A, B, (14,11,1), (3,4,1)]
+    liste2 =[(-1, 0, 1), (1, 0,1), (14,11,1), (3,4,1)]
+    x,y = norm(transfo_proj(C, liste, liste2))
+    return transfo_proj((1/x, 0, 1), liste2, liste)
+
+def projective(A, liste1, liste2):
+    return transfo_proj(A, liste1, liste2)
+
+def inter2(courbe1, courbe2, numero):
+    coooords=(0,0,0)
+    rooot=[]
+    if isinstance(courbe1, tuple):
+        a, b, c = courbe1
+        courbe1 = Polynome(((c, b,), (a,)))
+    if isinstance(courbe2, tuple):
+        a, b, c = courbe2
+        courbe2 = Polynome(((c, b,), (a,)))
+    if True:
+        p1, p2 = courbe1.expr_dict_monomes(), courbe2.expr_dict_monomes()
+        print(p1, p2)
+        print(courbe1.expr_rationals(('x','y')), courbe2.expr_rationals(('x','y')))
+        t = perf()
+        c = grob([p1, p2])
+        P2 = Polynome(c[1]).change_variables()
+        l = {d[1]:e[0]/e[1] for d, e in c[0].items()}
+        mat = []
+        for i in range(max(l) + 1):
+            mat.append(l[i] if i in l else 0)
+        racines = Polynome(mat).resoudre()[0]
+        for r in racines:
+            P = P2(r)
+            for r2 in P.resoudre()[0]:
+                if courbe2(r2)(r) < 1e-9:
+                    rooot.append((r2, r))
+        print(perf() - t)
+        print(len(rooot))
+    else:
+        if courbe2.deg==1:
+            droite, courbe=courbe2, courbe1
         else:
-            if courbe2.deg==1:
-                droite, courbe=courbe2, courbe1
-            else:
-                droite, courbe=courbe1, courbe2
-            coord=droite
-            coord2=courbe
-            k2=-coord[2]/coord[1]
-            k3=-coord[0]/coord[1]
-            poly=[0]*(courbe.deg+1)
-            if coord[1] == 0:
-                #polynomey = find_eq_courbe(courbe.coords(), courbe.deg, "y")
-                poly = coords(k2)
-                #for j in range(len(polynomey)):
-                #    poly[j] = eval(str(polynomey[j]).replace("x", str(k2)))
-            else:
-                permut = permutations(courbe.deg)
-                for i in range(len(permut)):
-                    k = (-1)**permut[i][1]/(coord[1]**permut[i][1])
-                    for j in range(permut[i][1]+1):
-                        poly[courbe.deg-permut[i][0]-j] += k* coord2[i]*coord[0]**j*coord[2]**(permut[i][1]-j) * binom(permut[i][1], j)
-            roots = poly.resoudre()
-            if coord[1]==0:
-                for r in roots:
-                    rooot.append((k2, r))
-            else:
-                for r in roots:
-                    rooot.append((r, k2 +r*k3))
-        if numero <len(rooot):
-            coooords= (rooot[numero][0], rooot[numero][1],1)
-        return coooords'''
-    
-    def inter2(self, courbe1, courbe2, numero):
-        coooords=(0,0,0)
-        rooot=[]
-        deg1 = round((-3+sqrt(9+8*len(courbe1)))/2)
-        deg2 = round((-3+sqrt(9+8*len(courbe2)))/2)
-        if (deg1-1)*(deg2-1) !=0:
-            poly1 = find_eq_homogene(courbe1,deg1)
-            poly2 = find_eq_homogene(courbe2, deg2)
-            b=groebner([poly1, poly2], x, y)
-            c=Poly(b[1]).all_coeffs()
-            root=resoudre(c)
-            for r in root:
-                k = str(b[0]).replace("y","("+ str(r)+")")
-                autre_roots = resoudre(Poly(k).all_coeffs())
-                for ax in autre_roots:
-                    rooot.append((ax,r))
+            droite, courbe=courbe1, courbe2
+        coord=droite
+        coord2=courbe
+        k2=-coord[2]/coord[1]
+        k3=-coord[0]/coord[1]
+        poly=[0]*(courbe.deg+1)
+        if coord[1] == 0:
+            poly = coords(k2)
         else:
-            if deg2==1:
-                droite, courbe=courbe2, courbe1
-            else:
-                droite, courbe=courbe1, courbe2
-                deg2, deg1 = deg1, deg2
-            coord=droite
-            coord2=courbe
-            k2=-coord[2]/coord[1]
-            k3=-coord[0]/coord[1]
-            poly=[0]*(deg1+1)
-            if coord[1]==0:
-                polynomey = find_eq_courbe(courbe, deg1, "y")
-                for j in range(len(polynomey)):
-                    poly[j] = eval(str(polynomey[j]).replace("x", str(k2)))
-            else:
-                permut=permutations(deg1)
-                for i in range(len(permut)):
-                    k = (-1)**permut[i][1]/(coord[1]**permut[i][1])
-                    for j in range(permut[i][1]+1):
-                        poly[deg1-permut[i][0]-j]+= k* coord2[i]*coord[0]**j*coord[2]**(permut[i][1]-j) * binom(permut[i][1], j)
-            roots = resoudre(poly)
-            if coord[1]==0:
-                for r in roots:
-                    rooot.append((k2, r))
-            else:
-                for r in roots:
-                    rooot.append((r, k2 +r*k3))
-        if numero <len(rooot):
-            coooords= (rooot[numero][0], rooot[numero][1],1)
-        return coooords
-    
-    def ortho(self, A):
-        """Point orthogonal de A"""
-        xA, yA, zA = A
-        if zA != 0:
-            raise ValueError("Orthogonal d'un point non à l'infini")
-        return (-yA, xA, 0)
-    
-    def inf(self, a):
-        """Point à l'infini d'une droite"""
-        xa, ya, za = a
-        return (-ya, xa, 0)
-    
-    def milieu(self, A, B):
-        """Définition du milieu de deux points"""
-        xA, yA, zA = A
-        xB, yB, zB = B
-        return (xA*zB+xB*zA, yA*zB+yB*zA, 2*zA*zB)
-
-    def centreInscrit(self, A, B, C):
-        """Définition du centre du cercle inscrit de trois points"""
-        xA, yA, zA = A
-        xB, yB, zB = B
-        xC, yC, zC = C
-        a=sqrt((xB-xC)**2+(yB-yC)**2+(zB-zC)**2)
-        b=sqrt((xA-xC)**2+(yA-yC)**2+(zA-zC)**2)
-        c=sqrt((xB-xA)**2+(yB-yA)**2+(zB-zA)**2)
-        return ((a*xA+b*xB+c*xC)/(a+b+c),
-                (a*yA+b*yB+c*yC)/(a+b+c),
-                (a*zA+b*zB+c*zC)/(a+b+c))
-    
-class Droite(Creature):
-    """Classe Droite"""
-    classe = 'Droite'
-
-    def __init__(self, plan, nom="", method="", args=[], objet=None, color="grey",u=0, vis = 1, inv=False):
-        if nom in (0, 1):
-            nom = plan.nouveau_nom(nom)
-        super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=1,u=u, vis = vis)
-        if method == "coord" and objet is not None and type(objet) is not Droite:
-            self.objet = objet
-        if not inv:
-            plan.droites[self.nom] = self
-        
-    def __del__(self):
-        print("Salut")
-
-    def __hash__(self):
-        return id(self)
-
-    def __eq__(self, other):
-        """Définition de l'égalité de deux droites"""
-        if type(other) != type(self): return False
-        xa, ya, za = self.coords()
-        xb, yb, zb = other.coords()
-        return ya*zb-yb*za == za*xb-zb *xa == xa*yb-xb*ya == 0
-    
-    def coord(self, c,d=0, e=0):
-        """Définition d'une droite par ses coordonnées"""
-        if isinstance(c, tuple):
-            x, y, z = c
-            if x == y == z == 0:
-                raise ValueError("Droite (0,0,0) impossible")
-            return (x, y, z)
-        return (c,d,e)
-    
-    def inter(self, A, B):
-        """Définition d'une droite par deux points"""
-        xA, yA, zA = A
-        xB, yB, zB = B
-        return (yA*zB-yB*zA,
-                zA*xB-zB*xA,
-                xA*yB-xB*yA)
-    
-    def biss(self, a, b, numero = 1): #numéro vaut 1 ou -1
-        xa, ya, za = a
-        xb, yb, zb = b
-        return (
-                xa*sqrt(xb**2+yb**2)-numero*xb*sqrt(xa**2+ya**2),
-                ya*sqrt(xb**2+yb**2)-numero*yb*sqrt(xa**2+ya**2),
-                za*sqrt(xb**2+yb**2)-numero*zb*sqrt(xa**2+ya**2)
-            )
-    
-    def tangente(self, C, p):
-        """C -> CA
-        a -> complexe
-        b -> complexe
-        Construit la tangente à C en le point (a,b)
-        """
-        a, b = p[:2]
-        coords = C
-        polynomex = coords.change_variables()
-        polynomey = coords
-        coef1 = polynomex(b).derivee()(a)
-        coef2 = polynomey(a).derivee()(b)
-        coords_droite = (coef1, coef2, -coef1*a -coef2*b)
-        return coords_droite
-    
-    def dual(self, p):
-        return p.coord
-    
-    
-class CA(Creature):
-    """"Classe Courbe_alg"""
-    classe = 'Courbe'
-
-    def __init__(self, plan, nom="", method="", args=[], deg="",color="green",u=0, vis = 1):
-        if nom in (0, 1):
-            nom = plan.nouveau_nom(nom)
-        if method == "cercle":
-            deg = 2
-        elif method in transformation:
-            deg = args[0].deg 
-        elif deg == "":
-            deg = floor(sqrt(2*len(args)+9/4)-3/2)
-            args = args[:(deg**2+3*deg)//2]
+            permut = permutations(courbe.deg)
+            for i in range(len(permut)):
+                k = (-1)**permut[i][1]/(coord[1]**permut[i][1])
+                for j in range(permut[i][1]+1):
+                    poly[courbe.deg-permut[i][0]-j] += k* coord2[i]*coord[0]**j*coord[2]**(permut[i][1]-j) * binom(permut[i][1], j)
+        roots = poly.resoudre()
+        if coord[1]==0:
+            for r in roots:
+                rooot.append((k2, r))
         else:
-            args = args[:(deg**2+3*deg)//2]
-        super().__init__(plan, nom=nom, args = args, color=color, method=method, deg=deg, u=u, vis = vis)
-        plan.CAs[self.nom] = self
-        
+            for r in roots:
+                rooot.append((r, k2 +r*k3))
+    if numero <len(rooot):
+        coooords = (rooot[numero][0], rooot[numero][1],1)
+    return coooords
 
-    def __hash__(self):
-        return id(self)
+def ortho(A):
+    """Point orthogonal de A"""
+    xA, yA, zA = A
+    if zA != 0:
+        raise ValueError("Orthogonal d'un point non à l'infini")
+    return (-yA, xA, 0)
 
-    '''def inter(self, deg, *args):#INTERpolation
-        xrint('Début interpolation')
-        xrint(deg)
-        zzzz=time.time()
-        permut = permutations(deg)
-        detConi = []
-        xrint('args :', args)
-        for i in args:
-            a, b, c = i
-            detConibis = []
-            for j in permut:
-                detConibis.append(a**j[0]*b**j[1]*c**j[2])
-            xrint(type(detConibis[0]))
-            detConi.append(detConibis)
-        coords = []
-        a = 0
-        if deg <=7:
-            a = deg + 3
-        else:
-            a = 2*deg - 5
-        for i in range(len(detConi)):
-            for j in range(len(detConi[i])):
-                detConi[i][j] = detConi[i][j]/(10**a)
-        for i in range(len(permut)):
-            sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-            coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
-        nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
-        a = 0
-        i = 0
-        while a == 0 and i < len(coords):
-            if coords[i][0] != 0:
-                a = coords[i][0]
-            i+=1
-        if a != 0:
-            for j in range(len(coords)):
-                c, b = coords[j][1][0], coords[j][1][1]
-                nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-        print('nouv_coords :', nouv_coords)
-        poly = Polynome(nouv_coords)
-        print('poly :', poly)
-        xrint(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
-        return poly'''
+def inf(a):
+    """Point à l'infini d'une droite"""
+    xa, ya, za = a
+    return (-ya, xa, 0)
+
+def milieu(A, B):
+    """Définition du milieu de deux points"""
+    xA, yA, zA = A
+    xB, yB, zB = B
+    return (xA*zB+xB*zA, yA*zB+yB*zA, 2*zA*zB)
+
+def centreInscrit(A, B, C):
+    """Définition du centre du cercle inscrit de trois points"""
+    xA, yA, zA = A
+    xB, yB, zB = B
+    xC, yC, zC = C
+    a=sqrt((xB-xC)**2+(yB-yC)**2+(zB-zC)**2)
+    b=sqrt((xA-xC)**2+(yA-yC)**2+(zA-zC)**2)
+    c=sqrt((xB-xA)**2+(yB-yA)**2+(zB-zA)**2)
+    return ((a*xA+b*xB+c*xC)/(a+b+c),
+            (a*yA+b*yB+c*yC)/(a+b+c),
+            (a*zA+b*zB+c*zC)/(a+b+c))
     
-    def inter(self, deg, *args):#INTERpolation
-        print('Début interpolation')
-        print(deg)
-        zzzz=time.time()
-        permut = permutations(deg)
-        detConi = []
-        print('args :', args)
-        for i in args:
-            detConibis = []
-            for j in permut:
-                detConibis.append(i[0]**j[0]*i[1]**j[1]* i[2]**j[2])
-            print(type(detConibis[0]))
-            detConi.append(detConibis)
-        coords = []
-        a = 0
-        if deg <=7:
-            a = deg + 3
-        else:
-            a = 2*deg - 5
-        for i in range(len(detConi)):
-            for j in range(len(detConi[i])):
-                detConi[i][j] = detConi[i][j]/(10**a)
-        print('detConi :', detConi)
-        for i in range(len(permut)):
-            sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-            print('sous det', type(sousDet), sousDet)
-            coords.append((-1)**(i+1) * determinant(sousDet))
-            #print('determinant', type(determinant(sousDet)), type((-1)**(i+1) * determinant(sousDet)), determinant(sousDet), determinant(sousDet), determinant(sousDet))
-        nouv_coords = [0]*len(coords)
-        a = 0
-        i = 0
-        while a == 0 and i < len(coords):
-            if coords[i] != 0:
-                a = coords[i]
-            i+=1
-        print('nouv_coords :', nouv_coords)
-        if a != 0:
-            for j in range(len(coords)):
-                nouv_coords[j] = numpy.real((1/a)*coords[j])
-                print(f'si on lui passe {coords[j]}, de type {type(coords[j])}, numpy.real renvoie : {numpy.real((1/a)*coords[j])}')
-        print('nouv_coords :', nouv_coords)
-        print(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
-        return nouv_coords        
+def biss(a, b, numero = 1): #numéro vaut 1 ou -1
+    xa, ya, za = a
+    xb, yb, zb = b
+    return (
+            xa*sqrt(xb**2+yb**2)-numero*xb*sqrt(xa**2+ya**2),
+            ya*sqrt(xb**2+yb**2)-numero*yb*sqrt(xa**2+ya**2),
+            za*sqrt(xb**2+yb**2)-numero*zb*sqrt(xa**2+ya**2)
+        )
 
-    
-    def cercle(self, deg, *args):
-        ''' crée une conique tangente à d1 en U et à d2 en V passant par le point B
-        permet notamment de faire un cercle de centre c1 si confondu avec c2'''
-        permut = permutations(deg)
-        d1, d2 = args[0], args[1]
-        U, V = args[3], args[4]
-        B = args[2]
-        b, c = d1[1], d1[2]
-        d, e = d2[1], d2[2]
-        detConi =  [[U[0]**2, U[0]*U[1], U[1]**2,U[2]*U[0], U[1]*U[2],U[2]**2],
-                     [0, U[0]* c, 2*c*U[1], -U[0]*b, U[2]*c-U[1]*b, -2*b*U[2]],
-                     [V[0]**2, V[0]*V[1], V[1]**2,V[2]*V[0], V[1]*V[2],V[2]**2],
-                     [0, V[0]* e, 2*e*V[1], -V[0]*d, V[2]*e-V[1]*d, -2*d*V[2]],
-                     [B[0]**2, B[0]*B[1],B[1]**2, B[0]*B[2], B[1]*B[2], B[2]**2]]
-        #if tangente1[2] !=0 and tangente1[2] !=0:
-        #detConi =  [[U.coords()[0]**2, U.coords()[0]*U.coords()[1], U.coords()[1]**2,U.coords()[2]*U.coords()[0], U.coords()[1]*U.coords()[2],U.coords()[2]**2],
-        #             [2*U.coords()[0]*b,b*U.coords()[1]-a*U.coords()[0], -2*U.coords()[1]*a, U.coords()[2]*b, -U.coords()[2]*a, 0],
-        #             [V.coords()[0]**2, V.coords()[0]*V.coords()[1], V.coords()[1]**2,V.coords()[2]*V.coords()[0], V.coords()[1]*V.coords()[2],V.coords()[2]**2],
-        #             [2*V.coords()[0]*d,d*V.coords()[1]-c*V.coords()[0], -2*V.coords()[1]*c, V.coords()[2]*d, -V.coords()[2]*c, 0],
-        #             [E.coords()[0]**2, E.coords()[0]*E.coords()[1],E.coords()[1]**2, E.coords()[0]*E.coords()[2], E.coords()[1]*E.coords()[2], E.coords()[2]**2]]
-        coords = []
-        for i in range(len(permut)):
-            sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-            coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
-        nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
-        a = 0
-        i = 0
-        while a == 0 and i < len(coords):
-            if coords[i][0] != 0:
-                a = coords[i][0]
-            i+=1
-        if a != 0:
-            for j in range(len(coords)):
-                c, b = coords[j][1][0], coords[j][1][1]
-                nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-        print('nouv_coords :', nouv_coords)
-        poly = Polynome(nouv_coords)
-        print('poly :', poly)
-        return poly
+def tangente(C, p):
+    """C -> CA
+    a -> complexe
+    b -> complexe
+    Construit la tangente à C en le point (a,b)
+    """
+    if isinstance(C, tuple):
+        return C
+    a, b = p[:2]
+    polynomex = C.change_variables()
+    polynomey = C
+    coef1 = polynomex(b).derivee()(a)
+    coef2 = polynomey(a).derivee()(b)
+    coords_droite = (coef1, coef2, -coef1*a -coef2*b)
+    return coords_droite
+
+def interpol(deg, *args):#INTERpolation
+    xrint('Début interpolation')
+    xrint(deg)
+    zzzz=time.time()
+    permut = permutations(deg)
+    detConi = []
+    xrint('args :', args)
+    for i in args:
+        a, b, c = i
+        detConibis = []
+        for j in permut:
+            detConibis.append(a**j[0]*b**j[1]*c**j[2])
+        xrint(type(detConibis[0]))
+        detConi.append(detConibis)
+    coords = []
+    a = 0
+    if deg <=7:
+        a = deg + 3
+    else:
+        a = 2*deg - 5
+    for i in range(len(detConi)):
+        for j in range(len(detConi[i])):
+            detConi[i][j] = detConi[i][j]/(10**a)
+    for i in range(len(permut)):
+        sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+    nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
+    a = 0
+    i = 0
+    while a == 0 and i < len(coords):
+        if coords[i][0] != 0:
+            a = coords[i][0]
+        i+=1
+    if a != 0:
+        for j in range(len(coords)):
+            c, b = coords[j][1][0], coords[j][1][1]
+            nouv_coords[c][b] = numpy.real(coords[j][0] / a)
+    print('nouv_coords :', nouv_coords)
+    poly = Polynome(nouv_coords)
+    print('poly :', poly)
+    xrint(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
+    return poly
+
+def cercle(deg, *args):
+    ''' crée une conique tangente à d1 en U et à d2 en V passant par le point B
+    permet notamment de faire un cercle de centre c1 si confondu avec c2'''
+    permut = permutations(deg)
+    d1, d2 = args[0], args[1]
+    U, V = args[3], args[4]
+    B = args[2]
+    b, c = d1[1], d1[2]
+    d, e = d2[1], d2[2]
+    detConi =  [[U[0]**2, U[0]*U[1], U[1]**2,U[2]*U[0], U[1]*U[2],U[2]**2],
+                 [0, U[0]* c, 2*c*U[1], -U[0]*b, U[2]*c-U[1]*b, -2*b*U[2]],
+                 [V[0]**2, V[0]*V[1], V[1]**2,V[2]*V[0], V[1]*V[2],V[2]**2],
+                 [0, V[0]* e, 2*e*V[1], -V[0]*d, V[2]*e-V[1]*d, -2*d*V[2]],
+                 [B[0]**2, B[0]*B[1],B[1]**2, B[0]*B[2], B[1]*B[2], B[2]**2]]
+    #if tangente1[2] !=0 and tangente1[2] !=0:
+    #detConi =  [[U.coords()[0]**2, U.coords()[0]*U.coords()[1], U.coords()[1]**2,U.coords()[2]*U.coords()[0], U.coords()[1]*U.coords()[2],U.coords()[2]**2],
+    #             [2*U.coords()[0]*b,b*U.coords()[1]-a*U.coords()[0], -2*U.coords()[1]*a, U.coords()[2]*b, -U.coords()[2]*a, 0],
+    #             [V.coords()[0]**2, V.coords()[0]*V.coords()[1], V.coords()[1]**2,V.coords()[2]*V.coords()[0], V.coords()[1]*V.coords()[2],V.coords()[2]**2],
+    #             [2*V.coords()[0]*d,d*V.coords()[1]-c*V.coords()[0], -2*V.coords()[1]*c, V.coords()[2]*d, -V.coords()[2]*c, 0],
+    #             [E.coords()[0]**2, E.coords()[0]*E.coords()[1],E.coords()[1]**2, E.coords()[0]*E.coords()[2], E.coords()[1]*E.coords()[2], E.coords()[2]**2]]
+    coords = []
+    for i in range(len(permut)):
+        sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+    nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
+    a = 0
+    i = 0
+    while a == 0 and i < len(coords):
+        if coords[i][0] != 0:
+            a = coords[i][0]
+        i+=1
+    if a != 0:
+        for j in range(len(coords)):
+            c, b = coords[j][1][0], coords[j][1][1]
+            nouv_coords[c][b] = numpy.real(coords[j][0] / a)
+    print('nouv_coords :', nouv_coords)
+    poly = Polynome(nouv_coords)
+    print('poly :', poly)
+    return poly
+
+###################################
+###         Classe Plan         ###
+###################################
     
 class Plan:
 
