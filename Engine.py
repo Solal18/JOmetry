@@ -458,12 +458,11 @@ class Creature:
                 method_tr, args_tr = transformations.pop()
                 classe, method, args, (U, V) = transformation[method_tr](classe, method, args, (U, V), *args_tr)
             print(self, method, args)
+            self.classe_actuelle = classe
             args = [i[1] for i in args]
-            if method == 'cercle':
-                self.coord = cercle(self.deg, *args)
-            elif self.classe == 'Courbe':
-                self.coord = interpol(self.deg, *args)
-            elif self.classe == 'Droite' and method == 'inter':
+            if self.classe_actuelle == 'Courbe':
+                self.coord = globals()[method](self.deg, *args)
+            elif self.classe_actuelle == 'Droite' and method == 'inter':
                 print(self)
                 self.coord = inter(*args)
             else:
@@ -514,7 +513,7 @@ class Creature:
         coords = self.coords() if (calcul or self.coord is None) else self.coord
         
         print(f"on dessine l'objet {self}")
-        if self.classe == 'Courbe' and self.deg !=1:
+        if self.classe_actuelle == 'Courbe' and self.deg !=1:
             xrint("Calcul des points.")
             zzzz=time.time()
             self.plan.CAst[self.nom]=[]
@@ -554,7 +553,7 @@ class Creature:
                 if objet is not None: can.tag_lower(objet, 'limite2')
             print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
-        if self.classe == 'Droite' or (self.classe == 'Courbe' and self.deg==1):
+        if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg==1):
             print(coords)
             if self == self.plan.inf: return
             nor = norm(coords)
@@ -566,7 +565,7 @@ class Creature:
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
 
-        if self.classe == 'Point':
+        if self.classe_actuelle == 'Point':
             a = coords
             if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
                 a = (a[0]/a[2], a[1]/a[2],1)
