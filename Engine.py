@@ -847,6 +847,7 @@ def cercle(deg, *args):
 ###################################
 ###         Classe Plan         ###
 ###################################
+
     
 class Plan:
 
@@ -859,9 +860,9 @@ class Plan:
         self.droites = {}
         self.CAs={}
         self.CAst={}
-        self.U = Point(self, nom="U", method="coord", args=[(1,1j,0)])
-        self.V = Point(self, nom="V", method="coord", args=[(1,-1j,0)])
-        self.inf = Droite(self, nom="Inf", method="inter", args=[self.U, self.V])
+        self.U = Creature(self, 'Point', nom="U", method="coord", args=[(1,1j,0)])
+        self.V = Creature(self, 'Point', nom="V", method="coord", args=[(1,-1j,0)])
+        self.inf = Creature(self, 'Droite', nom="Inf", method="inter", args=[self.U, self.V])
         self.bold = 3 #largeur d'une droite
         self.boldP = 3 #rayon d'un point
         self.boldC = 1 #largeur points des coniques
@@ -877,18 +878,15 @@ class Plan:
         self.derniere_action = None
 
 
-    def nouveau_nom(self, u = 1, type="courbe"):
+    def nouveau_nom(self, u = 1, classe = 'Point'):
         lettre, chiffre = 0, 0
-        if type=='courbe':
-            nom_init="a"
-        else:
-            nom_init="A"
-        nom = nom_init
+        nom = 'A'
+        dep = {'Point':65, 'Droite':92, 'Courbe':65}[classe]
         while nom in self.noms:
             lettre += 1
             chiffre += lettre//26
             lettre = lettre%26
-            nom = ('' if u else '_') + chr(ord(nom_init) + lettre) + (str(chiffre) if chiffre else '')
+            nom = ('' if u else '_') + chr(dep + lettre) + (str(chiffre) if chiffre else '')
         return nom
 
     def contre_action(self, fonc, args):
@@ -978,89 +976,105 @@ class Plan:
         return {i[0].valeur.nom for i in point.arbre.descente(point.arbre)}
 
     def new_harmonique(self, nom, A,B,C, u = 1):
-        d = Point(self, nom = nom, method = 'harmonique', args = (A,B,C), u = u)
+        d = Creature(self, 'Point', nom = nom, method = 'harmonique', args = (A,B,C), u = u)
         return d
-
+    
     def new_rotation(self, nom, obj, p, angle, u = 1):
-        d = type(obj)(self, nom = nom, method = 'rotation', args = (obj, p, angle), u = u)
+        d = Creature(self, obj.classe, nom = nom, method = 'rotation', args = (obj, p, angle), u = u)
         return d
     
     def new_homothetie(self, nom, obj, p, rapport, u = 1):
-        d = type(obj)(self, nom = nom, method = 'homothetie', args = (obj, p, rapport), u = u)
+        d = Creature(self, obj.classe, nom = nom, method = 'homothetie', args = (obj, p, rapport), u = u)
         return d
 
     def new_translation(self, nom, obj, vecteur, u = 1):
-        d = type(obj)(self, nom = nom, method = 'translation', args = (obj, vecteur), u = u)
+        d = Creature(self, obj.classe, nom = nom, method = 'translation', args = (obj, vecteur), u = u)
         return d
-    
+
     def new_symetrie(self, nom, obj, droite, u = 1):
-        d = type(obj)(self, nom = nom, method = 'symetrie', args = (obj, droite), u = u)
+        d = Creature(self, obj.classe, nom = nom, method = 'symetrie', args = (obj, droite), u = u)
         return d
     
     def new_projective(self, nom, obj, liste1, liste2, u = 1):
-        d = type(obj)(self, nom = nom, method = 'projective', args =(obj, liste1, liste2), u = u)
+        d = Creature(self, obj.classe, nom = nom, method = 'projective', args =(obj, liste1, liste2), u = u)
         return d
 
-    def newPoint_coord(self, nom, coord, u=1):#crée un point libre avec les coordonnées suivantes
-        p = Point(self, nom=nom, method="coord", args=[coord], u=u)
+    def newPoint_coord(self, nom, coord, u = 1):#crée un point libre avec les coordonnées suivantes
+        p = Creature(self, 'Point', nom=nom, method="coord", args=[coord], u = u)
         return p
 
     def newPoint_objets(self, nom, methode, objet1, objet2, numero, u = 1):#crée l'intersection de deux objets qui n'est pas dans inters
-        p = Point(self, nom = nom, method = methode, args = [objet1, objet2, numero], u = u)
+        p = Creature(self, 'Point', nom = nom, method = methode, args = [objet1, objet2, numero], u = u)
         return p
 
     def newDroite(self, nom, args, method, u = 1):
-        d = Droite(self, nom=nom, method=method, args=args, u = u)
+        d = Creature(self, 'Droite', nom=nom, method=method, args=args, u = u)
         return d
 
     def newCA(self, nom, liste, u = 1):
-        a = CA(self, nom = nom, method = "inter", args = liste, u = u)
+        a = Creature(self, 'Courbe', nom = nom, method = 'interpol', deg = '', args = liste, u = u)
         return a
 
     def newCAtan(self, nom, d1, d2, point, point2, point3, u = 1):
-        a = CA(self, nom=nom, method='cercle', args=[d1, d2, point, point2, point3], u = u)
+        a = Creature(self, 'Courbe', nom = nom, method = 'cercle', args = [d1, d2, point, point2, point3], u = u)
         return a
 
     def newProjectionOrtho(self, nom, args, u = 1):
-        d = self.newPerp(self.nouveau_nom(0), args, u = 0)
-        p = Point(self, nom = nom, method = 'inter', args = (args[0], d), u = u)
+        d = self.newPerp(0, args, u = 0)
+        p = Creature(self, 'Point', nom = nom, method = 'inter', args = (args[0], d), u = u)
         return p
 
     def newCentreInscrit(self, nom, p1, p2, p3, u = 1):
-        p = Point(self, nom = nom, method = 'centreInscrit', args = (p1, p2, p3), u = u)
+        p = Creature(self, 'Point', nom = nom, method = 'centreInscrit', args = (p1, p2, p3), u = u)
         return p
 
     def newPerp(self, nom, args, u = 1):
-        p1 = Point(self, nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
-        p2 = Point(self, nom = self.nouveau_nom(0), method = 'ortho', args = (p1,), u = 0)
-        d = Droite(self, nom = nom, method = 'inter', args = (args[1], p2), u = u)
+        '''args -> Droite, Point; retourne la perpendiculaire'''
+        p1 = Creature(self, 'Point', 0, method = 'inf', args = (args[0],), u = 0)
+        p2 = Creature(self, 'Point', 0, method = 'ortho', args = (p1,), u = 0)
+        d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p2), u = u)
         return d
     
     def newMilieu(self, nom, args, u = 1):
-        return Point(self, nom = nom, method = 'milieu', args = (args[0], args[1]), u = u)
+        return Creature(self, 'Point', nom = nom, method = 'milieu', args = (args[0], args[1]), u = u)
     
     def newCentre(self, nom, args, u = 1):
-        d1 = Droite(self, nom = self.nouveau_nom(0), method = 'tangente', args = (args[0], self.U), u = 0)
-        d2 = Droite(self, nom = self.nouveau_nom(0), method = 'tangente', args = (args[0], self.V), u = 0)
-        return Point(self, nom = nom, method = 'inter', args = (d1, d2), u = u, complexe = False)
+        d1 = Creature(self, 'Droite', 0, method = 'tangente', args = (args[0], self.U), u = 0)
+        d2 = Creature(self, 'Droite', 0, method = 'tangente', args = (args[0], self.V), u = 0)
+        return Creature(self, 'Point', nom = nom, method = 'inter', args = (d1, d2), u = u, complexe = False)
 
     def newMedia(self, nom, args, u = 1):
-        d1 = Droite(self, nom = self.nouveau_nom(0), method = 'inter', args = (args[0], args[1]), u = 0)
-        p1 = Point(self, nom = self.nouveau_nom(0), method = 'inf', args = (d1,), u = 0)
-        p2 = Point(self, nom = self.nouveau_nom(0), method = 'ortho', args = (p1,), u = 0)
-        p3= Point(self, nom = self.nouveau_nom(0), method = 'milieu', args = (args[0], args[1]), u = 0)
-        d = Droite(self, nom = nom, method = 'inter', args = (p2, p3), u = u)
+        d1 = Creature(self, 'Droite', 0, method = 'inter', args = (args[0], args[1]), u = 0)
+        p1 = Creature(self, 'Point', 0, method = 'inf', args = (d1,), u = 0)
+        p2 = Creature(self, 'Point', 0, method = 'ortho', args = (p1,), u = 0)
+        p3= Creature(self, 'Point', 0, method = 'milieu', args = (args[0], args[1]), u = 0)
+        d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (p2, p3), u = u)
         return d
     
+    def newPsurCA(self, nom, args, u = 1):
+        c, (x, y) = args
+        normales_c = [self.newPerp(0, (self.newDroite(0, (c, p), 'tangente', u = 0), p), u = 0) for p in c.args]
+        c_dual = self.newCA(0, normales_c, u = 1)
+        #tangentes_c = [self.newDroite(0, (c, p), 'tangente', u = 0) for p in c.args]
+        #c_dual = self.newCA(0, tangentes_c, u = 0)
+        c_dual.coords()
+        p = self.newPoint_coord(0, (x, y, 1), u = 1)
+        p1 = self.newPoint_coord(0, (1, 1, 1), u = 0)
+        p2 = self.newPoint_coord(0, (1000, 1000, 1), u = 0)
+        d1, d2 = self.newDroite(0, (p1, p), 'inter', u = 0), self.newDroite(0, (p2, p), 'inter', u = 0)
+        d = self.newDroite(0, (d1, d2), 'inter', u = 0)
+        for i in range(c_dual.deg):
+            p = self.newDroite(1, (d, c_dual, i), 'inter2')
+        #p = self.points[input()]
+        #perp = self.newPerp(0, (self.newDroite(0, (c, p), 'tangente', u = 0), p), u = 0)
+        #a, b, c = perp.coords()
+        #print('la faux dual ?', coo(a/c)(b/c))
+        
+    
     def newPara(self, nom, args, u = 1):
-        p1 = Point(self, nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
-        d = Droite(self, nom = nom, method = 'inter', args = (args[1], p1), u = u)
+        p1 = Creature(self, 'Point', nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
+        d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p1), u = u)
         return d
-
-    def newCercleInscrit(self, nom, point1, point2, point3):
-        p1, p2, p3 = self.objets[point1], self.objets[point2], self.objets[point3]
-        a = CA(nom=nom, method="cercle", args=[Point(self, nom=nom, method="centreInscrit", args=[p1, p2, p3]), Point(self, nom=nom, method="inter", args=[Droite(nom=nom, method="inter", args=[p1, p3]), Droite(nom=nom, method="perp", args=[Droite(nom=nom, method="inter", args=[p2, p3]), Point(self, nom=nom, method="centreInscrit", args=[p1, p2, p3])])]), self.objets["U"], self.objets["V"]], deg=2, u = 1)
-        return a
 
     def eq(self, a, b):
         return self.objets[a]==self.objets[b]
@@ -1095,3 +1109,4 @@ class Plan:
             self.objets[nom2] = self.objets.pop(nom)
             canv.itemconfig(self.points[nom2].tkinter[1], text=self.points[nom2].nom)
         self.modifs = (True, True)
+                      
