@@ -125,13 +125,6 @@ def petit(arr):
 
 permut2=[[2, 0, 0], [0, 2, 0], [0, 0, 2], [1, 1, 0], [0, 1, 1], [1, 0, 1]]
 
-def resoudre(polynome):
-    roots=[]
-    for i in numpy.roots(polynome):
-        if numpy.imag(i)==0:
-            roots.append(numpy.real(i))
-    return roots
-
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
     return (coord[0]/coord[2], coord[1]/coord[2])
 
@@ -271,7 +264,7 @@ class Polynome:
             
     def derivee(self):
         return Polynome([e*self[e] for e in range(1, self.deg() + 1)])
-    
+    '''
     def resoudre(self):
         if self.deg() == 1:
             return [-self[0]/self[1]], []
@@ -313,8 +306,15 @@ class Polynome:
                             else:
                                 x, inf = (x + sup)/2, x
             solutions.append(x)
-        return solutions, maximas
-    
+        return solutions, maximas'''
+
+    def resoudre(self):
+        roots=[]
+        for i in numpy.roots(self.coefficients()[::-1]):
+            if numpy.imag(i)==0:
+                roots.append(numpy.real(i))
+        return roots
+
     def expr_rationals(self, variables, join = 1):
         liste = []
         for e in range(self.deg() + 1):
