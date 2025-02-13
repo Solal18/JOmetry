@@ -99,7 +99,6 @@ class Main:
         fenetre.bind('<Return>', self.entree_commande)
         fenetre.bind('<Button-1>', self.detruire_menu)
         fenetre.bind('<Button-3>', self.detruire_menu)
-        fenetre.bind('<ButtonRelease>', self.bouger_point)
         fenetre.columnconfigure(0, weight = 2)
         fenetre.columnconfigure(0, weight = 1)
         fenetre.rowconfigure(1, weight = 1)
@@ -145,6 +144,7 @@ class Main:
         for touche, mouvement in fleches:
             fenetre.bind(touche, lambda ev, mouv = mouvement: self.decaler(mouv))
         self.canvas.bind("<Motion>", self.afficher_coord_souris)
+        self.canvas.bind('<ButtonRelease>', self.bouger_point)
 
     def creer_actions(self):
         self.actions = {'point' : (self.point, 1, ('non',)),
@@ -305,7 +305,11 @@ class Main:
             self.editeur_objets = Fenetres.EditeurObjets(fenetre, self, 0)
         
     def bouger_point(self, ev):
-        pass
+        if self.point_move is None: return
+        x, y = self.coord_canvas(ev.x, ev.y)
+        self.plans[0].action_utilisateur('bouger_point')
+        self.plans[0].move(self.point_move, (x, y, 1))
+            
         
     def nouv_plan(self):
         i = 1
@@ -642,6 +646,7 @@ class Main:
         for objet in self.liste_derniers_clics:
             if isinstance(objet, Geo.Creature):
                 self.canvas.itemconfigure(objet.tkinter[0], fill = objet.color)
+        self.point_move = None
                 
     def decaler(self, mouvement):
         self.plans[0].action_utilisateur('decaler')
