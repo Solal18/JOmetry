@@ -322,7 +322,7 @@ class Polynome:
         for i in numpy.roots(self.coefficients()[::-1]):
             if numpy.imag(i)==0:
                 roots.append(numpy.real(i))
-        return roots
+        return (roots, [])
 
     def expr_rationals(self, variables, join = 1):
         liste = []
@@ -1040,7 +1040,7 @@ class Plan:
         return d
     
     def newPsurCA(self, nom, args, u = 1):
-        defocaliser = self.plan.main.coord_canvas
+        defocaliser = self.main.coord_canvas
         c, (x, y) = args
         (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
         Liste = []
