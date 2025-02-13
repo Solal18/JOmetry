@@ -1040,22 +1040,23 @@ class Plan:
         return d
     
     def newPsurCA(self, nom, args, u = 1):
+        print("salut")
         defocaliser = self.main.coord_canvas
         c, (x, y) = args
-        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
         Liste = []
-        polynomey = c
-        n = round((-3+sqrt(9+8*len(c)))/2)
-        i = x1
-        while len(Liste) < 2*n**2+3*n and i<x2:
+        polynomey = c.coord
+        n = c.deg
+        i = x-20
+        while len(Liste) < 2*n**2+3*n and i<x+20:
             polynome2y = polynomey(i)
-            Liste += [(i,y) for y in polynome2y.resoudre() if y1 -50 <= y <= y2+50]
+            Liste += [(i,k) for k in polynome2y.resoudre() if y -1000 <= y <= y+1000]
             i += 1
-        Liste2 = [self.newPoint_coord(0, self.newPerp(0, [self.newDroite(0, (c, i), "tangente", u=0), (c,i)], "perp", u=0).coords(), u=0) for i in Liste]
-        CA2 = self.newCa(0, Liste2, u=0)
+        Liste2 = [self.newPoint_coord(0, self.newPerp(0, [self.newDroite(0, (c, i, 1), "tangente", u=0), (c,i)], u=0).coord, u=0) for i in Liste]
+        CA2 = self.newCA(0, Liste2, u=0)
         A=[]
         for i in inter2(CA2, self.newDroite(0, (x,y,1), "coord", u=0), -1):
             A += inter2(c, self.newDroite(0, i, "coord", u=0), -1)
+        print(min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2))
         return self.newPoint_coord(nom, min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2), u=1)
         
     
