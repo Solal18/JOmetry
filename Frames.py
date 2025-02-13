@@ -11,16 +11,21 @@ class AideFenetre:
         self.fen = tk.Toplevel(fenetre)
         self.fen.title('Aide')
 
-        self.entree = tk.Entry(self.fen, width=50)
-        self.entree.pack(pady=10)
+        self.entree = tk.Entry(self.fen, width=30)
+        self.entree.grid(row = 0, column = 0)
         self.entree.bind('<KeyRelease>', self.mettre_a_jour_resultats)
 
-        self.texte = tk.Text(self.fen, width=50, height=10)
-        self.texte.pack(pady=10)
-        self.texte.bind('<Button-1>', self.on_result_click)
+        self.possibles = tk.StringVar()
+        self.liste = tk.Listbox(self.fen, listvariable = self.possibles, width = 30)
+        self.liste.grid(row = 1, column = 0)
+        self.liste.bind('<<ListboxSelect>>', self.clic_liste)
+
+        self.texte = tk.Text(self.fen, width=50, height=10, padx = 5)
+        self.texte.grid(row = 0, column = 1, rowspan = 2)
+        self.texte.config(state = 'disabled')
         
-        self.pos = 0
         self.doc = doc
+        self.resultats = None
 
     
     def recherche(self, texte):
@@ -31,24 +36,33 @@ class AideFenetre:
         return resultats
 
     def texte_aide(self, texte):
-        return self.doc[[i[1] for i in self.doc].index(texte)][2]
+        texte, liens = self.doc[[i[1] for i in self.doc].index(texte)][2], {}
+        while '[' in texte:
+            idx1, idx2, idx3 = texte.index('['), texte.index('|'), texte.index(']')
+            liens[(idx1, idx2 - 1)] = texte[idx2 + 1:idx3]
+            texte = texte[:idx1]+texte[idx1+1:idx2]+texte[idx3+1:]
+        return texte, liens
 
     def mettre_a_jour_resultats(self, event):
-        self.pos = 0
-        self.texte.delete('1.0', 'end')
         texte_recherche = self.entree.get()
-        resultats = self.recherche(texte_recherche)
-        for resultat in resultats:
-            self.texte.insert('end', resultat + "\n")
+        self.resultats = self.recherche(texte_recherche)
+        self.possibles.set(' '.join([x.replace(' ', '\ ') for x in self.resultats]))
 
-    def on_result_click(self, event):
-        if self.pos == 1: return
-        self.pos = 1
-        index = self.texte.index(f'@{event.x},{event.y}')
-        ligne = self.texte.get(f'{index} linestart', f'{index} lineend')
-        nouveau_texte = self.texte_aide(ligne)
+    def clic_liste(self, event = None, texte = ''):
+        if self.resultats is None: return
+        if texte == '': texte = self.resultats[self.liste.curselection()[0]]
+        nouveau_texte, liens = self.texte_aide(texte)
+        self.texte.config(state = 'normal')
         self.texte.delete('1.0', 'end')
         self.texte.insert('end', nouveau_texte)
+        self.texte.config(state = 'disabled')
+        for (id1, id2), mot in liens.items():
+            i1, i2 = f'1.0+{id1}c', f'1.0+{id2}c'
+            self.texte.tag_add(mot, i1, i2)
+            self.texte.tag_config(mot, foreground = 'blue', underline = True)
+            self.texte.tag_bind(mot, '<Button-1>', lambda ev, mot = mot: self.clic_liste(texte = mot))
+    
+ 
 
 class EditeurObjets:
     
@@ -79,8 +93,8 @@ class EditeurObjets:
             self.tableau.column(i, width=40)
             self.tableau.heading(i, text = t)
         self.nom_methodes = {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
-                        'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice',
-                        'cercle' : 'conique tangente à deux droites'}
+                        'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
+                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation'}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
         self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
         self.couleur = tk.Frame(self.frame)
