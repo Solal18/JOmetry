@@ -1,8 +1,9 @@
 import numpy
 from math import floor, sqrt, exp, cos, sin, pi
 import time
-from sympy import groebner, Rational, Poly
-from sympy.abc import x, y
+from sympy import Rational
+from groebner import grob
+from time import perf_counter_ns as perf
 
 def xrint(*args):
     #print(*args)
