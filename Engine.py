@@ -186,6 +186,12 @@ class Polynome:
     
     def __init__(self, mat):
         self.coefs = []
+        if isinstance(mat, dict):
+            h, l = max(mat)[0], max(mat, key = lambda x: x[1])[1]
+            mat2 = nouv_coords = [[0]*(l + 1) for i in range(h + 1)]
+            for a, b in mat.items():
+                mat2[a[0]][a[1]] = b[0]/b[1]
+            mat = mat2
         while mat != [] and mat[-1] == 0: mat.pop()
         for coef in mat:
             if hasattr(coef, '__getitem__'):
@@ -251,7 +257,7 @@ class Polynome:
         for e in range(self.deg() + 1):
             if not isinstance(self[e], Polynome):
                 self[e] = Polynome((self[e],))
-        return Polynome([Polynome([coef[e] for coef in self]) for e in range(max(poly.deg() for poly in self))])
+        return Polynome([Polynome([coef[e] for coef in self]) for e in range(max(poly.deg() for poly in self) + 1)])
             
     def derivee(self):
         return Polynome([e*self[e] for e in range(1, self.deg() + 1)])
@@ -281,10 +287,16 @@ class Polynome:
             x = deb
             for i in range(100):
                 x = x - (self(x) / derivee(x))
-                if not inter[0] < x < inter[1]:
-                    print('erreur de Newton')
+                if not inter[0] <= x <= inter[1]:
                     x = deb
-                    break
+                    inf, sup = inter[0], inter[1]
+                    if inf != -float('inf') and sup != float('inf'):
+                        for i in range(100):
+                            if self(x)*self(inf) <= 0:
+                                x = (x + inf)/2
+                                sup = x
+                            else:
+                                x, inf = (x + sup)/2, x
             solutions.append(x)
         return solutions, maximas
     
@@ -297,6 +309,15 @@ class Polynome:
             else:
                 liste.append((f'{variables[0]}**{e}*' if e != 0 else '') + str(Rational(self[e])))
         return '+'.join(liste) if join else liste
+    
+    def expr_dict_monomes(self):
+        l = {}
+        for i, poly in enumerate(self):
+            for j, coef in enumerate(poly):
+                r = Rational(coef)
+                l[(i, j)] = (r.p, r.q)
+        return l
+            
     
     __radd__ = __add__
     __rmul__ = __mul__ 
