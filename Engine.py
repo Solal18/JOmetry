@@ -285,7 +285,9 @@ class Polynome:
                 intervalles.append((maximas[i], maximas[i+1]))
         solutions = []
         for inter in intervalles:
-            if inter[0] == -float('inf'):
+            if inter[0] == -float('inf') and inter[1] == float('inf'):
+                deb = 0
+            elif inter[0] == -float('inf'):
                 deb = inter[1] - 1
             elif inter[1] == float('inf'):
                 deb = inter[0] + 1
