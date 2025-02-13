@@ -297,8 +297,11 @@ class Polynome:
                         break
                 deb = m
             x = deb
-            for i in range(100):
-                x = x - (self(x) / derivee(x))
+            while True:
+                d = self(x) / derivee(x)
+                if d < 1e-14:
+                    break
+                x -= d
                 if not inter[0] <= x <= inter[1]:
                     x = deb
                     inf, sup = inter[0], inter[1]
