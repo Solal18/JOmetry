@@ -4,15 +4,12 @@
 import tkinter as tk
 from tkinter import filedialog as fd, colorchooser, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
-from PIL import Image, ImageDraw, ImageTk
-
 import Engine_w as Geo
-
+from PIL import Image, ImageDraw, ImageTk
 from math import sqrt, floor
 from time import time
 import os.path as op
 import Frames as Fenetres
-from random import random, randint
 
 fenetre = tk.Tk()
 ttk.Style().theme_use('clam')
@@ -41,7 +38,7 @@ def txt(x):
 #à executer avant toute modification :
 #txt({Philemon : 34})
 
-def val(x):#INVERSE DE TXT
+def val(x):
     if ' ' in x: return x
     if (x[0] == '[' and x[-1] == ']') or (x[0] == '(' and x[-1] == ')'):
         l, t, ec, n = [], x[1:-1], '', 0
@@ -76,12 +73,11 @@ class Main:
     def __init__(self):
         self.editeur_objets = None
         self.liste_derniers_clics = []
-
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
-                     ['point', 'intersection', 'milieu', 'harmonique', 'centre'],
+                     ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent'],
-                     ['courbe', 'caa'], ['soumettre'],
+                     ['courbe'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'projective', 'polyregul'],
                      ['editeur_objets'],
@@ -90,7 +86,6 @@ class Main:
         self.creer_canvas()
         self.plans = [Geo.Plan(self)]
         Geo.plan_default = self.plans[0]
-
         self.nom_boutons = [l[0] for l in self.menu]
         self.creer_actions()
         self.creer_boutons()
@@ -153,6 +148,7 @@ class Main:
 
     def creer_actions(self):
         self.actions = {'point' : (self.point, 1, ('non',)),
+                        'surcourbe' : (self.surcourbe, 1, ('courbe', 'non')),
                         'cercle_circ' : (self.cercle, 1, ('point', 'point', 'point')),
                         'courbe' : (self.courbe, 1, ('point',)*90),
                         'droite' : (self.droite, 1, ('point', 'point')),
@@ -183,7 +179,6 @@ class Main:
                         'ctrlz' : (self.act_ctrlz, 0),
                         'ctrly' : (self.act_ctrly, 0),
                         'rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
-                        'caa' : (self.caa, 0),
                         'homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
                         'translation' : (self.translation, 1, ('objet', 'point', 'point')), 
                         'symetrie' : (self.symetrie, 1, ('objet', 'droite')),
@@ -203,7 +198,7 @@ class Main:
         pprint(plan.objets)
         for objet in plan.objets.values():
             pprint(objet)
-            liste[1].append((objet.__class__.classe, objet.nom, objet.method,
+            liste[1].append((objet.classe, objet.nom, objet.method,
                                     objet.args,
                                     objet.deg, objet.color, objet.vis, objet.u))
         return liste
@@ -294,11 +289,10 @@ class Main:
             if ajout:
                 objets.append(l.pop(i%len(l)))
                 nom_objets.add(objets[-1][0])
-        classes = {'Point' : Geo.Point, 'Courbe' : Geo.CA, 'Droite' : Geo.Droite}
         args = {}
         for o in objets:
             arguments = [args[arg] if type(arg) != list and arg in args else arg for arg in o[3]]
-            nouv = classes[o[1]](self.plans[0], nom = o[0], method = o[2], args = arguments, color = o[5], vis = o[6], u = o[7])
+            nouv = Geo.Creature(self.plans[0], o[1], nom = o[0], method = o[2], args = arguments, color = o[5], vis = o[6], u = o[7])
             args[o[0]] = nouv
             nouv.dessin()
         fenetre.title(f'JOmetry - {self.plans[0].nom}')
@@ -405,14 +399,15 @@ class Main:
         c1, c2 = self.liste_derniers_clics
         tangentes_c1 = [self.plans[0].newDroite(0, (c1, p), 'tangente', u = 0) for p in c1.args]
         tangentes_c2 = [self.plans[0].newDroite(0, (c2, p), 'tangente', u = 0) for p in c2.args]
-        c1_dual = courbe = self.plans[0].newCA(0, tangentes_c1, u = 0)
-        c2_dual = courbe = self.plans[0].newCA(0, tangentes_c2, u = 0)
+        c1_dual = self.plans[0].newCA(0, tangentes_c1, u = 0)
+        c2_dual = self.plans[0].newCA(0, tangentes_c2, u = 0)
         c1_dual.coords()
         c2_dual.coords()
         for i in range(c1_dual.deg * c2_dual.deg):
-            p = self.plans[0].newPoint_objets(0, 'inter2', c1_dual, c2_dual, i, u = 0)
-            p.coords()
-            d = self.plans[0].newDroite(1, (p,), 'dual')
+            p = self.plans[0].newDroite(1, (c1_dual, c2_dual, i), 'inter2')
+            
+    def surcourbe(self):
+        p = self.plans[0].newPsurCA(1, self.liste_derniers_clics)
 
     def harmonique(self):
         A,B,C = self.liste_derniers_clics
@@ -479,14 +474,6 @@ class Main:
     
     def perp(self):
         self.plans[0].newPerp(1, self.liste_derniers_clics)
-
-    def caa(self):
-        CA = [self.plans[0].newPoint_coord(1, (self.canvas.winfo_width()/4+random()*self.canvas.winfo_width()*3/4, self.canvas.winfo_height()/4+random()*3/4*self.canvas.winfo_height(),1), u=0) for _ in range([5, 9, 14, 20, 32][randint(0,4)])]
-        if randint(0,3)==2:
-            CA = [self.plans[0].U]+CA
-        if randint(0,3)==2:
-            CA = [self.plans[0].V]+CA
-        self.plans[0].newCA(1, CA).dessin()
 
     def media(self):
         self.plans[0].newMedia(1, self.liste_derniers_clics)
@@ -560,9 +547,9 @@ class Main:
         
     def intersection(self):
         courbe_1, courbe_2 = self.liste_derniers_clics
-        if isinstance(courbe_1, Geo.Droite) and isinstance(courbe_2, Geo.Droite):
+        if courbe_1.classe == 'Droite' and courbe_2.classe == 'Droite':
             pprint('intersection de droites')
-            p = Geo.Point(self.plans[0], nom = 1, method = 'inter',
+            p = Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'inter',
                       args = [courbe_1, courbe_2], u = 1)
             p.dessin()
             return
@@ -585,6 +572,7 @@ class Main:
         commande = self.entree_texte.get()
         self.entree_texte.set('')
         print(f"Vous avez essayé d'executer la commande suivante :\n{commande}\nMalheureusement, votre incompetence en informatique vous a empeché d'arriver à vos fins.")
+        exec(commande)
     
     def configure_fenetre(self, evenement):
         if evenement.widget is not fenetre: return
@@ -593,10 +581,9 @@ class Main:
         self.dessin_canvas()
 
     def canvas_clic(self, evenement):
-        x, y = self.coord_canvas(evenement.x, evenement.y)
         if self.attendus is None:
             return
-        pprint(self.plans[0].points)
+        x, y = self.coord_canvas(evenement.x, evenement.y)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
             self.liste_derniers_clics.append((x, y))
@@ -609,7 +596,6 @@ class Main:
                 p_x, p_y = norm((p_x, p_y, p_z))
                 distances.append((dist((x, y), (p_x, p_y)), i, p))
             distances.sort()
-            if len(distances): pprint(distances[0], str(distances[0][2]))
             if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
                 #clic éloigné d'un point
                 self.plans[0].action_utilisateur(None)
@@ -688,6 +674,9 @@ class Main:
     
 def ouvrir_erreur():
     tk_mb.showerror('Erreur', 'Impossible de lire ce fichier.')
+        
+
+
 
 if __name__ == '__main__':
     main = Main()
