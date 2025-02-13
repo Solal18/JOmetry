@@ -1054,7 +1054,7 @@ class Plan:
             polynome2y = polynomey(i)
             Liste += [(i, y) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
             i += 1
-        Liste2 = [self.newPerp(0, [self.newDroite(0, (c, i), "tangente", u = 0), (c,i)], "perp", u = 0) for i in Liste]
+        Liste2 = [self.newPerp(0, [self.newDroite(0, (c, i,1), "tangente", u = 0), (c,i)], u = 0) for i in Liste]
         CA2 = self.newCA(0, Liste2, u = 0)
         A = []
         for i in inter2(CA2, self.newDroite(0, (x, y, 1), "coord", u = 0), -1):
