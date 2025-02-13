@@ -1040,23 +1040,23 @@ class Plan:
         return d
     
     def newPsurCA(self, nom, args, u = 1):
+        defocaliser = self.plan.main.coord_canvas
         c, (x, y) = args
-        normales_c = [self.newPerp(0, (self.newDroite(0, (c, p), 'tangente', u = 0), p), u = 0) for p in c.args]
-        c_dual = self.newCA(0, normales_c, u = 1)
-        #tangentes_c = [self.newDroite(0, (c, p), 'tangente', u = 0) for p in c.args]
-        #c_dual = self.newCA(0, tangentes_c, u = 0)
-        c_dual.coords()
-        p = self.newPoint_coord(0, (x, y, 1), u = 1)
-        p1 = self.newPoint_coord(0, (1, 1, 1), u = 0)
-        p2 = self.newPoint_coord(0, (1000, 1000, 1), u = 0)
-        d1, d2 = self.newDroite(0, (p1, p), 'inter', u = 0), self.newDroite(0, (p2, p), 'inter', u = 0)
-        d = self.newDroite(0, (d1, d2), 'inter', u = 0)
-        for i in range(c_dual.deg):
-            p = self.newDroite(1, (d, c_dual, i), 'inter2')
-        #p = self.points[input()]
-        #perp = self.newPerp(0, (self.newDroite(0, (c, p), 'tangente', u = 0), p), u = 0)
-        #a, b, c = perp.coords()
-        #print('la faux dual ?', coo(a/c)(b/c))
+        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+        Liste = []
+        polynomey = c
+        n = c.deg
+        i = x1
+        while len(Liste) < 2*n**2+3*n and i<x2:
+            polynome2y = polynomey(i)
+            Liste += [(i,y) for y in polynome2y.resoudre() if y1 -50 <= y <= y2+50]
+            i += 1
+        Liste2 = [self.newPoint_coord(0, self.newPerp(0, [self.newDroite(0, (c, i), "tangente", u=0), (c,i)], "perp", u=0).coords(), u=0) for i in Liste]
+        CA2 = self.newCa(0, Liste2, u=0)
+        A=[]
+        for i in inter2(CA2, self.newDroite(0, (x,y,1), "coord", u=0), -1):
+            A += inter2(c, self.newDroite(0, i, "coord", u=0), -1)
+        return min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2)
         
     
     def newPara(self, nom, args, u = 1):
