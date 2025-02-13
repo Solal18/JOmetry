@@ -1045,7 +1045,7 @@ class Plan:
         (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
         Liste = []
         polynomey = c
-        n = c.deg
+        n = round((-3+sqrt(9+8*len(c)))/2)
         i = x1
         while len(Liste) < 2*n**2+3*n and i<x2:
             polynome2y = polynomey(i)
