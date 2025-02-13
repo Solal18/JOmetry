@@ -8,4 +8,4 @@ au revoir
 
 actions|geometrie
 commandes geometriques
-ca vous va la démo ?
+Avec le [bouton droite|boutons], vous pouvez faire une droite.
