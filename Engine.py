@@ -1052,7 +1052,7 @@ class Plan:
         i = x1 - 10
         while len(Liste) < 2*n**2+3*n and i < x2 + 10:
             polynome2y = polynomey(i)
-            Liste += [(i, y) for y in polynome2y.resoudre() if y1 - 50 <= y <= y2 + 50]
+            Liste += [(i, y) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
             i += 1
         Liste2 = [self.newPerp(0, [self.newDroite(0, (c, i), "tangente", u = 0), (c,i)], "perp", u = 0) for i in Liste]
         CA2 = self.newCA(0, Liste2, u = 0)
