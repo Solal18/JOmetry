@@ -1056,7 +1056,7 @@ class Plan:
         A=[]
         for i in inter2(CA2, self.newDroite(0, (x,y,1), "coord", u=0), -1):
             A += inter2(c, self.newDroite(0, i, "coord", u=0), -1)
-        return min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2)
+        return self.newPoint_coord(nom, min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2), u=1)
         
     
     def newPara(self, nom, args, u = 1):
