@@ -322,32 +322,56 @@ class Arbre:
     def supprimer(self):
         for i in self.parents:
             i.arbre.descendants.remove(self.valeur)
+
+
+################################################################################
+###                        classe Créature                                   ###
+################################################################################   
+
     
 class Creature:
 
-    def __init__(self, plan, nom = '', method = '', args = [], deg = '', color = 'green', vis = 1, u = 0, complexe=True):
+    def __init__(self, plan, classe, nom = '', method = '', args = [], deg = 1, color = 'green', vis = 1, u = 0, complexe = True):
         self.plan = plan
+        if nom in (0, 1):
+            nom = plan.nouveau_nom(nom, classe)
+        if classe == 'Courbe':
+            if method == 'cercle':
+                deg = 2
+            elif method in transformation:
+                deg = args[0].deg 
+            elif deg == '':
+                deg = floor(sqrt(2*len(args)+9/4)-3/2)
+                args = args[:(deg**2+3*deg)//2]
+            else:
+                args = args[:(deg**2+3*deg)//2]
         self.nom = nom
         self.coord = None
         self.method = method
+        self.classe = classe
+        self.classe_actuelle = None
         self.args = args
         self.deg = deg
         self.color = color
-        self.complexe = complexe
         self.vis = vis
         self.u = u
+        self.complexe = complexe
         self.tkinter = [None, None] #[cercle, texte] pour les points
         plan.objets[nom] = self
         plan.noms.append(nom)
         plan.modifs = (True, True)
-        if self.nom != "":
+        listes = {'Point' : plan.points, 'Droite' : plan.droites, 'Courbe' : plan.CAs}
+        if classe in listes:
+            listes[classe][nom] = (self)
+        if self.nom != '':
             self.arbre = Arbre(args, self)
         if plan.main.editeur_objets:
             plan.main.editeur_objets.ajouter(self)
         if nom not in ('U', 'V', 'Inf'):
             plan.contre_action(self.supprimer, (self.plan.main.canvas,))
         self.dessin()
-        xrint(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args} et couleur {color}')
+        print(self.coord)
+        print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args} et couleur {color}')
         
 
     def __str__(self):
@@ -360,12 +384,7 @@ class Creature:
         '''fonction recursive pour supprimer des elements
         un peu bizarre pour selectionner un element d'un ensemble,
         mais le plus rapide, j'ai vérifié'''
-        if self.classe == 'Point':
-            self.plan.contre_action(Point, (self.plan, self.nom, self.method, self.args, None, self.color, self.u, self.vis))
-        if self.classe == 'Droite':
-            self.plan.contre_action(Droite, (self.plan, self.nom, self.method, self.args, None, self.color, self.u, self.vis))
-        if self.classe == 'Courbe':
-            self.plan.contre_action(CA, (self.plan, self.nom, self.method, self.args, '', self.color, self.u, self.vis))
+        self.plan.contre_action(Creature, (self.plan, self.classe, self.nom, self.method, self.args, self.deg, self.color, self.u, self.vis))
         if self.plan.main.editeur_objets:
             self.plan.main.editeur_objets.supprimer_element(self)
         while self.arbre.descendants:
@@ -383,39 +402,45 @@ class Creature:
         self.plan.noms.remove(self.nom)
         del self
                 
+    def __eq__(self, other):
+        """Définition de l'égalité de deux points ou droites"""
+        if type(other) != type(self): return False
+        xa, ya, za = self.coords()
+        xb, yb, zb = other.coords()
+        return ya*zb-yb*za == za*xb-zb *xa == xa*yb-xb*ya == 0
 
     def coords(self, calcul = 0):
-        if self.coord is None and not calcul:
+        if self.coord is None or calcul:
             method = self.method
             objet = self
             transformations = []
-            while method in transformation and not isinstance(objet, Point):
+            print(self, method, self.args)
+            while method in transformation and not objet.classe == 'Point':
                 parent = objet.args[0]
                 transformations.append((method, objet.args[1:]))
                 method = parent.method
                 objet = parent
-            args = [(i.coords(), 1) if isinstance(i, Creature) else (i, 0) for i in objet.args]
+            args = [(i.classe, i.coords()) if isinstance(i, Creature) else (0, i) for i in objet.args]
+            print(self, method, args, transformations)
+            classe = self.classe
             while transformations:
                 method_tr, args_tr = transformations.pop()
-                args = [(transformation[method_tr](i[0], *args_tr), 1) if i[1] else i for i in args]
-            args = [i[0] for i in args]
+                classe, method, args, (U, V) = transformation[method_tr](classe, method, args, (U, V), *args_tr)
+            print(self, method, args)
+            args = [i[1] for i in args]
             if method == 'cercle':
-                self.coord = self.cercle(self.deg, *args)
-            elif isinstance(self, CA):
-                self.coord = self.inter(self.deg, *args)
-            elif isinstance(self, Droite) and method == 'inter':
-                self.coord = self.inter(*args)
+                self.coord = cercle(self.deg, *args)
+            elif self.classe == 'Courbe':
+                self.coord = interpol(self.deg, *args)
+            elif self.classe == 'Droite' and method == 'inter':
+                print(self)
+                self.coord = inter(*args)
             else:
-                print(f'{self} : {self.nom} : {method} : {args}')
-                print(f'{type(self)}')
-                self.coord = getattr(self.__class__, method)(self, *args)
+                self.coord = globals()[method](*args)
         return self.coord
 
     def set_coords(self):
-        if isinstance(self, CA):
-            self.coord = getattr(CA, self.method)(self.deg, *self.args)
-        else:
-            self.coord = getattr(self.__class__, self.method)(self, *self.args)
+        self.coord = globals()[method](*self.args)
             
     def set_param(self, nom, couleur, vis):
         self.plan.contre_action(self.set_param, (self.nom, self.color, self.vis))
@@ -439,63 +464,43 @@ class Creature:
         self.vis = vis
         self.dessin()
         
-    
     def dessin(self, calcul = 1):
         
+        if not (self.u and self.vis): return
+
         can = self.plan.main.canvas
         h, w = can.winfo_height(), can.winfo_width()
+        defocaliser = self.plan.main.coord_canvas
+        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
         for i in self.tkinter:
             can.delete(i)
         self.tkinter=[None, None]
         
-        if not (self.u and self.vis): return
-
+        
         def focaliser(coordN): #renvoie le focalisé du point (qui est gentil) coordN par foc
             return (self.plan.offset_x[0]*coordN[0] + self.plan.offset_x[1], self.plan.offset_y[0]*coordN[1]+self.plan.offset_y[1])
         
+        coords = self.coords() if (calcul or self.coord is None) else self.coord
         
-        coords = self.coords() if calcul or self.coord is None else self.coord
-         
-        '''if isinstance(self, CA) and self.deg !=1:
+        print(f"on dessine l'objet {self}")
+        if self.classe == 'Courbe' and self.deg !=1:
             xrint("Calcul des points.")
             zzzz=time.time()
             self.plan.CAst[self.nom]=[]
             polynomex = coords.change_variables()
             polynomey = coords
-            #polynomex = find_eq_courbe(coords, self.deg, "x")
-            #polynomey = find_eq_courbe(coords, self.deg, "y")
-            #polynome2x = [0]*len(polynomex)
-            #polynome2y = [0]*len(polynomey)
-            i = 0
-
-            #while i<h:
-            #    for j in range(len(polynomex)):
-            #        polynome2x[j] = eval(str(polynomex[j]).replace("y", str(i)))
-            #    roots = resoudre(polynome2x)
-            #    l_x = []
-            #    for x in roots:
-            #        if 0 <= x and w >= x:
-            #            c = [x, i]
-            #            l_x.append((x, i))
-            #    self.plan.CAst[self.nom].append(l_x)
-            #    i += 1
-            i = 0
-
-            while i<w:
-                #for j in range(len(polynomey)):
-                    #polynome2y[j] = eval(str(polynomey[j]).replace("x", str(i)))
+            
+            i = x1
+            while i<x2:
                 polynome2y = polynomey(i)
-                if i == 10: print(polynome2y)
                 roots = polynome2y.resoudre()[0]
-                #roots = resoudre(polynome2y)
                 l_y = []
                 for y in roots:
-                    if 0 <= y <= h:
-                        c = [i, y]
+                    if y1 - 50 <= y <= y2 + 50:
                         l_y.append((i, y))
                 self.plan.CAst[self.nom].append(l_y)
                 i += 1
-            xrint(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
+            print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
             xrint("Début affichage des points")
             zzzz = time.time()
             points = self.plan.CAst[self.nom]
@@ -516,92 +521,31 @@ class Creature:
                         self.plan.tkinter_object[z]=self
             for objet in self.tkinter:
                 if objet is not None: can.tag_lower(objet, 'limite2')
-            xrint(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')'''
-        
-        if isinstance(self, CA) and self.deg !=1:
-            print("Calcul des points.")
-            zzzz=time.time()
-            self.plan.CAst[self.nom]=[]
-            polynomex = find_eq_courbe(coords, self.deg, "x")
-            polynomey = find_eq_courbe(coords, self.deg, "y")
-            print("wesh")
-            print(polynomex, polynomey)
-            polynome2x = [0]*len(polynomex)
-            polynome2y = [0]*len(polynomey)
-            i = 0
-
-            #while i<h:
-            #    for j in range(len(polynomex)):
-            #        polynome2x[j] = eval(str(polynomex[j]).replace("y", str(i)))
-            #    roots = resoudre(polynome2x)
-            #    l_x = []
-            #    for x in roots:
-            #        if 0 <= x and w >= x:
-            #            c = [x, i]
-            #            l_x.append((x, i))
-            #    self.plan.CAst[self.nom].append(l_x)
-            #    i += 1
-            i = 0
-
-            while i<w:
-                for j in range(len(polynomey)):
-                    polynome2y[j] = eval(str(polynomey[j]).replace("x", str(i)))
-                roots = resoudre(polynome2y)
-                l_y = []
-                for y in roots:
-                    if 0 <= y <= h:
-                        c = [i, y]
-                        l_y.append((i, y))
-                self.plan.CAst[self.nom].append(l_y)
-                i += 1
-            print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
-            print("Début affichage des points")
-            zzzz = time.time()
-            points = self.plan.CAst[self.nom]
-            for x, l_p in enumerate(points[1:-1]):
-                p_moins = points[x]
-                p_plus = points[x+2]
-                for p in l_p:
-                    d_moins = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_moins] + [(float('inf'), 0)])
-                    d_plus = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_plus] + [(float('inf'), 0)])
-                    d_nor = min([(abs(p[1]-p_[1]), p_) for p_ in l_p if p_ != p] + [(float('inf'), 0)])
-                    if d_moins == d_nor == (float('inf'), 0):
-                        continue
-                    a_p = min([d_moins, d_nor])[1]
-                    p, a_p = focaliser(p), focaliser(a_p)
-                    if dist(p, a_p) < 50:
-                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color)
-                        self.tkinter.append(z)
-                        self.plan.tkinter_object[z]=self
-            for objet in self.tkinter:
-                if objet is not None: can.tag_lower(objet, 'limite')
             print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
-
-        if isinstance(self, Droite) or (isinstance(self, CA) and self.deg==1):
+        if self.classe == 'Droite' or (self.classe == 'Courbe' and self.deg==1):
             print(coords)
             if self == self.plan.inf: return
             nor = norm(coords)
             if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
                 z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color)
             else:
-                print(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)))
                 z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color)
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
 
-        if isinstance(self, Point):
+        if self.classe == 'Point':
             a = coords
-            if a[0].imag == 0 and a[1].imag == 0 and a[2]!=0:
-                a= (a[0]/a[2], a[1]/a[2],1)
-                c=focaliser([a[0], a[1]])
+            if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
+                a = (a[0]/a[2], a[1]/a[2],1)
+                c = focaliser([a[0], a[1]])
                 k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color)
-                z=can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6))
-                self.tkinter[1]=z
-                self.tkinter[0]=k
-                self.plan.tkinter_object[k]=self
-                self.plan.tkinter_object[z]=self
+                z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6))
+                self.tkinter[1] = z
+                self.tkinter[0] = k
+                self.plan.tkinter_object[k] = self
+                self.plan.tkinter_object[z] = self
                 can.tag_raise(k, 'limite1')
                 can.tag_raise(z, 'limite1')
 
