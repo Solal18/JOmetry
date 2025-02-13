@@ -268,6 +268,15 @@ class Polynome:
     def resoudre(self):
         if self.deg() == 1:
             return [-self[0]/self[1]], []
+        if self.deg() == 2:
+            a, b, c = self[2], self[1], self[0]
+            det = b**2 - 4*a*c
+            if det < 0:
+                return [], [-b/(2*a)]
+            if det == 0:
+                return [-b/(2*a)], [-b/(2*a)]
+            if det > 0:
+                return [-(b+sqrt(det))/(2*a), -(b-sqrt(det))/(2*a)], [-b/(2*a)]
         derivee = self.derivee()
         maximas, max_derivee = derivee.resoudre()
         maximas = [-float('inf')] + maximas + [float('inf')]
