@@ -197,7 +197,7 @@ class Polynome:
             mat = mat2
         while mat != [] and mat[-1] == 0: mat.pop()
         for coef in mat:
-            if type(coef)==type(numpy.float64(1)):
+            if isinstance(coef, numpy.float64):
                 self.coefs.append(coef)
             elif hasattr(coef, '__getitem__'):
                 self.coefs.append(Polynome(coef))
