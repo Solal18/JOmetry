@@ -1113,7 +1113,7 @@ class Plan:
         return self.objets[x]
     
     def switchNom(self, nom, canv):
-        point = self.points[nom]
+        point = self.points[nom] 
         if canv.itemcget(point.tkinter[1], "text")=="":
             canv.itemconfig(point.tkinter[1], text=point.nom)
         else:
