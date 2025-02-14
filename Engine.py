@@ -1086,8 +1086,8 @@ class Plan:
         Liste2 = [self.newPerp(0, [self.newDroite(0, (c, i,1), "tangente", u = 0), (c,i)], u = 0) for i in Liste]
         CA2 = self.newCA(0, Liste2, u = 0)
         A = []
-        for i in inter2(CA2, self.newDroite(0, (x, y, 1), "coord", u = 0), -1):
-            A += inter2(c, self.newDroite(0, i, "coord", u = 0), -1)
+        for i in inter2(CA2.coords(), self.newDroite(0, (x, y, 1), 'coord', u = 0).coords(), -1):
+            A += inter2(c.coords(), self.newDroite(0, i, "coord", u = 0).coords(), -1)
         return self.newPoint_coord(nom, min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2), u = 1)
         
     
