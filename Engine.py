@@ -197,11 +197,35 @@ class Polynome:
             mat = mat2
         while mat != [] and mat[-1] == 0: mat.pop()
         for coef in mat:
-            if hasattr(coef, '__getitem__'):
+            if type(coef)==type(numpy.float64(1)):
+                self.coefs.append(coef)
+            elif hasattr(coef, '__getitem__'):
                 self.coefs.append(Polynome(coef))
             else:
                 self.coefs.append(coef)
-    
+                
+
+    def newPsurCA(self, nom, args, u = 1):
+        defocaliser = self.main.coord_canvas
+        w, h = self.main.canvas.winfo_width(), self.main.canvas.winfo_height()
+        c, (x, y) = args
+        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+        Liste = []
+        polynomey = c.coords()
+        n = c.deg
+        i = x1 - 10
+        while len(Liste) < 2*n**2+3*n and i < x2 + 10:
+            polynome2y = polynomey(i)
+            Liste += [(i, y) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
+            i += 1
+        Liste2 = [self.newPoint_coord(0, self.newPerp(0, [self.newDroite(0, (c, (i[0], i[1],1)), "tangente", u = 1), (i[0], i[1], 1)], u = 1).coords(), u=1) for i in Liste]
+        CA2 = self.newCA(0, Liste2, u = 0)
+        A = []
+        a= inter2(CA2.coords(), (x,y,1), -1)
+        for i in a:
+            A += inter2(c.coords(), (int(i[0]), int(i[1]), 1), -1)
+        return self.newPoint_coord(nom, min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2), u = 1)
+
     def __getitem__(self, ind):
         if ind < len(self.coefs):
             return self.coefs[ind]
