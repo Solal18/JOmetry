@@ -379,8 +379,8 @@ class Arbre:
         self.parents = set()
         for i in args:
             if isinstance(i, Creature):
-                self.parents.add(i)
-                i.arbre.descendants.add(objet)
+                self.parents.add(i.arbre)
+                i.arbre.descendants.add(self)
 
     def descente(self, a = set(), n = 0):
         a.add((self, n))
