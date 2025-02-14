@@ -379,7 +379,7 @@ class Arbre:
         self.parents = set()
         for i in args:
             if isinstance(i, Creature):
-                self.parents.add(i.arbre)
+                self.parents.add(i)
                 i.arbre.descendants.add(self)
 
     def descente(self, a = set(), n = 0):
@@ -483,14 +483,13 @@ class Creature:
             method = self.method
             objet = self
             transformations = []
-            print(self, method, self.args)
             while method in transformation and not objet.classe == 'Point':
                 parent = objet.args[0]
                 transformations.append((method, objet.args[1:]))
                 method = parent.method
                 objet = parent
+            print(self)
             args = [(i.classe, i.coords()) if isinstance(i, Creature) else (0, i) for i in objet.args]
-            print(self, method, args, transformations)
             classe = self.classe
             while transformations:
                 method_tr, args_tr = transformations.pop()
@@ -714,7 +713,9 @@ def inter2(courbe1, courbe2, numero):
         else:
             for r in roots:
                 rooot.append((r, k2 +r*k3))
-    if numero <len(rooot):
+    if numero == -1:
+        return rooot
+    if numero < len(rooot):
         coooords = (rooot[numero][0], rooot[numero][1],1)
     return coooords
 
@@ -1081,14 +1082,23 @@ class Plan:
         i = x1 - 10
         while len(Liste) < 2*n**2+3*n and i < x2 + 10:
             polynome2y = polynomey(i)
-            Liste += [(i, y) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
+            Liste += [(i, y, 1) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
             i += 1
-        Liste2 = [self.newPerp(0, [self.newDroite(0, (c, i), "tangente", u = 0), (c,i)], u = 0) for i in Liste]
+        Liste3 = [[self.newDroite(0, (c, i), "tangente", u = 0), i] for i in Liste]
+        Liste3[0][0].coords()
+        Liste2 = [self.newPerp(0, i, u = 0) for i in Liste3]
+        Liste2[0].coords()
         CA2 = self.newCA(0, Liste2, u = 0)
+        CA2.coords()
         A = []
-        for i in inter2(CA2.coords(), self.newDroite(0, (x, y, 1), 'coord', u = 0).coords(), -1):
-            A += inter2(c.coords(), self.newDroite(0, i, "coord", u = 0).coords(), -1)
-        return self.newPoint_coord(nom, min(A, key = lambda x : (x[0]-x)**2+(x[1]-y)**2), u = 1)
+        a = inter2(CA2.coords(), (x,y,1), -1)
+        print(a)
+        for i in a:
+            print(i, c.coords())
+            A += inter2(c.coords(), (float(i[0]), float(i[1]), 1), -1)
+        print(A)
+        A = list(map(lambda x: (x[0], x[1], 1), A))
+        return self.newPoint_coord(nom, min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2), u = 1)
         
     
     def newPara(self, nom, args, u = 1):
