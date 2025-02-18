@@ -8,6 +8,11 @@ class Signe:#d'aucuns pourraient dire que ça sert à rien mais si, c'est quand 
     def __hash__(self):
         return 1
 
+def prod(ens, start = 1):#renvoie le produit d'un ensemble
+    for i in ens:
+        start *= i
+    return start
+
 class ExpressionIndeterminee:#savoir manipuler le signe
     def __init__(self, ei1, method = "signe", ei2=None):
         self.method = method#signe, + ou * globalement
@@ -98,6 +103,8 @@ class ExpressionIndeterminee:#savoir manipuler le signe
 
     def __add__(self, other):
         return ExpressionIndeterminee(self, "add", other)
+        
+    __radd__ = __add__
 
     def __mul__(self, other):
         if isinstance(other, ExpressionIndeterminee):
@@ -109,12 +116,24 @@ class ExpressionIndeterminee:#savoir manipuler le signe
     
     def __str__(self):
         return self.exp
+        
+    @staticmethod
+    def calcEns(E):#renvoie l'ensemble E mais où tous les nombres ont été calculés entre eux.
+        t = 1
+        for i in E:
+            if i.method == "nb":
+                E.remove(i)
+                t *= i.ei1
+        return E
+        
+    def calcIrr(self):#si self est un irréductible il fait les multiplications des différents nombres.
+        return sum(calcEns(self.irrToEns())) 
     
     def __eq__(self, other):
-        if self.method == "signe" and other.method == "signe":
+        if (self.method == "signe" and other.method == "signe") or (self.method == "nb" and other.method == "nb"):
             return self.ei1 == other.ei1
         elif self.irr and other.irr:
-            return self.irrToEns() == other.irrToEns()
+            return self.calcIrr().irrToEns() == other.calcIrr().irrToEns()
         else:
             return self.eiToEns() == other.eiToEns()
         
