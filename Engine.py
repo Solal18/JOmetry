@@ -390,7 +390,7 @@ class Arbre:
         
     def supprimer(self):
         for i in self.parents:
-            i.arbre.descendants.remove(self.valeur)
+            i.arbre.descendants.remove(self)
 
 
 ################################################################################
@@ -583,7 +583,7 @@ class Creature:
                     a_p = min([d_moins, d_nor])[1]
                     p, a_p = focaliser(p), focaliser(a_p)
                     if dist(p, a_p) < 50:
-                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color)
+                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.nom)
                         self.tkinter.append(z)
                         self.plan.tkinter_object[z]=self
             for objet in self.tkinter:
@@ -595,9 +595,9 @@ class Creature:
             if self == self.plan.inf: return
             nor = norm(coords)
             if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
-                z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color)
+                z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.nom)
             else:
-                z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color)
+                z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.nom)
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
@@ -607,14 +607,14 @@ class Creature:
             if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
                 a = (a[0]/a[2], a[1]/a[2],1)
                 c = focaliser([a[0], a[1]])
-                k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color)
-                z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6))
+                k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color, tag = self.nom)
+                z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6), tag = self.nom)
                 self.tkinter[1] = z
                 self.tkinter[0] = k
                 self.plan.tkinter_object[k] = self
                 self.plan.tkinter_object[z] = self
-                can.tag_raise(k, 'limite1')
-                can.tag_raise(z, 'limite1')
+                can.tag_raise(k, 'limite2')
+                can.tag_raise(z, 'limite2')
 
 
  
@@ -684,6 +684,7 @@ def inter2(courbe1, courbe2, numero):
         for r in racines:
             P = P2(r)
             for r2 in P.resoudre()[0]:
+                print(courbe2(r2)(r))
                 if courbe2(r2)(r) < 1e-9:
                     rooot.append((r2, r))
         print(perf() - t)
@@ -780,7 +781,7 @@ def interpol(deg, *args):#INTERpolation
     zzzz=time.time()
     permut = permutations(deg)
     detConi = []
-    xrint('args :', args)
+    print('args :', args)
     for i in args:
         a, b, c = i
         detConibis = []
@@ -789,7 +790,6 @@ def interpol(deg, *args):#INTERpolation
         xrint(type(detConibis[0]))
         detConi.append(detConibis)
     coords = []
-    a = 0
     if deg <=7:
         a = deg + 3
     else:
@@ -856,6 +856,38 @@ def cercle(deg, *args):
     poly = Polynome(nouv_coords)
     print('poly :', poly)
     return poly
+
+def perp(d, p):
+    '''args -> Droite, Point; retourne la perpendiculaire'''
+    p1 = inf(d)
+    p2 = ortho(p1)
+    d = inter(p, p2)
+    return d
+    
+
+def PsurCA(C, n, coo, main):
+    print(coo)
+    x, y = coo
+    defocaliser = main.coord_canvas
+    w, h = main.canvas.winfo_width(), main.canvas.winfo_height()
+    (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+    Liste = []
+    P = C
+    i = x1 - 10
+    while len(Liste) < 2*n**2+3*n and i < x2 + 10:
+        polynome2y = P(i)
+        Liste += [(i, y, 1) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
+        i += 1
+    Liste3 = [[tangente(C, i), i] for i in Liste]
+    Liste2 = [perp(i[0], i[1]) for i in Liste3]
+    print(Liste2)
+    CA2 = interpol(2*n, *Liste2)
+    A = []
+    a = inter2(CA2, (x,y,1), -1)
+    for i in a:
+        A += inter2(P, (float(i[0]), float(i[1]), 1), -1)
+    A = list(map(lambda x: (x[0], x[1], 1), A))
+    return min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2)
 
 ###################################
 ###         Classe Plan         ###
@@ -982,9 +1014,10 @@ class Plan:
 
     
     def move(self, point, coords):
-        if point.arbre.parents == set():
+        if point.arbre.parents == set() or point.method == 'PsurCA':
             self.contre_action(self.move, (point, point.coords()))
-            point.args=[coords]
+            if point.arbre.parents == set(): point.args=[coords]
+            else: point.args[2] = coords[:2]
             for i in sorted(list(point.arbre.descente()), key=lambda x: x[1]):
                 i[0].valeur.coords(1)
                 i[0].valeur.dessin(1)
@@ -1071,34 +1104,7 @@ class Plan:
 
 
     def newPsurCA(self, nom, args, u = 1):
-        print("salut")
-        defocaliser = self.main.coord_canvas
-        w, h = self.main.canvas.winfo_width(), self.main.canvas.winfo_height()
-        c, (x, y) = args
-        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
-        Liste = []
-        polynomey = c.coords()
-        n = c.deg
-        i = x1 - 10
-        while len(Liste) < 2*n**2+3*n and i < x2 + 10:
-            polynome2y = polynomey(i)
-            Liste += [(i, y, 1) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
-            i += 1
-        Liste3 = [[self.newDroite(0, (c, i), "tangente", u = 0), i] for i in Liste]
-        Liste3[0][0].coords()
-        Liste2 = [self.newPerp(0, i, u = 0) for i in Liste3]
-        Liste2[0].coords()
-        CA2 = self.newCA(0, Liste2, u = 0)
-        CA2.coords()
-        A = []
-        a = inter2(CA2.coords(), (x,y,1), -1)
-        print(a)
-        for i in a:
-            print(i, c.coords())
-            A += inter2(c.coords(), (float(i[0]), float(i[1]), 1), -1)
-        print(A)
-        A = list(map(lambda x: (x[0], x[1], 1), A))
-        return self.newPoint_coord(nom, min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2), u = 1)
+        return Creature(self, 'Point', nom = nom, method = 'PsurCA', args = [args[0], args[0].deg, args[1], self.main], u = u)
         
     
     def newPara(self, nom, args, u = 1):
@@ -1113,7 +1119,7 @@ class Plan:
         return self.objets[x]
     
     def switchNom(self, nom, canv):
-        point = self.points[nom] 
+        point = self.points[nom]
         if canv.itemcget(point.tkinter[1], "text")=="":
             canv.itemconfig(point.tkinter[1], text=point.nom)
         else:
