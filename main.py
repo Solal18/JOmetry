@@ -136,6 +136,7 @@ class Main:
             
     def creer_canvas(self):
         self.canvas = tk.Canvas(fenetre, relief = 'sunken')
+        self.limite0 = self.canvas.create_text(5, 0, text = '', tag = 'limite0')
         self.limite1 = self.canvas.create_text(10, 0, text = '', tag = 'limite1')
         self.limite2 = self.canvas.create_text(0, 0, text = '', tag = 'limite2')
         self.canvas.grid(row = 1, column = 0, sticky = 'nsew')
@@ -618,6 +619,7 @@ class Main:
             print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
                                              {'droite':self.limite2, 'courbe':self.limite1}[attendu])
+            print(self.canvas.gettags({'droite':self.limite2, 'courbe':self.limite1}[attendu]))
             if len(objet) == 0: return
             print(self.canvas.gettags(objet[0]))
             courbe = self.plans[0].tkinter_object[objet[0]]
