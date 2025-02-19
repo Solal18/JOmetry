@@ -3,10 +3,12 @@ class Signe:#d'aucuns pourraient dire que ça sert à rien mais si, c'est quand 
         self.nom = nom
 
     def __eq__(self, other):
-        return self.nom == other.nom
+        if isinstance(other, Signe):
+            return self.nom == other.nom
+        return False
         
     def __hash__(self):
-        return 1
+        return id(self)
 
 def prod(ens, start = 1):#renvoie le produit d'un ensemble
     for i in ens:
@@ -24,7 +26,8 @@ class ExpressionIndeterminee:#savoir manipuler le signe
             self.ei1 = Signe(ei1)
         elif method == "nb":
             self.exp = str(ei1)
-            self.ei1 = ei1
+        elif method == "inv":
+            self.exp = "(" + str(ei1) + ")^{-1}"
         else:
             self.irr = ei1.irr and ei2.irr and method == "mult"#on est irréductible ssi on est produit de signe
             s1, s2 = str(self.ei1), str(self.ei2)
@@ -54,6 +57,8 @@ class ExpressionIndeterminee:#savoir manipuler le signe
             return self.ei1.evaluer(valeures) * self.ei2.evaluer(valeures)
         elif self.method == "nb":
             return self.ei1
+        elif self.method == "inv":
+            return 1 / self.ei1.evaluer()
         else:
             raise TypeError("Opération de type inconnu.")
         
@@ -78,9 +83,7 @@ class ExpressionIndeterminee:#savoir manipuler le signe
         
     def irrToEns(self):#renvoie l'ensembles des termes du produit d'un irréductible
         if self.method == "signe" or self.method == "nb":
-            t = set()
-            t.add(self)
-            return t
+            return set((self,))
         elif self.method == "mult":
             return self.ei1.irrToEns() | self.ei2.irrToEns()
         else:
@@ -102,7 +105,10 @@ class ExpressionIndeterminee:#savoir manipuler le signe
         return self.devp().sommeToEns()
 
     def __add__(self, other):
-        return ExpressionIndeterminee(self, "add", other)
+        if isinstance(other, ExpressionIndeterminee):
+            return ExpressionIndeterminee(self, "mult", other)
+        else:
+            return ExpressionIndeterminee(self, "mult", ExpressionIndeterminee(other, method = "nb"))
         
     __radd__ = __add__
 
@@ -120,25 +126,44 @@ class ExpressionIndeterminee:#savoir manipuler le signe
     @staticmethod
     def calcEns(E):#renvoie l'ensemble E mais où tous les nombres ont été calculés entre eux.
         t = 1
-        for i in E:
+        for i in E.copy():
             if i.method == "nb":
                 E.remove(i)
                 t *= i.ei1
+        E.add(t)
         return E
-        
-    def calcIrr(self):#si self est un irréductible il fait les multiplications des différents nombres.
-        return sum(calcEns(self.irrToEns())) 
     
     def __eq__(self, other):
-        if (self.method == "signe" and other.method == "signe") or (self.method == "nb" and other.method == "nb"):
-            return self.ei1 == other.ei1
-        elif self.irr and other.irr:
-            return self.calcIrr().irrToEns() == other.calcIrr().irrToEns()
-        else:
-            return self.eiToEns() == other.eiToEns()
+        if isinstance(other, ExpressionIndeterminee):
+            if (self.method == "signe" and other.method == "signe") or (self.method == "nb" and other.method == "nb"):
+                return self.ei1 == other.ei1
+            elif self.irr and other.irr:
+                return ExpressionIndeterminee.calcEns(self.irrToEns()) == ExpressionIndeterminee.calcEns(other.irrToEns())
+            else:
+                return self.eiToEns() == other.eiToEns()
+        return False
         
     def __hash__(self):
-        return 1
+        return id(self)
+        
+    def __neg__(self):
+        return (-1)*self
+        
+    def __sub__(self, other):
+        return self + ((-1)*other)
+        
+    def inv(self):#renvoie l'inverse de self
+        return ExpressionIndeterminee(self, method = "inv")
+        
+        
+    def __div__(self, other):
+        if isinstance(other, ExpressionIndeterminee):
+            return self * ExpressionIndeterminee.inv()
+        else:
+            return self * (1/other)
+            
+    def __rdiv__(self, other):
+        return (self/other).inv()
     
     def parentheser(self):
         return "(" + self.exp + ")"
@@ -166,4 +191,4 @@ Y = ExpressionIndeterminee("Y")
 Z = ExpressionIndeterminee("Z")
 t = 2*(X+Y)*(Y+Z)*(Z+X)
 print(t.evaluer({X : 5, Y : 3, "Z" : 5.5}))
-print(2*X == X*2)
+print(2*X*3+X*X*(3*X+(-3)*X) == X*2*3)
