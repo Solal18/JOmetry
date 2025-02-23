@@ -794,6 +794,23 @@ def milieu(A, B):
 
 def centreInscrit(A, B, C):
     """Définition du centre du cercle inscrit de trois points"""
+    xA, yA, zA = A
+    xB, yB, zB = B
+    xC, yC, zC = C
+    a=sqrt((xB-xC)**2+(yB-yC)**2+(zB-zC)**2)
+    b=sqrt((xA-xC)**2+(yA-yC)**2+(zA-zC)**2)
+    c=sqrt((xB-xA)**2+(yB-yA)**2+(zB-zA)**2)
+    return ((a*xA+b*xB+c*xC)/(a+b+c),
+            (a*yA+b*yB+c*yC)/(a+b+c),
+            (a*zA+b*zB+c*zC)/(a+b+c))
+
+def biss(a, b, numero = 1): #numéro vaut 1 ou -1
+    xa, ya, za = a
+    xb, yb, zb = b
+    return (
+            xa*sqrt(xb**2+yb**2)-numero*xb*sqrt(xa**2+ya**2),
+            ya*sqrt(xb**2+yb**2)-numero*yb*sqrt(xa**2+ya**2),
+            za*sqrt(xb**2+yb**2)-numero*zb*sqrt(xa**2+ya**2))
 
 def tangente(C, p):
     """C -> CA
