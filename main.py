@@ -2,7 +2,7 @@
 
 
 import tkinter as tk
-from tkinter import filedialog as fd, colorchooser, messagebox as tk_mb, simpledialog as tk_sd
+from tkinter import filedialog as fd, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
 import Engine as Geo
 from PIL import Image, ImageDraw, ImageTk
@@ -73,23 +73,25 @@ class Main:
     def __init__(self):
         self.editeur_objets = None
         self.liste_derniers_clics = []
+        self.plans = [None]
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
                      ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
-                     ['cercle_circ', 'cercle_inscr', 'cercle_cent'],
+                     ['cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex'],
                      ['courbe'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
-                     ['rotation', 'homothetie', 'translation', 'symetrie', 'projective', 'polyregul'],
-                     ['editeur_objets'],
+                     ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul'],
+                     ['editeur_objets'], ['etude'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['aide'],
                      ]
         self.creer_canvas()
-        self.plans = [Geo.Plan(self)]
+        self.plans[0] = Geo.Plan(self)
         Geo.plan_default = self.plans[0]
         self.nom_boutons = [l[0] for l in self.menu]
         self.creer_actions()
         self.creer_boutons()
         self.men = None
+        self.fen_etude = None
         self.attendus = None
         self.action_canvas = None
         self.dernier_bouton = None
@@ -164,9 +166,12 @@ class Main:
                         'enregistrer' : (self.enregistrer, 0),
                         'enregistrer_sous' : (self.enregistrer_sous, 0),
                         'ouvrir' : (self.ouvrir, 0),
+                        'etude' : (self.etude, 0),
                         'cercle_cent' : (self.cercle_cent, 1, ('point', 'point')),
                         'harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
+                        'invers' : (self.invers, 1, ('objet', 'point', 'point')),
                         'cercle_inscr' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
+                        'cercle_ex' : (self.cercle_ex, 1, ('point', 'point', 'point')),
                         'bissec' : (self.bissec, 1, ('point', 'point', 'point')),
                         'tangente' : (self.tangente, 1, ('courbe', 'point')),
                         'tangentes_communes' : (self.tangentes_communes, 1, ('courbe', 'courbe')),
@@ -226,7 +231,11 @@ class Main:
         self.dessin_canvas()
         fenetre.title(f'JOmetry - {self.plans[0].nom}')
         
-                       
+    def etude(self):
+        if self.fen_etude is None:
+            self.fen_etude = Fenetres.EtudieurObjets(fenetre, self, 1)
+            
+    
     def enregistrer(self):
         if not self.plans[0].dossier_default:
             return self.enregistrer_sous()
@@ -302,14 +311,17 @@ class Main:
         
         
     def edit_objets(self):
+        print('??')
         if self.editeur_objets is None:
             self.editeur_objets = Fenetres.EditeurObjets(fenetre, self, 0)
-        
+            
+            
     def bouger_point(self, ev):
         if self.point_move is None: return
         x, y = self.coord_canvas(ev.x, ev.y)
         self.plans[0].action_utilisateur('bouger_point')
-        self.plans[0].move(self.point_move, (x, y, 1))
+        for obj in self.plans[0].move(self.point_move, (x, y, 1)):
+            obj.dessin(1)
             
         
     def nouv_plan(self):
@@ -446,6 +458,10 @@ class Main:
         for i in range(int(nombre)-2):
             p1, p2 = self.plans[0].new_rotation(1, p2, p1, (nombre-2)*180/nombre), p1
 
+    def invers(self):
+        obj, centre, rayon = self.liste_derniers_clics
+        Geo.Creature(self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon), obj.deg, u = 1)
+        
     def point(self):
         x, y = self.liste_derniers_clics[0]
         point = self.plans[0].newPoint_coord(1, (x, y, 1))
@@ -502,6 +518,21 @@ class Main:
         d2 = self.plans[0].newDroite(0, [centre, V], 'inter', u = 0)
         cercle = self.plans[0].newCAtan(1, d1, d2, point, U, V)
         cercle.dessin()
+        
+    def cercle_ex(self):
+        p1, p2, p3 = self.liste_derniers_clics
+        centre = self.plans[0].newCentreInscrit(0, p1, p2, p3, u = 0)
+        bp1 = self.plans[0].newDroite(1, (centre, p1), 'inter', u = 0)
+        bp3 = self.plans[0].newDroite(1, (centre, p3), 'inter', u = 0)
+        be1 = self.plans[0].newPerp(1, (bp1, p1), u = 0)
+        be3 = self.plans[0].newPerp(1, (bp3, p3), u = 0)
+        centre2 = Geo.Creature(self.plans[0], 'Point', 1, method = 'inter', args = (be1, be3), u = 1)
+        cote = self.plans[0].newDroite(0, (p1, p3), 'inter', u = 0)
+        point =  self.plans[0].newProjectionOrtho(0, (cote, centre2), u = 0)
+        U, V = self.plans[0].points['U'], self.plans[0].points['V']
+        d1 = self.plans[0].newDroite(0, [centre2, U], 'inter', u = 0)
+        d2 = self.plans[0].newDroite(0, [centre2, V], 'inter', u = 0)
+        cercle = self.plans[0].newCAtan(1, d1, d2, point, U, V)
     
     def bissec(self):
         p1, p2, p3 = self.liste_derniers_clics
@@ -592,13 +623,15 @@ class Main:
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
             self.liste_derniers_clics.append((x, y))
-        if attendu == 'point':     
+        if attendu == 'point':    
             distances = []
             for i, p in enumerate(self.plans[0].points.values()):
-                pprint(p)
+                if p.u == 0: continue
                 p_x, p_y, p_z = p.coords()
                 if p_z == 0: continue
                 p_x, p_y = norm((p_x, p_y, p_z))
+                print(p_x, p_y)
+                if p_x.imag != 0 or p_y.imag != 0: continue
                 distances.append((dist((x, y), (p_x, p_y)), i, p))
             distances.sort()
             if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
