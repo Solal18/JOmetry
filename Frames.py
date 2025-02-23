@@ -94,7 +94,7 @@ class EditeurObjets:
             self.tableau.heading(i, text = t)
         self.nom_methodes = {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
-                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation'}
+                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion'}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
         self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
         self.couleur = tk.Frame(self.frame)
@@ -196,4 +196,86 @@ class EditeurObjets:
         couleur = tk_cc.askcolor()
         if couleur[1] is not None:
             self.var2.set(couleur[1])
+
+
+class EtudieurObjets:
+    
+    def __init__(self, fenetre, main, separe):
+        self.fenetre = fenetre
+        if separe:
+            self.grande_frame = tk.Toplevel()
+            self.frame = self.grande_frame
+            self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
+        else :
+            self.grande_frame = tk.Frame(fenetre, bg = '#ddd')
+            self.grande_frame.grid(row = 1, column = 1, sticky = 'ns')
+            self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
+            self.frame.grid(row = 0, column = 0)
+            tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
+            fenetre.bind('<Return>', self.clic_entree)
+        self.main = main
+        self.valeur = tk.StringVar()
+        self.listvariable = tk.StringVar()
+        self.texte = tk.Label(self.frame, text = 'Entrez une valeur pour essayer de determiner une constante, en autorisant les points suivants à varier')
+        self.entree = tk.Entry(self.frame, textvariable = self.valeur)
+        self.formule = tk.Label(self.frame, text = '')
+        self.bouton = tk.Button(self.frame, text = 'Etude', command = self.etude)
+        self.liste = tk.Listbox(self.frame, listvariable = self.listvariable, selectmode = 'multiple')
+        self.texte.grid(row = 0, column = 0, columnspan = 2)
+        self.entree.grid(row = 1, column = 0)
+        self.formule.grid(row = 2, column = 0)
+        self.bouton.grid(row = 3, column = 0, columnspan = 2)
+        self.liste.grid(row = 1, column = 1, rowspan = 2)
+        l = []
+        for p in main.plans[0].points.values():
+            if p.bougeable():
+                l.append(p.nom)
+        self.listvariable.set(' '.join(l))
+                
         
+    def etude(self):
+        from numpy import float64
+        from random import randrange
+        import Engine as Geo
+        formule = self.valeur.get()
+        if formule in self.main.plans[0].points:
+            point = self.main.plans[0].points[formule]
+            bouge = [self.main.plans[0].points[self.liste.get(0, 'end')[nombre]] for nombre in self.liste.curselection()]
+            positions = [point.args for p in bouge]
+            l = []
+            print(point, bouge, positions)
+            for i in range(20):
+                for p in bouge:
+                    x, y = randrange(0, 500), randrange(0, 500)
+                    p.plan.move(p, (x, y, 1))
+                z = tuple([float(t) if isinstance(t, float64) else t for t in point.coords()])
+                print(z)
+                l.append(z)
+            l = [(p[0]/p[2], p[1]/p[2], 1)for p in l]
+            n = 2
+            while n <= 5:
+                deg = n*(n+3)//2
+                points = l[:deg]
+                eq = Geo.interpol(n, *points)
+                bon = True
+                for i in l:
+                    if eq(i[0])(i[1]) >= 1e-10:
+                        bon = False
+                if bon:
+                    break
+                n += 1
+            self.main.plans[0].newCA(1, l[:deg])
+            for p, pos in zip(bouge, positions):
+                if isinstance(pos[0], Geo.Creature):
+                    pos = pos[1]
+                p.plan.move(p, pos)
+            
+        
+    def supprimer(self):
+        self.grande_frame.grid_forget()
+        self.grande_frame.forget()
+        self.main.editeur_objets = None
+
+    def fermer_fenetre(self):
+        self.main.editeur_objets = None
+        self.grande_frame.destroy()
