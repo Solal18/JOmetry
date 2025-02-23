@@ -6,20 +6,19 @@ from groebner import grob
 from time import perf_counter_ns as perf
 
 def xrint(*args):
-    #print(*args)
-    return 
+    pass 
 
 plan_default = 0
 
 def dist(a, b):
     return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
-def scale_m(k, m1):
+'''def scale_m(k, m1):
     for i in range(len(m1[0])):
         m1[0][1] *= k
     return m1
 
-'''def inverse_m(m):
+def inverse_m(m):
     x,y,z = m
     a,b,c=x
     d,e,f=y
@@ -61,34 +60,99 @@ def transfo_p(liste):
 def transfo_proj(A, liste1, liste2):
     return multi_matrix(A,multi_matrix2(transfo_p(liste2),inverse_m(transfo_p(liste1))))
 
-def translater(classe, method, args, UV, v):
+def translater(classe, method, deg, args, UV, v):
     nouv_args = []
-    tx, ty, tz = v
     for i in args:
         if i[0] == 'Point':
-            a, b, c = i[1]
-            nouv_args.append('Point', (a + tx*c, b + ty*c, tz*c))
-        if i[0] == 'Droite':
+            nouv_args.append(('Point', translation(i[1], v)))
+        elif i[0] == 'Droite':
+            nouv_args.append(i)
+            #à modifier
+        else:
+            nouv_args.append(i)
+    return classe, method, deg, nouv_args, UV
+
+def rotater(classe, method, deg, args, UV, p, theta):
+    nouv_args = []
+    theta = theta/180*pi
+    if not isinstance(p, tuple):
+        p = p.coords()
+    for i in args:
+        if i[0] == 'Point':
+            nouv_args.append(('Point', rotation(i[1], p, theta)))
+        elif i[0] == 'Droite':
+            nouv_args.append(i)
+            #à modifier
+        else:
+            nouv_args.append(i)
+    return classe, method, deg, nouv_args, UV
+
+def inverser(classe, method, deg, args, UV, c, r):
+    nouv_args = []
+    if not isinstance(c, tuple):
+        c = c.coords()
+    if not isinstance(r, tuple):
+        r = r.coords()
+    if classe == 'Droite':
+        A, B = args[0][1], args[1][1]
+        d = globals()[method](A, B)
+        a, b, h = d
+        e, f, g = c
+        if abs(a*e+b*f+h*g) < 1e-13:
+            return classe, method, deg, nouv_args, UV
+        cercl = cercle(2, inter(UV[0], c), inter(UV[1], c), r, UV[0], UV[1])
+        if method == 'inter':
+            return 'Courbe', 'interpol', 2, [('Point', inversion(A, c, cercl)), ('Point', inversion(B, c, cercl)), ('Point', c), ('Point', UV[0]), ('Point', UV[1])], UV
+        else:
+            return 'Courbe', 'CAtan1', 2, [('Droite', inter(c, inf(d))), ('Point', c), ('Point', UV[0]), ('Point', UV[1]), ('Point', inversion(B, c, cercl))], UV
+            
+    print(classe, method)
+    for i in args:
+        if i[0] == 'Point':
+            nouv_args.append(('Point', rotation(i[1], p, theta)))
+        elif i[0] == 'Droite':
             nouv_args.append(i)
             #à modifier
         else:
             nouv_args.append(i)
     return classe, method, nouv_args, UV
 
-def rotater(A, B, theta):
-    theta = theta/180*pi
-    if type(B) is not tuple:
-        B = B.coords()
-    a, b, c = B
-    k = [[cos(theta), sin(theta), 0], [sin(-theta), cos(-theta), 0], [0, 0, 1]]
-    return translater(multi_matrix(translater(A, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
+def translation(p, v):
+    a, b, c = p
+    tx, ty, tz = v
+    return (a + tx*c, b + ty*c, tz*c)
 
-def homotheter(A, B, rapport):
-    if type(B) is not tuple:
-        B = B.coords()
-    a, b, c = B
+def rotation(p, c, theta):
+    a, b, c = c
+    k = [[cos(theta), sin(theta), 0], [sin(-theta), cos(-theta), 0], [0, 0, 1]]
+    return translation(multi_matrix(translation(p, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
+
+def homothetie(p, c, rapport):
+    a, b, c = c
     k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
-    return translater(multi_matrix(translater(A, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
+    return translation(multi_matrix(translation(p, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
+
+def inversion(p, centre, cercle):
+    if centre == p:
+        return (1, 1, 0)
+    d = inter(p, centre)
+    A, B = inter2(d, cercle, -1)
+    return harmonique(A, B, p)
+
+
+def homotheter(classe, method, deg, args, UV, p, rapport):
+    nouv_args = []
+    if not isinstance(p, tuple):
+        p = p.coords()
+    for i in args:
+        if i[0] == 'Point':
+            nouv_args.append(('Point', homothetie(i[1], p, rapport)))
+        elif i[0] == 'Droite':
+            nouv_args.append(i)
+            #à modifier
+        else:
+            nouv_args.append(i)
+    return classe, method, deg, nouv_args, UV
 
 def symetrer(A, B):
     if type(B) is not tuple:
@@ -105,7 +169,7 @@ def symetrer(A, B):
         k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
         return translater(multi_matrix(translater(A, (c/a, 0, 1)), k), (-c/a, 0, 1))    
 
-transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer, 'projective' : transfo_proj}
+transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer, 'projective' : transfo_proj, 'inversion' : inverser}
 
 dico_binom = {(0, 0): 1}
 def binom(n, k):
@@ -205,27 +269,6 @@ class Polynome:
                 self.coefs.append(coef)
                 
 
-    def newPsurCA(self, nom, args, u = 1):
-        defocaliser = self.main.coord_canvas
-        w, h = self.main.canvas.winfo_width(), self.main.canvas.winfo_height()
-        c, (x, y) = args
-        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
-        Liste = []
-        polynomey = c.coords()
-        n = c.deg
-        i = x1 - 10
-        while len(Liste) < 2*n**2+3*n and i < x2 + 10:
-            polynome2y = polynomey(i)
-            Liste += [(i, y) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
-            i += 1
-        Liste2 = [self.newPoint_coord(0, self.newPerp(0, [self.newDroite(0, (c, (i[0], i[1],1)), "tangente", u = 1), (i[0], i[1], 1)], u = 1).coords(), u=1) for i in Liste]
-        CA2 = self.newCA(0, Liste2, u = 0)
-        A = []
-        a= inter2(CA2.coords(), (x,y,1), -1)
-        for i in a:
-            A += inter2(c.coords(), (int(i[0]), int(i[1]), 1), -1)
-        return self.newPoint_coord(nom, min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2), u = 1)
-
     def __getitem__(self, ind):
         if ind < len(self.coefs):
             return self.coefs[ind]
@@ -253,6 +296,12 @@ class Polynome:
             i += 1
         return Polynome(l)
         
+    def __neg__(self):
+        raise Exception(f'Négation non autorisée pour les polynomes. Polynome en question : {self}')
+        
+    def __div__(self):
+        raise Exception(f'Division non autorisée pour les polynomes. Polynome en question : {self}')
+        
     def __sub__(self, other):
         return self + (-1)*other
     
@@ -260,39 +309,52 @@ class Polynome:
         return (-1)*self + other
     
     def __mul__(self, other : int):
-        return Polynome([coef*other for coef in self])
+        if isinstance(other, (int, float, complex, numpy.float64)):
+            return Polynome([coef*other for coef in self])
+        if isinstance(other, Polynome):
+            return Polynome([sum([self[j]*other[i-j] for j in range(i + 1)]) for i in range(self.deg + other.deg + 1)])
+        raise Exception(f'Multiplication non autorisée pour les {type(other)}. Objet en question : {other}')
+
+    def __pow__(self, other):
+        if other == 0:
+            return 1
+        if other == 1:
+            return self
+        if isinstance(other, int) and other > 1:
+            return self ** (other - 1) * self
 
     def __call__(self, arg):
         if arg == float('inf'):
             return float('inf')*self.coef_domin()
         if arg == -float('inf'):
-            if self.deg() % 2 == 0:
+            if self.deg % 2 == 0:
                 return float('inf')*self.coef_domin()
-            return -float('inf')*self.coef_domin() 
+            return -float('inf')*self.coef_domin()
         return sum(arg**e*coef for e, coef in enumerate(self))
     
     def coefficients(self):
         return self.coefs
     
     def coef_domin(self):
-        return self[self.deg()]
+        return self[self.deg]
     
+    @property
     def deg(self):
-        return max(e + self[e].deg() if isinstance(self[e], Polynome) else e for e, coef in enumerate(self.coefs))
+        return max(e + self[e].deg if isinstance(self[e], Polynome) else e for e, coef in enumerate(self.coefs)) if self.coefs != [] else 0
     
     def change_variables(self):
-        for e in range(self.deg() + 1):
+        for e in range(self.deg + 1):
             if not isinstance(self[e], Polynome):
                 self[e] = Polynome((self[e],))
-        return Polynome([Polynome([coef[e] for coef in self]) for e in range(max(poly.deg() for poly in self) + 1)])
+        return Polynome([Polynome([coef[e] for coef in self]) for e in range(max(poly.deg for poly in self) + 1)])
             
     def derivee(self):
-        return Polynome([e*self[e] for e in range(1, self.deg() + 1)])
-    '''
+        return Polynome([e*self[e] for e in range(1, self.deg + 1)])
+    
     def resoudre(self):
-        if self.deg() == 1:
+        if self.deg == 1:
             return [-self[0]/self[1]], []
-        if self.deg() == 2:
+        if self.deg == 2:
             a, b, c = self[2], self[1], self[0]
             det = b**2 - 4*a*c
             if det < 0:
@@ -339,18 +401,18 @@ class Polynome:
                             else:
                                 x, inf = (x + sup)/2, x
             solutions.append(x)
-        return solutions, maximas'''
+        return solutions, maximas
 
-    def resoudre(self):
+    '''def resoudre(self):
         roots=[]
         for i in numpy.roots(self.coefficients()[::-1]):
             if numpy.imag(i)==0:
                 roots.append(numpy.real(i))
-        return (roots, [])
+        return (roots, [])'''
 
     def expr_rationals(self, variables, join = 1):
         liste = []
-        for e in range(self.deg() + 1):
+        for e in range(self.deg + 1):
             if isinstance(self[e], Polynome):
                 txt = self[e].expr_rationals(variables[1:], 0)
                 liste.append('+'.join(map(lambda x: (f'{variables[0]}**{e}*' if e != 0 else '') + x, txt)))
@@ -419,6 +481,7 @@ class Creature:
         self.method = method
         self.classe = classe
         self.classe_actuelle = None
+        self.deg_actu = None
         self.args = args
         self.deg = deg
         self.color = color
@@ -439,15 +502,20 @@ class Creature:
         if nom not in ('U', 'V', 'Inf'):
             plan.contre_action(self.supprimer, (self.plan.main.canvas,))
         self.dessin()
-        print(self.coord)
-        print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args} et couleur {color}')
+        xrint(self.coord)
+        xrint(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args} et couleur {color}')
         
 
     def __str__(self):
         return self.nom
+    
+    __repr__ = __str__
 
     def __hash__(self):
         return id(self)
+    
+    def bougeable(self):
+        return (self.nom not in ('U', 'V') and (self.arbre.parents == set() or self.method in ('PsurCA', 'PsurDroite')))
 
     def supprimer(self, canvas):
         '''fonction recursive pour supprimer des elements
@@ -459,7 +527,7 @@ class Creature:
         while self.arbre.descendants:
             for e in self.arbre.descendants:
                 break
-            e.supprimer(canvas)
+            e.valeur.supprimer(canvas)
         self.arbre.supprimer()
         for i in self.tkinter:
             if i is not None:
@@ -488,19 +556,23 @@ class Creature:
                 transformations.append((method, objet.args[1:]))
                 method = parent.method
                 objet = parent
-            print(self)
+            print(self, objet, objet.args)
             args = [(i.classe, i.coords()) if isinstance(i, Creature) else (0, i) for i in objet.args]
             classe = self.classe
+            U, V = self.plan.U.coord, self.plan.V.coord
+            deg = self.deg
             while transformations:
                 method_tr, args_tr = transformations.pop()
-                classe, method, args, (U, V) = transformation[method_tr](classe, method, args, (U, V), *args_tr)
+                print(args)
+                classe, method, deg, args, (U, V) = transformation[method_tr](classe, method, deg, args, (U, V), *args_tr)
             print(self, method, args)
             self.classe_actuelle = classe
+            self.deg_actu = deg
             args = [i[1] for i in args]
             if self.classe_actuelle == 'Courbe':
-                self.coord = globals()[method](self.deg, *args)
+                self.coord = globals()[method](deg, *args)
             elif self.classe_actuelle == 'Droite' and method == 'inter':
-                print(self)
+                xrint(self)
                 self.coord = inter(*args)
             else:
                 self.coord = globals()[method](*args)
@@ -533,14 +605,18 @@ class Creature:
         
     def dessin(self, calcul = 1):
         
-        if not (self.u and self.vis): return
-
+        if self.plan is not self.plan.main.plans[0]: return
+        
         can = self.plan.main.canvas
+        for i in self.tkinter:
+            can.delete(i)
+        
+        if not (self.u and self.vis): return
+        if self.classe_actuelle == 'non': return
+        
         h, w = can.winfo_height(), can.winfo_width()
         defocaliser = self.plan.main.coord_canvas
         (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
-        for i in self.tkinter:
-            can.delete(i)
         self.tkinter=[None, None]
         
         
@@ -549,8 +625,8 @@ class Creature:
         
         coords = self.coords() if (calcul or self.coord is None) else self.coord
         
-        print(f"on dessine l'objet {self}")
-        if self.classe_actuelle == 'Courbe' and self.deg !=1:
+        xrint(f"on dessine l'objet {self}")
+        if self.classe_actuelle == 'Courbe' and self.deg_actu !=1:
             xrint("Calcul des points.")
             zzzz=time.time()
             self.plan.CAst[self.nom]=[]
@@ -590,8 +666,8 @@ class Creature:
                 if objet is not None: can.tag_lower(objet, 'limite2')
             print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
-        if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg==1):
-            print(coords)
+        if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
+            xrint(coords)
             if self == self.plan.inf: return
             nor = norm(coords)
             if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
@@ -601,9 +677,12 @@ class Creature:
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
+            print(f'Fin affichage des points de la droite {self}. Temps estimé : devine')
+            
 
         if self.classe_actuelle == 'Point':
             a = coords
+            print(a)
             if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
                 a = (a[0]/a[2], a[1]/a[2],1)
                 c = focaliser([a[0], a[1]])
@@ -639,15 +718,6 @@ def inter(A, B):
             zA*xB-zB*xA,
             xA*yB-xB*yA)
 
-def translation(A, v):
-    return translater(A, v)
-
-def rotation(A, B, theta):
-    return rotater(A, B, theta)
-
-def homothetie(A, B, rapport):
-    return homotheter(A, B, rapport)
-
 def symetrie(A, B):
     return symetrer(A, B)
 
@@ -661,19 +731,27 @@ def projective(A, liste1, liste2):
     return transfo_proj(A, liste1, liste2)
 
 def inter2(courbe1, courbe2, numero):
-    coooords=(0,0,0)
-    rooot=[]
+    coooords = (0,0,0)
+    rooot = []
+    droite = None
     if isinstance(courbe1, tuple):
         a, b, c = courbe1
-        courbe1 = Polynome(((c, b,), (a,)))
+        if a != 0:
+            droite, courbe = Polynome([-c/a, -b/a]), courbe2
+        else:
+            y = -c/b
+            courbe = courbe2.change_variables()
+            rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
     if isinstance(courbe2, tuple):
         a, b, c = courbe2
-        courbe2 = Polynome(((c, b,), (a,)))
-    if True:
+        if a != 0:
+            droite, courbe = Polynome([-c/a, -b/a]), courbe1
+        else:
+            y = -c/b
+            courbe = courbe1.change_variables()
+            rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
+    if droite is None and rooot == []:
         p1, p2 = courbe1.expr_dict_monomes(), courbe2.expr_dict_monomes()
-        print(p1, p2)
-        print(courbe1.expr_rationals(('x','y')), courbe2.expr_rationals(('x','y')))
-        t = perf()
         c = grob([p1, p2])
         P2 = Polynome(c[1]).change_variables()
         l = {d[1]:e[0]/e[1] for d, e in c[0].items()}
@@ -684,41 +762,17 @@ def inter2(courbe1, courbe2, numero):
         for r in racines:
             P = P2(r)
             for r2 in P.resoudre()[0]:
-                print(courbe2(r2)(r))
-                if courbe2(r2)(r) < 1e-9:
-                    rooot.append((r2, r))
-        print(perf() - t)
-        print(len(rooot))
-    else:
-        if courbe2.deg==1:
-            droite, courbe=courbe2, courbe1
-        else:
-            droite, courbe=courbe1, courbe2
-        coord=droite
-        coord2=courbe
-        k2=-coord[2]/coord[1]
-        k3=-coord[0]/coord[1]
-        poly=[0]*(courbe.deg+1)
-        if coord[1] == 0:
-            poly = coords(k2)
-        else:
-            permut = permutations(courbe.deg)
-            for i in range(len(permut)):
-                k = (-1)**permut[i][1]/(coord[1]**permut[i][1])
-                for j in range(permut[i][1]+1):
-                    poly[courbe.deg-permut[i][0]-j] += k* coord2[i]*coord[0]**j*coord[2]**(permut[i][1]-j) * binom(permut[i][1], j)
-        roots = poly.resoudre()
-        if coord[1]==0:
-            for r in roots:
-                rooot.append((k2, r))
-        else:
-            for r in roots:
-                rooot.append((r, k2 +r*k3))
+                xrint(courbe2(r2)(r))
+                if courbe2(r2)(r) < 1e-14:
+                    rooot.append((r2, r, 1))
+    elif rooot == []:
+        P = courbe(droite)
+        for y in P.resoudre()[0]:
+            rooot.append((droite(y), y, 1))
     if numero == -1:
         return rooot
     if numero < len(rooot):
-        coooords = (rooot[numero][0], rooot[numero][1],1)
-    return coooords
+        return rooot[numero]
 
 def ortho(A):
     """Point orthogonal de A"""
@@ -740,24 +794,6 @@ def milieu(A, B):
 
 def centreInscrit(A, B, C):
     """Définition du centre du cercle inscrit de trois points"""
-    xA, yA, zA = A
-    xB, yB, zB = B
-    xC, yC, zC = C
-    a=sqrt((xB-xC)**2+(yB-yC)**2+(zB-zC)**2)
-    b=sqrt((xA-xC)**2+(yA-yC)**2+(zA-zC)**2)
-    c=sqrt((xB-xA)**2+(yB-yA)**2+(zB-zA)**2)
-    return ((a*xA+b*xB+c*xC)/(a+b+c),
-            (a*yA+b*yB+c*yC)/(a+b+c),
-            (a*zA+b*zB+c*zC)/(a+b+c))
-    
-def biss(a, b, numero = 1): #numéro vaut 1 ou -1
-    xa, ya, za = a
-    xb, yb, zb = b
-    return (
-            xa*sqrt(xb**2+yb**2)-numero*xb*sqrt(xa**2+ya**2),
-            ya*sqrt(xb**2+yb**2)-numero*yb*sqrt(xa**2+ya**2),
-            za*sqrt(xb**2+yb**2)-numero*zb*sqrt(xa**2+ya**2)
-        )
 
 def tangente(C, p):
     """C -> CA
@@ -797,8 +833,11 @@ def interpol(deg, *args):#INTERpolation
     for i in range(len(detConi)):
         for j in range(len(detConi[i])):
             detConi[i][j] = detConi[i][j]/(10**a)
+    print(permut)
     for i in range(len(permut)):
+        print([detConi[0][k] for k in range(i)], [detConi[0][k] for k in range(i+1, len(permut))])
         sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
+        print(sousDet)
         coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
     nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
     a = 0
@@ -811,10 +850,37 @@ def interpol(deg, *args):#INTERpolation
         for j in range(len(coords)):
             c, b = coords[j][1][0], coords[j][1][1]
             nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-    print('nouv_coords :', nouv_coords)
+    xrint('nouv_coords :', nouv_coords)
     poly = Polynome(nouv_coords)
-    print('poly :', poly)
+    xrint('poly :', poly)
     xrint(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
+    return poly
+
+def CAtan1(deg, *args):
+    '''crée une conique tangente à d1 en A passant par les points B, C et D'''
+    permut = permutations(deg)
+    d1, A, B, C, D = args[:5]
+    b, c = d1[1], d1[2]
+    detConi =  [[A[0]**2, A[0]*A[1], A[1]**2, A[2]*A[0], A[1]*A[2], A[2]**2],
+                 [0, A[0]*c, 2*c*A[1], -A[0]*b, A[2]*c-A[1]*b, -2*b*A[2]],
+                 [B[0]**2,B[0]*B[1], B[1]**2, B[0]*B[2], B[1]*B[2], B[2]**2],
+                 [C[0]**2,C[0]*C[1], C[1]**2, C[0]*C[2], C[1]*C[2], C[2]**2],
+                 [D[0]**2,D[0]*D[1], D[1]**2, D[0]*D[2], D[1]*D[2], D[2]**2]]
+    coords = []
+    for i in range(len(permut)):
+        sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+    nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
+    a, i = 0, 0
+    while a == 0 and i < len(coords):
+        if coords[i][0] != 0:
+            a = coords[i][0]
+        i+=1
+    if a != 0:
+        for j in range(len(coords)):
+            c, b = coords[j][1][0], coords[j][1][1]
+            nouv_coords[c][b] = numpy.real(coords[j][0] / a)
+    poly = Polynome(nouv_coords)
     return poly
 
 def cercle(deg, *args):
@@ -852,9 +918,9 @@ def cercle(deg, *args):
         for j in range(len(coords)):
             c, b = coords[j][1][0], coords[j][1][1]
             nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-    print('nouv_coords :', nouv_coords)
+    xrint('nouv_coords :', nouv_coords)
     poly = Polynome(nouv_coords)
-    print('poly :', poly)
+    xrint('poly :', poly)
     return poly
 
 def perp(d, p):
@@ -864,9 +930,16 @@ def perp(d, p):
     d = inter(p, p2)
     return d
     
+def PsurDroite(d, p):
+    p1 = inf(d)
+    p2 = ortho(p1)
+    d1 = inter((p[0], p[1], 1), p2)
+    return inter(d, d1)
+    
+
 
 def PsurCA(C, n, coo, main):
-    print(coo)
+    xrint(coo)
     x, y = coo
     defocaliser = main.coord_canvas
     w, h = main.canvas.winfo_width(), main.canvas.winfo_height()
@@ -880,13 +953,12 @@ def PsurCA(C, n, coo, main):
         i += 1
     Liste3 = [[tangente(C, i), i] for i in Liste]
     Liste2 = [perp(i[0], i[1]) for i in Liste3]
-    print(Liste2)
+    xrint(Liste2)
     CA2 = interpol(2*n, *Liste2)
     A = []
     a = inter2(CA2, (x,y,1), -1)
     for i in a:
-        A += inter2(P, (float(i[0]), float(i[1]), 1), -1)
-    A = list(map(lambda x: (x[0], x[1], 1), A))
+        A += inter2(P, i, -1)
     return min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2)
 
 ###################################
@@ -908,6 +980,9 @@ class Plan:
         self.U = Creature(self, 'Point', nom="U", method="coord", args=[(1,1j,0)])
         self.V = Creature(self, 'Point', nom="V", method="coord", args=[(1,-1j,0)])
         self.inf = Creature(self, 'Droite', nom="Inf", method="inter", args=[self.U, self.V])
+        self.U.coords()
+        self.V.coords()
+        self.inf.coords()
         self.bold = 3 #largeur d'une droite
         self.boldP = 3 #rayon d'un point
         self.boldC = 1 #largeur points des coniques
@@ -1014,16 +1089,17 @@ class Plan:
 
     
     def move(self, point, coords):
-        if point.arbre.parents == set() or point.method == 'PsurCA':
+        objets = set()
+        if point.bougeable():
             self.contre_action(self.move, (point, point.coords()))
             if point.arbre.parents == set(): point.args=[coords]
-            else: point.args[2] = coords[:2]
+            elif point.method == 'PsurCA': point.args[2] = coords[:2]
+            else: point.args[1] = coords[:2]
             for i in sorted(list(point.arbre.descente()), key=lambda x: x[1]):
                 i[0].valeur.coords(1)
-                i[0].valeur.dessin(1)
+                objets.add(i[0].valeur)
             self.modifs = (True, True)
-            return {i[0].valeur for i in point.arbre.descente()}
-        return None
+        return objets
 
     
     def new_harmonique(self, nom, A,B,C, u = 1):
@@ -1104,6 +1180,8 @@ class Plan:
 
 
     def newPsurCA(self, nom, args, u = 1):
+        if args[0].classe == 'Droite':
+            return Creature(self, 'Point', nom = nom, method = 'PsurDroite', args = [args[0], args[1]], u = u)
         return Creature(self, 'Point', nom = nom, method = 'PsurCA', args = [args[0], args[0].deg, args[1], self.main], u = u)
         
     
