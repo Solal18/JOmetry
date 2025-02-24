@@ -93,6 +93,7 @@ def inverser(classe, method, deg, args, UV, c, r):
         c = c.coords()
     if not isinstance(r, tuple):
         r = r.coords()
+    cercl = cercle(2, inter(UV[0], c), inter(UV[1], c), r, UV[0], UV[1])
     if classe == 'Droite':
         A, B = args[0][1], args[1][1]
         d = globals()[method](A, B)
@@ -100,12 +101,24 @@ def inverser(classe, method, deg, args, UV, c, r):
         e, f, g = c
         if abs(a*e+b*f+h*g) < 1e-13:
             return classe, method, deg, nouv_args, UV
-        cercl = cercle(2, inter(UV[0], c), inter(UV[1], c), r, UV[0], UV[1])
         if method == 'inter':
             return 'Courbe', 'interpol', 2, [('Point', inversion(A, c, cercl)), ('Point', inversion(B, c, cercl)), ('Point', c), ('Point', UV[0]), ('Point', UV[1])], UV
         else:
             return 'Courbe', 'CAtan1', 2, [('Droite', inter(c, inf(d))), ('Point', c), ('Point', UV[0]), ('Point', UV[1]), ('Point', inversion(B, c, cercl))], UV
-            
+    if deg >= 2:
+        dico = {UV[0] : 0, UV[1] : 0, c : 0}
+        nouv_args = []
+        for i in args:
+            if i[1] in list(dico.keys()):
+                dico[i[1]] +=1
+            else:
+                nouv_args.append(('Point', inversion(i[1], c, cercl)))
+        nouv_args+= [('Point', c)]*(deg-dico[UV[0]] - dico[UV[1]])
+        nouv_args+= [('Point', UV[0])]*(deg-dico[UV[0]] - dico[c])
+        nouv_args+= [('Point', UV[1])]*(deg-dico[UV[1]] - dico[c])
+        print(nouv_args)
+        return 'Courbe', 'interpol', floor(sqrt(2*len(nouv_args)+9/4)-3/2), nouv_args, UV
+
     print(classe, method)
     for i in args:
         if i[0] == 'Point':
