@@ -364,7 +364,7 @@ class Polynome:
     def derivee(self):
         return Polynome([e*self[e] for e in range(1, self.deg + 1)])
     
-    def resoudre(self):
+    '''def resoudre(self):
         if self.deg == 1:
             return [-self[0]/self[1]], []
         if self.deg == 2:
@@ -414,15 +414,15 @@ class Polynome:
                             else:
                                 x, inf = (x + sup)/2, x
             solutions.append(x)
-        return solutions, maximas
+        return solutions, maximas'''
 
-    '''def resoudre(self):
+    def resoudre(self):
         roots=[]
         for i in numpy.roots(self.coefficients()[::-1]):
             if numpy.imag(i)==0:
-                roots.append(numpy.real(i))
-        return (roots, [])'''
-
+                roots.append(float(numpy.real(i)))
+        return (roots, [])
+        
     def expr_rationals(self, variables, join = 1):
         liste = []
         for e in range(self.deg + 1):
