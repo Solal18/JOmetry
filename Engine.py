@@ -682,6 +682,8 @@ class Creature:
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
             xrint(coords)
             if self == self.plan.inf: return
+            if isinstance(coords, Polynome):
+                coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
             nor = norm(coords)
             if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
                 z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.nom)
