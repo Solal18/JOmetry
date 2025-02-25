@@ -106,18 +106,26 @@ def inverser(classe, method, deg, args, UV, c, r):
         else:
             return 'Courbe', 'CAtan1', 2, [('Droite', inter(c, inf(d))), ('Point', c), ('Point', UV[0]), ('Point', UV[1]), ('Point', inversion(B, c, cercl))], UV
     if deg >= 2:
+        print('saluttt')
+        print(f'coucou : {args}')
         dico = {UV[0] : 0, UV[1] : 0, c : 0}
         nouv_args = []
         for i in args:
+            print(i)
             if i[1] in list(dico.keys()):
+                print("yeah")
                 dico[i[1]] +=1
             else:
                 nouv_args.append(('Point', inversion(i[1], c, cercl)))
+        print(dico)
         nouv_args+= [('Point', c)]*(deg-dico[UV[0]] - dico[UV[1]])
         nouv_args+= [('Point', UV[0])]*(deg-dico[UV[0]] - dico[c])
         nouv_args+= [('Point', UV[1])]*(deg-dico[UV[1]] - dico[c])
+        print("salututuezhtia")
         print(nouv_args)
-        return 'Courbe', 'interpol', floor(sqrt(2*len(nouv_args)+9/4)-3/2), nouv_args, UV
+        print(len(nouv_args))
+        print(floor(sqrt(2*lignes([tuple(i[1]) for i in nouv_args])+9/4)-3/2))
+        return 'Courbe', 'interpol', floor(sqrt(2*lignes([tuple(i[1]) for i in nouv_args])+9/4)-3/2), nouv_args, UV
 
     print(classe, method)
     for i in args:
@@ -422,7 +430,7 @@ class Polynome:
             if numpy.imag(i)==0:
                 roots.append(float(numpy.real(i)))
         return (roots, [])
-        
+
     def expr_rationals(self, variables, join = 1):
         liste = []
         for e in range(self.deg + 1):
@@ -485,10 +493,14 @@ class Creature:
             elif method in transformation:
                 deg = args[0].deg 
             elif deg == '':
-                deg = floor(sqrt(2*len(args)+9/4)-3/2)
-                args = args[:(deg**2+3*deg)//2]
+                while 2*lignes(args) != floor(sqrt(2*lignes(args)+9/4)-3/2)**2+3*floor(sqrt(2*lignes(args)+9/4)-3/2):
+                    args.pop(-1)
+                deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
             else:
                 args = args[:(deg**2+3*deg)//2]
+        print("sos")
+        print(args)
+        print(deg)
         self.nom = nom
         self.coord = None
         self.method = method
@@ -552,13 +564,6 @@ class Creature:
         self.plan.noms.remove(self.nom)
         del self
                 
-    def __eq__(self, other):
-        """Définition de l'égalité de deux points ou droites"""
-        if type(other) != type(self): return False
-        xa, ya, za = self.coords()
-        xb, yb, zb = other.coords()
-        return ya*zb-yb*za == za*xb-zb *xa == xa*yb-xb*ya == 0
-
     def coords(self, calcul = 0):
         if self.coord is None or calcul:
             method = self.method
@@ -683,7 +688,9 @@ class Creature:
             xrint(coords)
             if self == self.plan.inf: return
             if isinstance(coords, Polynome):
+                print("salut")
                 coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
+                print(coords)
             nor = norm(coords)
             if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
                 z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.nom)
@@ -697,7 +704,6 @@ class Creature:
 
         if self.classe_actuelle == 'Point':
             a = coords
-            print(a)
             if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
                 a = (a[0]/a[2], a[1]/a[2],1)
                 c = focaliser([a[0], a[1]])
@@ -715,6 +721,13 @@ class Creature:
 ################################################################################
 ###                        Méthodes de calcul                                ###
 ################################################################################        
+
+
+def lignes(liste):
+    dicoArgs={}
+    for i in liste:
+        dicoArgs[i] = dicoArgs.get(i, 0)+1
+    return sum([(i*(i+1))//2 for i in list(dicoArgs.values())])
 
 def coord(c, d = 0, e = 0):
     """Définition d'un point par ses coordonnées"""
@@ -845,18 +858,44 @@ def tangente(C, p):
 
 def interpol(deg, *args):#INTERpolation
     xrint('Début interpolation')
-    xrint(deg)
     zzzz=time.time()
     permut = permutations(deg)
     detConi = []
-    print('args :', args)
+    dicoArgs ={}
+    args = [tuple(i) for i in args]
     for i in args:
+        dicoArgs[i] = dicoArgs.get(i, 0)+1
+    for i in list(dicoArgs.keys()):
         a, b, c = i
         detConibis = []
         for j in permut:
             detConibis.append(a**j[0]*b**j[1]*c**j[2])
-        xrint(type(detConibis[0]))
         detConi.append(detConibis)
+        for k in range(1,(dicoArgs[i]*(dicoArgs[i]+1))//2):
+            detConibis = []
+            if c==0:
+                for j in permut:
+                    if j[2]==0 and j[1]==0:
+                        detConibis.append(0)
+                    elif j[2]==0:
+                        detConibis.append(10**10*((10**7-100*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+                    elif j[1]==0:
+                        detConibis.append(10**10*(k*j[2]*c**(j[2]-1)*b**j[1]*a**j[0]))
+                    else:
+                        detConibis.append(10**10*(k*j[2]*c**(j[2]-1)*b**j[1]*a**j[0]+(10**7-100*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+            else:
+                for j in permut:
+                    if j[0]==0 and j[1]==0:
+                        detConibis.append(0)
+                    elif j[0]==0:
+                        detConibis.append((10**(2*deg+1)-10**(deg)*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+                    elif j[1]==0:
+                        detConibis.append(k*j[0]*a**(j[0]-1)*b**j[1]*c**j[2])
+                    else:
+                        detConibis.append(k*j[0]*a**(j[0]-1)*b**j[1]*c**j[2]+(10**(2*deg+1)-10**(deg)*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+            detConi.append(detConibis)
+    print("wooo")
+    print(detConi)
     coords = []
     if deg <=7:
         a = deg + 3
@@ -865,12 +904,10 @@ def interpol(deg, *args):#INTERpolation
     for i in range(len(detConi)):
         for j in range(len(detConi[i])):
             detConi[i][j] = detConi[i][j]/(10**a)
-    print(permut)
     for i in range(len(permut)):
-        print([detConi[0][k] for k in range(i)], [detConi[0][k] for k in range(i+1, len(permut))])
         sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-        print(sousDet)
         coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+    print(coords)
     nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
     a = 0
     i = 0
@@ -882,7 +919,6 @@ def interpol(deg, *args):#INTERpolation
         for j in range(len(coords)):
             c, b = coords[j][1][0], coords[j][1][1]
             nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-    xrint('nouv_coords :', nouv_coords)
     poly = Polynome(nouv_coords)
     xrint('poly :', poly)
     xrint(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
@@ -1255,4 +1291,3 @@ class Plan:
             self.objets[nom2] = self.objets.pop(nom)
             canv.itemconfig(self.points[nom2].tkinter[1], text=self.points[nom2].nom)
         self.modifs = (True, True)
-                      
