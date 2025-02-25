@@ -10,6 +10,7 @@ from math import sqrt, floor
 from time import time
 import os.path as op
 import Frames as Fenetres
+from random import random, randint
 
 fenetre = tk.Tk()
 ttk.Style().theme_use('clam')
@@ -78,7 +79,7 @@ class Main:
                      ['nouv_plan'], ['suppr_plan'], ['main'],
                      ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex'],
-                     ['courbe'], ['soumettre'],
+                     ['courbe', 'caa'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul'],
                      ['editeur_objets'], ['etude'],
@@ -154,6 +155,7 @@ class Main:
                         'surcourbe' : (self.surcourbe, 1, ('courbe', 'non')),
                         'cercle_circ' : (self.cercle, 1, ('point', 'point', 'point')),
                         'courbe' : (self.courbe, 1, ('point',)*90),
+                        'caa' : (self.caa, 0),
                         'droite' : (self.droite, 1, ('point', 'point')),
                         'plus' : (self.plus, 0),
                         'moins' : (self.moins, 0),
@@ -496,6 +498,14 @@ class Main:
     def perp(self):
         self.plans[0].newPerp(1, self.liste_derniers_clics)
 
+    def caa(self):
+        CA = [self.plans[0].newPoint_coord(1, (self.canvas.winfo_width()/4+random()*self.canvas.winfo_width()*3/4, self.canvas.winfo_height()/4+random()*3/4*self.canvas.winfo_height(),1), u=0) for _ in range([5, 9, 14, 20, 32][randint(0,4)])]
+        if randint(0,3)==2:
+            CA = [self.plans[0].U]+CA
+        if randint(0,3)==2:
+            CA = [self.plans[0].V]+CA
+        self.plans[0].newCA(1, CA).dessin()
+        
     def media(self):
         self.plans[0].newMedia(1, self.liste_derniers_clics)
 
