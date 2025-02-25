@@ -600,7 +600,7 @@ class Main:
         
     def soumettre(self):
         if self.action_canvas == self.courbe and len(self.liste_derniers_clics) >= 2:
-            courbe = self.plans[0].newCA(1,self.liste_derniers_clics)
+            courbe = self.plans[0].newCA(1,[i for i in self.liste_derniers_clics])
             self.deselectionner()
             courbe.dessin()
         
