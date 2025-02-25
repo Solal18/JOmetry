@@ -600,7 +600,7 @@ class Main:
         
     def soumettre(self):
         if self.action_canvas == self.courbe and len(self.liste_derniers_clics) >= 2:
-            courbe = self.plans[0].newCA(1, self.liste_derniers_clics)
+            courbe = self.plans[0].newCA(1,self.liste_derniers_clics)
             self.deselectionner()
             courbe.dessin()
         
@@ -646,8 +646,9 @@ class Main:
                     self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
                     self.canvas.tag_raise(point.tkinter[0], self.canvas.find_all()[-1])
                     self.canvas.tag_raise(point.tkinter[1], self.canvas.find_all()[-1])
-            if point not in self.liste_derniers_clics:
-                self.liste_derniers_clics.append(point)
+            self.liste_derniers_clics.append(point)
+            if self.liste_derniers_clics.count(point) not in {0,1}:
+                self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
         if attendu in ['droite', 'courbe']:
             print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
@@ -656,6 +657,7 @@ class Main:
             if len(objet) == 0: return
             print(self.canvas.gettags(objet[0]))
             courbe = self.plans[0].tkinter_object[objet[0]]
+            print(courbe)
             if courbe not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(courbe)
         if attendu == 'objet':
@@ -681,18 +683,32 @@ class Main:
         for objet in self.liste_derniers_clics:
             if isinstance(objet, Geo.Creature):
                 self.canvas.itemconfigure(objet.tkinter[0], fill = objet.color)
+                self.canvas.itemconfigure(objet.tkinter[1], text = objet.nom)
         self.point_move = None
                 
     def decaler(self, mouvement):
-        self.plans[0].action_utilisateur('decaler')
-        self.plans[0].contre_action(self.decaler, ((-mouvement[0], -mouvement[1]),))
-        a,b = [i*20 for i in mouvement]
-        self.plans[0].offset_x = [self.plans[0].offset_x[0],
-                                  (self.plans[0].offset_x[1] + a)]
-        self.plans[0].offset_y = [self.plans[0].offset_y[0] ,
-                                  (self.plans[0].offset_y[1] + b)]
-        self.canvas.move('all', a,b)
-        self.plans[0].modifs = (True, True)
+        if self.dernier_bouton != 'courbe':
+            self.plans[0].action_utilisateur('decaler')
+            self.plans[0].contre_action(self.decaler, ((-mouvement[0], -mouvement[1]),))
+            a,b = [i*20 for i in mouvement]
+            self.plans[0].offset_x = [self.plans[0].offset_x[0],
+                                    (self.plans[0].offset_x[1] + a)]
+            self.plans[0].offset_y = [self.plans[0].offset_y[0] ,
+                                    (self.plans[0].offset_y[1] + b)]
+            self.canvas.move('all', a,b)
+            self.plans[0].modifs = (True, True)
+        else:
+            if self.liste_derniers_clics != []:
+                point=self.liste_derniers_clics[-1]
+                if mouvement == (1,0):
+                    self.liste_derniers_clics.append(point)
+                if mouvement == (-1,0):
+                    self.liste_derniers_clics.remove(point)
+                if self.liste_derniers_clics.count(point) in {0,1}:
+                    self.canvas.itemconfigure(point.tkinter[1], text = point.nom)
+                    self.canvas.itemconfigure(point.tkinter[0], fill=point.color)
+                else:
+                    self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
         
     def dessin_canvas(self):
         for t in self.canvas.find_all():
