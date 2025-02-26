@@ -10,7 +10,6 @@ from math import sqrt, floor
 from time import time
 import os.path as op
 import Frames as Fenetres
-from random import random, randint
 
 fenetre = tk.Tk()
 ttk.Style().theme_use('clam')
@@ -79,9 +78,9 @@ class Main:
                      ['nouv_plan'], ['suppr_plan'], ['main'],
                      ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex'],
-                     ['courbe', 'caa'], ['soumettre'],
+                     ['courbe'], ['caa'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
-                     ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul'],
+                     ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
                      ['editeur_objets'], ['etude'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['aide'],
                      ]
@@ -155,7 +154,6 @@ class Main:
                         'surcourbe' : (self.surcourbe, 1, ('courbe', 'non')),
                         'cercle_circ' : (self.cercle, 1, ('point', 'point', 'point')),
                         'courbe' : (self.courbe, 1, ('point',)*90),
-                        'caa' : (self.caa, 0),
                         'droite' : (self.droite, 1, ('point', 'point')),
                         'plus' : (self.plus, 0),
                         'moins' : (self.moins, 0),
@@ -169,9 +167,11 @@ class Main:
                         'enregistrer_sous' : (self.enregistrer_sous, 0),
                         'ouvrir' : (self.ouvrir, 0),
                         'etude' : (self.etude, 0),
+                        'caa' : (self.caa, 0),
                         'cercle_cent' : (self.cercle_cent, 1, ('point', 'point')),
                         'harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
                         'invers' : (self.invers, 1, ('objet', 'point', 'point')),
+                        'inv_plan' : (self.inv_plan, 1, ('point', 'point')),
                         'cercle_inscr' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
                         'cercle_ex' : (self.cercle_ex, 1, ('point', 'point', 'point')),
                         'bissec' : (self.bissec, 1, ('point', 'point', 'point')),
@@ -322,7 +322,9 @@ class Main:
         if self.point_move is None: return
         x, y = self.coord_canvas(ev.x, ev.y)
         self.plans[0].action_utilisateur('bouger_point')
-        for obj in self.plans[0].move(self.point_move, (x, y, 1)):
+        l = self.plans[0].move(self.point_move, (x, y, 1))
+        print(l)
+        for obj in l:
             obj.dessin(1)
             
         
@@ -462,8 +464,28 @@ class Main:
 
     def invers(self):
         obj, centre, rayon = self.liste_derniers_clics
-        Geo.Creature(self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon), obj.deg, u = 1)
+        if obj.classe == 'Point':
+            Geo.Creature(self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon, (self.plans[0].U, self.plans[0].V)), obj.deg, u = 1)
         
+    def inv_plan(self):
+        centre, rayon = self.liste_derniers_clics
+        plan = self.plans[0]
+        l = plan.objets.values()
+        self.nouv_plan()
+        n_plan = self.plans[0]
+        for obj in l:
+            if obj.nom in ('U', 'V', 'Inf'): continue
+            if obj.classe == 'Point':
+                Geo.Creature(n_plan, obj.classe, obj.nom + "'", 'inversion', (obj, centre, rayon, (n_plan.U, n_plan.V)), obj.deg, u = 1)
+            else:
+                Geo.Creature(n_plan, obj.classe, obj.nom + "'", 'inversion', (obj, centre, rayon), obj.deg, u = 1)
+            Geo.Creature(n_plan, 'Point', centre.nom + "'", 'rien', (centre, ), 1, u = 1)
+            n_plan.offset_x = plan.offset_x
+            n_plan.offset_y = plan.offset_y
+            n_plan.bold, n_plan.boldP, n_plan.boldC = plan.bold, plan.boldP, plan.boldC
+            n_plan.focal = plan.focal
+            n_plan.plan_trans = plan
+            
     def point(self):
         x, y = self.liste_derniers_clics[0]
         point = self.plans[0].newPoint_coord(1, (x, y, 1))
