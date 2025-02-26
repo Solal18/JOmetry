@@ -10,6 +10,7 @@ from math import sqrt, floor
 from time import time
 import os.path as op
 import Frames as Fenetres
+from random import random, randint
 
 fenetre = tk.Tk()
 ttk.Style().theme_use('clam')
@@ -466,7 +467,9 @@ class Main:
         obj, centre, rayon = self.liste_derniers_clics
         if obj.classe == 'Point':
             Geo.Creature(self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon, (self.plans[0].U, self.plans[0].V)), obj.deg, u = 1)
-        
+        else:
+            Geo.Creature(self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon), obj.deg, u = 1)
+            
     def inv_plan(self):
         centre, rayon = self.liste_derniers_clics
         plan = self.plans[0]
