@@ -89,6 +89,7 @@ def rotater(classe, method, deg, args, UV, p, theta):
 
 def inverser(classe, method, deg, args, UV, c, r):
     nouv_args = []
+    print('inversion ',classe, method, deg, args, UV, c, r)
     if not isinstance(c, tuple):
         c = c.coords()
     if not isinstance(r, tuple):
@@ -100,10 +101,13 @@ def inverser(classe, method, deg, args, UV, c, r):
         a, b, h = d
         e, f, g = c
         if abs(a*e+b*f+h*g) < 1e-13:
-            return classe, method, deg, nouv_args, UV
+            print(1)
+            return classe, method, deg, args, UV
         if method == 'inter':
+            print(2)
             return 'Courbe', 'interpol', 2, [('Point', inversion(A, c, cercl)), ('Point', inversion(B, c, cercl)), ('Point', c), ('Point', UV[0]), ('Point', UV[1])], UV
         else:
+            print(3)
             return 'Courbe', 'CAtan1', 2, [('Droite', inter(c, inf(d))), ('Point', c), ('Point', UV[0]), ('Point', UV[1]), ('Point', inversion(B, c, cercl))], UV
     if deg >= 2:
         print('saluttt')
@@ -153,11 +157,14 @@ def homothetie(p, c, rapport):
     k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
     return translation(multi_matrix(translation(p, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
 
-def inversion(p, centre, cercle):
+def inversion(p, centre, r, UV = None):
+    if isinstance(r, tuple):
+        r = cercle(2, inter(UV[0].coord, centre), inter(UV[1].coord, centre), r, UV[0].coord, UV[1].coord)
     if centre == p:
         return (1, 1, 0)
     d = inter(p, centre)
-    A, B = inter2(d, cercle, -1)
+    print(p, r, centre, d)
+    A, B = inter2(d, r, -1)
     return harmonique(A, B, p)
 
 
@@ -320,7 +327,7 @@ class Polynome:
     def __neg__(self):
         raise Exception(f'Négation non autorisée pour les polynomes. Polynome en question : {self}')
         
-    def __div__(self):
+    def __div__(self, other):
         raise Exception(f'Division non autorisée pour les polynomes. Polynome en question : {self}')
         
     def __sub__(self, other):
@@ -525,6 +532,7 @@ class Creature:
         if plan.main.editeur_objets:
             plan.main.editeur_objets.ajouter(self)
         if nom not in ('U', 'V', 'Inf'):
+            plan.action_utilisateur(f'creation de {nom}')
             plan.contre_action(self.supprimer, (self.plan.main.canvas,))
         self.dessin()
         xrint(self.coord)
@@ -722,6 +730,8 @@ class Creature:
 ###                        Méthodes de calcul                                ###
 ################################################################################        
 
+
+def rien(c): return c
 
 def lignes(liste):
     dicoArgs={}
