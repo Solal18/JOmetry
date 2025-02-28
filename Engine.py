@@ -1,8 +1,8 @@
 import numpy
 from math import floor, sqrt, exp, cos, sin
 import time
-from sympy import Rational
-from groebner import grob
+from sympy import Rational, groebner, Poly
+import sympy.abc
 from time import perf_counter_ns as perf
 
 def xrint(*args):
@@ -260,6 +260,13 @@ def permutations(n):
             liste.append([n-i-j, j, i])
     return liste
 
+def resoudre(self):
+    roots=[]
+    for i in numpy.roots(self):
+        if numpy.imag(i)==0:
+            roots.append(float(numpy.real(i)))
+    return (roots, [])
+
 class Polynome:
     
     def __init__(self, mat):
@@ -439,7 +446,7 @@ class Polynome:
                 l[(i, j)] = (r.p, r.q)
         return l
             
-    
+        
     __radd__ = __add__
     __rmul__ = __mul__ 
     
@@ -760,19 +767,24 @@ def inter2(courbe1, courbe2, numero):
             rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
     if droite is None and rooot == []:
         p1, p2 = courbe1.expr_dict_monomes(), courbe2.expr_dict_monomes()
-        c = grob([p1, p2])
-        P2 = Polynome(c[1]).change_variables()
-        l = {d[1]:e[0]/e[1] for d, e in c[0].items()}
-        mat = []
-        for i in range(max(l) + 1):
-            mat.append(l[i] if i in l else 0)
-        racines = Polynome(mat).resoudre()[0]
-        for r in racines:
-            P = P2(r)
-            for r2 in P.resoudre()[0]:
-                xrint(courbe2(r2)(r))
-                if courbe2(r2)(r) < 1e-14:
-                    rooot.append((r2, r, 1))
+        print(p1)
+        stra = ""
+        for i in list(p1.keys()):
+            stra+= "x**"+str(i[0])+"*y**"+str(i[1]) + "*" +str(Rational(p1[i][0]/p1[i][1]))+"+"
+        strb=""
+        for i in list(p2.keys()):
+            strb+= "x**"+str(i[0])+"*y**"+str(i[1])+ "*" +str(Rational(p2[i][0]/p2[i][1]))+"+"
+        b=groebner([stra[:-1], strb[:-1]], sympy.abc.x, sympy.abc.y)
+        c=Poly(b[1]).all_coeffs()
+        root=resoudre(c)[0]
+        for r in root:
+            k = str(b[0]).replace("y","("+ str(r)+")")
+            print(k)
+            autre_roots = resoudre(Poly(k).all_coeffs())[0]
+            for ax in autre_roots:
+                rooot.append((ax,r,1))
+                print("wesh")
+                print((ax,r,1))
     elif rooot == []:
         P = courbe(droite)
         for y in P.resoudre()[0]:
@@ -781,6 +793,7 @@ def inter2(courbe1, courbe2, numero):
         return rooot
     if numero < len(rooot):
         return rooot[numero]
+    return (0,0,0)
 
 def ortho(A):
     """Point orthogonal de A"""
