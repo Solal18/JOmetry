@@ -1,5 +1,5 @@
 import numpy
-from math import floor, sqrt, exp, cos, sin, pi
+from math import floor, sqrt, exp, cos, sin
 import time
 from sympy import Rational
 from groebner import grob
@@ -74,15 +74,13 @@ def translater(classe, method, deg, args, UV, v):
 
 def rotater(classe, method, deg, args, UV, p, theta):
     nouv_args = []
-    theta = theta/180*pi
     if not isinstance(p, tuple):
         p = p.coords()
     for i in args:
         if i[0] == 'Point':
             nouv_args.append(('Point', rotation(i[1], p, theta)))
         elif i[0] == 'Droite':
-            nouv_args.append(i)
-            #à modifier
+            nouv_args.append(('Droite', rotater(i[1], p, theta)))
         else:
             nouv_args.append(i)
     return classe, method, deg, nouv_args, UV
@@ -148,6 +146,8 @@ def translation(p, v):
     return (a + tx*c, b + ty*c, tz*c)
 
 def rotation(p, c, theta):
+    print("theta")
+    print(theta)
     a, b, c = c
     k = [[cos(theta), sin(theta), 0], [sin(-theta), cos(-theta), 0], [0, 0, 1]]
     return translation(multi_matrix(translation(p, (-a/c, -b/c, 1/c)), k), (a/c, b/c, c))
@@ -182,20 +182,26 @@ def homotheter(classe, method, deg, args, UV, p, rapport):
             nouv_args.append(i)
     return classe, method, deg, nouv_args, UV
 
-def symetrer(A, B):
+def symetrer(classe, method, deg, args, UV, B):
+    nouv_args =[]
     if type(B) is not tuple:
         B = B.coords()
     a,b, c = B
     if b!=0:
-        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0, inv=True)
-        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (0, c/b, 1)), u = 0, inv=True).coords()
-        k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
-        return translater(multi_matrix(translater(A, (0, c/b, 1)), k), (0, -c/b, 1))
+        for i in args:
+            if i[0] == 'Point':
+                d1 = Creature(plan=plan_default,classe="Droite", method='coord', args = B, u= 0)
+                x,y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, (0, c/b, 1)), u = 0).coords()
+                k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
+                nouv_args.append(('Point', translation(multi_matrix(translation(i[1], (0, c/b, 1)), k),(0, -c/b, 1))))
     elif a!=0:
-        d1 = Droite(plan=plan_default, method='coord', args = B, u= 0, inv=True)
-        x,y, z = Droite(plan=plan_default, method = 'translation', args = (d1, (c/a,0, 1)), u = 0, inv=True).coords()
-        k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
-        return translater(multi_matrix(translater(A, (c/a, 0, 1)), k), (-c/a, 0, 1))    
+        for i in args:
+            if i[0] == 'Point':
+                d1 = Creature(plan=plan_default,classe="Droite", method='coord', args = B, u= 0)
+                x,y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, (c/a,0, 1)), u = 0).coords()
+                k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
+                nouv_args.append(('Point',translation(multi_matrix(translation(i[1],(c/a, 0, 1)), k),(-c/a, 0, 1))))
+    return classe, method, deg, nouv_args, UV
 
 transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer, 'projective' : transfo_proj, 'inversion' : inverser}
 
@@ -589,6 +595,7 @@ class Creature:
             deg = self.deg
             while transformations:
                 method_tr, args_tr = transformations.pop()
+                print("arguments")
                 print(args)
                 classe, method, deg, args, (U, V) = transformation[method_tr](classe, method, deg, args, (U, V), *args_tr)
             print(self, method, args)
