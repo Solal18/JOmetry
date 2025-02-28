@@ -437,7 +437,7 @@ class Main:
 
     def rotation(self):
         obj, p, angle = self.liste_derniers_clics
-        d = self.plans[0].new_rotation(1, obj, p, angle/180*pi)
+        d = self.plans[0].new_rotation(1, obj, p, -angle/180*pi)
 
     def symetrie(self):
         obj, p = self.liste_derniers_clics
@@ -461,7 +461,7 @@ class Main:
     def polyregul(self):
         p1, p2, nombre = self.liste_derniers_clics
         for i in range(int(nombre)-2):
-            p1, p2 = self.plans[0].new_rotation(1, p2, p1, (nombre-2)*180/nombre), p1
+            p1, p2 = self.plans[0].new_rotation(1, p2, p1, (nombre-2)/nombre*pi), p1
 
     def invers(self):
         obj, centre, rayon = self.liste_derniers_clics
@@ -741,7 +741,8 @@ class Main:
                     self.liste_derniers_clics.remove(point)
                 if self.liste_derniers_clics.count(point) in {0,1}:
                     self.canvas.itemconfigure(point.tkinter[1], text = point.nom)
-                    self.canvas.itemconfigure(point.tkinter[0], fill=point.color)
+                    if self.liste_derniers_clics.count(point)==0:
+                        self.canvas.itemconfigure(point.tkinter[0], fill=point.color)
                 else:
                     self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
         
