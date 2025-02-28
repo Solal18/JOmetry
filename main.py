@@ -6,7 +6,7 @@ from tkinter import filedialog as fd, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
 import Engine as Geo
 from PIL import Image, ImageDraw, ImageTk
-from math import sqrt, floor
+from math import sqrt, pi
 from time import time
 import os.path as op
 import Frames as Fenetres
@@ -437,7 +437,7 @@ class Main:
 
     def rotation(self):
         obj, p, angle = self.liste_derniers_clics
-        d = self.plans[0].new_rotation(1, obj, p, angle)
+        d = self.plans[0].new_rotation(1, obj, p, angle/180*pi)
 
     def symetrie(self):
         obj, p = self.liste_derniers_clics
