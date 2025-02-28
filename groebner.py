@@ -88,3 +88,7 @@ def optimisation(G):
     print('bizzare...')
     return G
 
+def grob(A):
+    G = buchberger(A)
+    G = optimisation(G)
+    return G
