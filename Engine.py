@@ -166,7 +166,7 @@ def inverser(classe, method, deg, args, UV, c, r):
             return 'Courbe', 'interpol', 2, [('Point', inversion(A, c, cercl)), ('Point', inversion(B, c, cercl)), ('Point', c), ('Point', UV[0]), ('Point', UV[1])]
         else:
             return 'Courbe', 'CAtan1', 2, [('Droite', inter(c, inf(d))), ('Point', c), ('Point', UV[0]), ('Point', UV[1]), ('Point', inversion(B, c, cercl))]
-    if deg >= 2:
+    if deg >= 1:
         dico = {UV[0] : 0, UV[1] : 0, c : 0}
         nouv_args = []
         for i in args:
@@ -178,7 +178,8 @@ def inverser(classe, method, deg, args, UV, c, r):
         nouv_args+= [('Point', UV[0])]*(deg-dico[UV[0]] - dico[c])
         nouv_args+= [('Point', UV[1])]*(deg-dico[UV[1]] - dico[c])
         return 'Courbe', 'interpol', floor(sqrt(2*lignes([tuple(i[1]) for i in nouv_args])+9/4)-3/2), nouv_args
-    return classe, method, nouv_args, UV
+    print("Sos il se passe un truc sus dans inversion")
+    return classe, method,deg, nouv_args
 
 transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer, 'projective' : projective, 'inversion' : inverser}
 
@@ -575,7 +576,14 @@ class Creature:
                 method_tr, args_tr = transformations.pop()
                 print(f'On effectue : {method_tr} sur {args} avec {args_tr}')
                 if method_tr == "inversion":
+                    print(f'on fait une inversion avec {self.deg}')
+                    print(self)
                     self.classe, method, self.deg, args = transformation["inversion"](self.classe, method, self.deg, args, (self.plan.U.coord, self.plan.V.coord), *args_tr)
+                    print(f'On obtient {self.deg}')
+                    print(f'et comme arguments {self.args}')
+                    print(type(self.args[0]))
+                    if self.deg==1:
+                        self.classe=="Droite"
                 else:
                     args = transformation[method_tr](args, *args_tr)
             args = [i[1] for i in args]
