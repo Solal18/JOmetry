@@ -94,7 +94,7 @@ class EditeurObjets:
             self.tableau.heading(i, text = t)
         self.nom_methodes = {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
-                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion'}
+                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion', 'inversion' : 'inversion'}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
         self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
         self.couleur = tk.Frame(self.frame)
