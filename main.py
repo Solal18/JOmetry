@@ -764,6 +764,8 @@ class Main:
             return Geo.Creature(*args, **kwargs)
         if cat == 'Supprimer':
             return args[0].supprimer(self.canvas)
+        if cat == 'Modif':
+            return args[0].set_param(**kwargs)
     
     
 def ouvrir_erreur():
