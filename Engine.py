@@ -609,7 +609,10 @@ class Creature:
     def set_coords(self):
         self.coord = globals()[method](*self.args)
             
-    def set_param(self, nom, couleur, vis):
+    def set_param(self, nom = None, col = None, vis = None):
+        if nom is None: nom = self.nom
+        if col is None: col = self.color
+        if vis is None: vis = self.vis
         self.plan.contre_action(self.set_param, (self.nom, self.color, self.vis))
         self.plan.noms.remove(self.nom)
         for dic in (self.plan.points, self.plan.droites, self.plan.CAs, self.plan.objets):
@@ -623,11 +626,11 @@ class Creature:
                 ligne = edit.tableau.item(item)['values']
                 if ligne and ligne[0] == self.nom:
                     ligne[0] = nom
-                    ligne[4] = couleur
+                    ligne[4] = col
                     ligne[5] = ['non', 'oui'][vis]
                     edit.tableau.item(item, values = ligne)
         self.nom = nom
-        self.color = couleur
+        self.color = col
         self.vis = vis
         self.dessin()
         
