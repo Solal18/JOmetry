@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter.ttk import Treeview
+from tkinter.ttk import Treeview, Spinbox
 from tkinter import colorchooser as tk_cc
 from PIL import Image, ImageTk
 import os.path as op
@@ -94,7 +94,7 @@ class EditeurObjets:
             self.tableau.heading(i, text = t)
         self.nom_methodes = {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
-                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion', 'inversion' : 'inversion'}
+                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion'}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
         self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
         self.couleur = tk.Frame(self.frame)
@@ -170,7 +170,7 @@ class EditeurObjets:
             return
         self.label['text'] = '\n'
         anc_nom = self.selectionne.nom
-        self.selectionne.set_param(nom, couleur, aff)
+        self.main.action('Modif', self.selectionne, nom = nom, col = couleur, vis = aff)
         for item in self.tableau.get_children():
             ligne = self.tableau.item(item)['values']
             if ligne and ligne[0] == anc_nom:
@@ -279,3 +279,63 @@ class EtudieurObjets:
     def fermer_fenetre(self):
         self.main.editeur_objets = None
         self.grande_frame.destroy()
+        
+class Parametres:
+    
+    def __init__(self, fenetre, main, separe):
+        self.fenetre = fenetre
+        self.grande_frame = tk.Toplevel()
+        self.frame = self.grande_frame
+        self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
+        plan = main.plans[0]
+        self.p = [('nombre', 'Taille des points', plan.boldP, 3),
+                  ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
+                  ('choix', "Style de l'interface", '', 'clam', ('clam', 'old')),
+                  ('texte', 'Nom du plan', plan.nom, 'Plan 1')]
+        self.widgets = []
+        tk.Label(self.frame, text = 'Paramètres').grid(row = 0, column = 0, columnspan = 4)
+        for i, e in enumerate(self.p):
+            if e[0] == 'nombre':
+                w = tk.Spinbox(self.frame, from_ = 0)
+                w.grid(row = i+1, column = 0, columnspan = 2)
+                self.widgets.append(w)
+            if e[0] == 'choix':
+                pass
+            if e[0] == 'texte':
+                pass
+            tk.Label(self.frame, text = e[1]).grid(row = i+1, column = 2, columnspan = 2)
+        tk.Button(self.frame, text = 'Reinitialiser').grid(row = i+2, column = 0)
+        tk.Button(self.frame, text = '   Annuler   ').grid(row = i+2, column = 1, columnspan = 2)
+        tk.Button(self.frame, text = '     OK     ').grid(row = i+2, column = 3)
+            
+    def fermer_fenetre(self):
+        pass
+    
+    def maj(self):
+        pass
+    
+    def assigner_valeurs(self):
+        pass
+    
+    def par_defaut(self):
+        pass
+    
+    def changer_param(self):
+        pass
+                
+class Notes:
+    
+    def __init__(self, fenetre, main, separe):
+        self.fenetre = fenetre
+        if separe:
+            self.grande_frame = tk.Toplevel()
+            self.frame = self.grande_frame
+            self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
+        else :
+            self.grande_frame = tk.Frame(fenetre, bg = '#ddd')
+            self.grande_frame.grid(row = 1, column = 1, sticky = 'ns')
+            self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
+            self.frame.grid(row = 0, column = 0)
+            tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
+            fenetre.bind('<Return>', self.clic_entree)
+        
