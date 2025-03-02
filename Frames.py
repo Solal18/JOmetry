@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter.ttk import Treeview, Spinbox
+from tkinter.ttk import Treeview, Combobox
 from tkinter import colorchooser as tk_cc
 from PIL import Image, ImageTk
 import os.path as op
@@ -122,7 +122,7 @@ class EditeurObjets:
                 self.tableau.delete(item)
         if self.selectionne == i:
             self.deselectionner()
-        if b: i.supprimer(self.main.canvas)
+        if b: self.main.action('Supprimer', i)
 
     def deselectionner(self):
         self.var1.set('')
@@ -290,23 +290,24 @@ class Parametres:
         plan = main.plans[0]
         self.p = [('nombre', 'Taille des points', plan.boldP, 3),
                   ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
-                  ('choix', "Style de l'interface", '', 'clam', ('clam', 'old')),
+                  ('choix', "Style de l'interface", '', 'clam', 'clam', ('clam', 'old')),
                   ('texte', 'Nom du plan', plan.nom, 'Plan 1')]
         self.widgets = []
         tk.Label(self.frame, text = 'Paramètres').grid(row = 0, column = 0, columnspan = 4)
         for i, e in enumerate(self.p):
             if e[0] == 'nombre':
                 w = tk.Spinbox(self.frame, from_ = 0)
-                w.grid(row = i+1, column = 0, columnspan = 2)
-                self.widgets.append(w)
             if e[0] == 'choix':
-                pass
+                w = Combobox(self.frame, state = 'readonly', values = e[4])
             if e[0] == 'texte':
-                pass
+                w = tk.Entry(self.frame)
+            w.grid(row = i+1, column = 0, columnspan = 2)
+            self.widgets.append(w)
             tk.Label(self.frame, text = e[1]).grid(row = i+1, column = 2, columnspan = 2)
         tk.Button(self.frame, text = 'Reinitialiser').grid(row = i+2, column = 0)
         tk.Button(self.frame, text = '   Annuler   ').grid(row = i+2, column = 1, columnspan = 2)
         tk.Button(self.frame, text = '     OK     ').grid(row = i+2, column = 3)
+        self.assigner_valeurs([e[2] for e in self.p])
             
     def fermer_fenetre(self):
         pass
@@ -314,7 +315,7 @@ class Parametres:
     def maj(self):
         pass
     
-    def assigner_valeurs(self):
+    def assigner_valeurs(self, liste):
         pass
     
     def par_defaut(self):
