@@ -624,7 +624,7 @@ class Main:
         
     def supprimer(self):
         pprint('\n\n\nsuppr\n\n\n')
-        self.liste_derniers_clics[0].supprimer(self.canvas)
+        self.action('Supprimer', self.liste_derniers_clics[0])
         
     def soumettre(self):
         if self.action_canvas == self.courbe and len(self.liste_derniers_clics) >= 2:
@@ -758,11 +758,12 @@ class Main:
         self.Texte.config(text = texte)
         
     def action(self, cat, *args, **kwargs):
+        '''Creature, Supprimer, Zoom, Mouv, Modif'''
         print(cat, args, kwargs)
         if cat == 'Creature':
             return Geo.Creature(*args, **kwargs)
         if cat == 'Supprimer':
-            return args[0].supprimer()
+            return args[0].supprimer(self.canvas)
     
     
 def ouvrir_erreur():
