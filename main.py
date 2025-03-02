@@ -419,53 +419,53 @@ class Main:
         
     def tangentes_communes(self):
         c1, c2 = self.liste_derniers_clics
-        tangentes_c1 = [Geo.Creature(self.plans[0], 'Droite', nom = 0, method = 'tangente', args = (c1, p), u = 0) for p in c1.args]
-        tangentes_c2 = [Geo.Creature(self.plans[0], 'Droite', nom = 0, method = 'tangente', args = (c2, p), u = 0) for p in c2.args]
-        c1_dual = Geo.Creature(self.plans[0], 'Courbe', nom = 0, method = 'interpol', deg = '', args = tangentes_c1, u = 0)
-        c2_dual = Geo.Creature(self.plans[0], 'Courbe', nom = 0, method = 'interpol', deg = '', args = tangentes_c2, u = 0)
+        tangentes_c1 = [self.action('Creature', self.plans[0], 'Droite', nom = 0, method = 'tangente', args = (c1, p), u = 0) for p in c1.args]
+        tangentes_c2 = [self.action('Creature', self.plans[0], 'Droite', nom = 0, method = 'tangente', args = (c2, p), u = 0) for p in c2.args]
+        c1_dual = self.action('Creature', self.plans[0], 'Courbe', nom = 0, method = 'interpol', deg = '', args = tangentes_c1, u = 0)
+        c2_dual = self.action('Creature', self.plans[0], 'Courbe', nom = 0, method = 'interpol', deg = '', args = tangentes_c2, u = 0)
         c1_dual.coords()
         c2_dual.coords()
         for i in range(c1_dual.deg * c2_dual.deg):
-            Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'inter2', args = (c1_dual, c2_dual, i), u = 1)
+            self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter2', args = (c1_dual, c2_dual, i), u = 1)
             
     def surcourbe(self):
         obj, pos = self.liste_derniers_clics
         if obj.classe == 'Droite':
-            return Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'ProjOrtho', args = [obj, (pos[0], pos[1], 1)], u = 1)
-        return Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, obj.deg, pos, self], u = 1)
+            return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'ProjOrtho', args = [obj, (pos[0], pos[1], 1)], u = 1)
+        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, obj.deg, pos, self], u = 1)
 
     def harmonique(self):
         A,B,C = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'harmonique', args = (A, B, C), u = 1)
+        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'harmonique', args = (A, B, C), u = 1)
 
     def rotation(self):
         obj, p, angle = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], obj.classe, nom = 1, method = 'rotation', args = (obj, p, -angle/180*pi), u = 1)
+        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'rotation', args = (obj, p, -angle/180*pi), u = 1)
 
     def symetrie(self):
         obj, d = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], obj.classe, nom = 1, method = 'symetrie', args = (obj, d), u = 1)
+        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'symetrie', args = (obj, d), u = 1)
 
     def projective(self):
         objet, a,b,c,d,p,q,r,s = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], obj.classe, nom = 1, method = 'projective', args = (obj, [a,b,c,d], [p,q,r,s]), u = 1)
+        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'projective', args = (obj, [a,b,c,d], [p,q,r,s]), u = 1)
     
     def homothetie(self):
         obj, p, rapport = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], obj.classe, nom = 1, method = 'homothetie', args = (obj, p, rapport), u = 1)
+        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'homothetie', args = (obj, p, rapport), u = 1)
 
     def translation(self):
         obj, p1, p2 = self.liste_derniers_clics
         x2, y2, z2 = p2.coords()
         x1, y1, z1 = p1.coords()
         v = ((x2-x1)/z1, (y2-y1)/z1, z2/z1)
-        return Geo.Creature(self.plans[0], obj.classe, nom = 1, method = 'translation', args = (obj, v), u = 1)
+        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'translation', args = (obj, v), u = 1)
     
     def polyregul(self):
         p1, p2, nombre = self.liste_derniers_clics
         nombre = int(nombre)
         for i in range(nombre - 2):
-            p1, p2 = Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'rotation', args = (p2, p1, (nombre-2)/nombre*pi), u = 1), p1
+            p1, p2 = self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'rotation', args = (p2, p1, (nombre-2)/nombre*pi), u = 1), p1
 
     def invers(self):
         obj, centre, rayon = self.liste_derniers_clics
@@ -495,29 +495,29 @@ class Main:
             
     def point(self):
         x, y = self.liste_derniers_clics[0]
-        return Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'coord', args = [(x, y, 1)], u = 1)
+        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'coord', args = [(x, y, 1)], u = 1)
                     
         
     def cercle(self):
         points = self.liste_derniers_clics + [self.plans[0].U, self.plans[0].V]
-        return Geo.Creature(self.plans[0], 'Courbe', nom = 1, method = 'interpol', args = points, u = 1)
+        return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', args = points, u = 1)
         
     def droite(self):
         A, B = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, B), u = 1)
+        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, B), u = 1)
         
     def tangente(self):
         C, p = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'tangente', args = (C, p), u = 1)
+        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'tangente', args = (C, p), u = 1)
         
     def cercle_cent(self):
         centre, point =  self.liste_derniers_clics[0], self.liste_derniers_clics[1]
         U, V = self.plans[0].U, self.plans[0].V
-        return Geo.Creature(plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
+        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
     
     def perp(self):
         d, p = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'perp', args = (d, p), u = 1)
+        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'perp', args = (d, p), u = 1)
 
     def caa(self):
         CA = [self.plans[0].newPoint_coord(1, (self.canvas.winfo_width()/4+random()*self.canvas.winfo_width()*3/4, self.canvas.winfo_height()/4+random()*3/4*self.canvas.winfo_height(),1), u=0) for _ in range([5, 9, 14, 20, 32][randint(0,4)])]
@@ -529,47 +529,47 @@ class Main:
         
     def media(self):
         A, B = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'media', args = (A, B), u = 1)
+        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'media', args = (A, B), u = 1)
 
     def milieu(self):
         A, B = self.liste_derniers_clics
-        return Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'milieu', args = (A, B), u = 1)
+        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'milieu', args = (A, B), u = 1)
      
     def centre(self):
         self.plans[0].newCentre(1, self.liste_derniers_clics)
 
     def para(self):
         d, A = self.liste_derniers_clics
-        p = Geo.Creature(self.plans[0], 'Point', nom = 0, method = 'inf', args = (d,), u = 0)
-        return Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, p), u = 1)
+        p = self.action('Creature', self.plans[0], 'Point', nom = 0, method = 'inf', args = (d,), u = 0)
+        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, p), u = 1)
 
     def cercle_inscr(self):
         p1, p2, p3 = self.liste_derniers_clics
         plan = self.plans[0]
-        centre = Geo.Creature(plan, 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
-        cote = Geo.Creature(plan, 'Droite', nom = 0, method = 'inter', args = (p1, p2), u = 0)
-        point =  Geo.Creature(plan, 'Point', nom = 0, method = 'ProjOrtho', args = (cote, centre), u = 0)
+        centre = self.action('Creature', plan, 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
+        cote = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (p1, p2), u = 0)
+        point =  self.action('Creature', plan, 'Point', nom = 0, method = 'ProjOrtho', args = (cote, centre), u = 0)
         U, V = plan.U, plan.V
-        return Geo.Creature(plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
+        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
         
     def cercle_ex(self):
         p1, p2, p3 = self.liste_derniers_clics
         plan = self.plans[0]
-        centre = Geo.Creature(plan, 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
-        bp1 = Geo.Creature(plan, 'Droite', nom = 0, method = 'inter', args = (centre, p1), u = 0)
-        bp3 = Geo.Creature(plan, 'Droite', nom = 0, method = 'inter', args = (centre, p3), u = 0)
-        be1 = Geo.Creature(plan, 'Droite', nom = 0, method = 'perp', args = (bp1, p1), u = 0)
-        be3 = Geo.Creature(plan, 'Droite', nom = 0, method = 'perp', args = (bp3, p3), u = 0)
+        centre = self.action('Creature', plan, 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
+        bp1 = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (centre, p1), u = 0)
+        bp3 = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (centre, p3), u = 0)
+        be1 = self.action('Creature', plan, 'Droite', nom = 0, method = 'perp', args = (bp1, p1), u = 0)
+        be3 = self.action('Creature', plan, 'Droite', nom = 0, method = 'perp', args = (bp3, p3), u = 0)
         centre2 = self.action('Creature', plan, 'Point', nom = 1, method = 'inter', args = (be1, be3), u = 1)
-        cote = Geo.Creature(plan, 'Droite', nom = 0, method = 'inter', args = (p1, p3), u = 0)
-        point = Geo.Creature(plan, 'Point', nom = 0, method = 'ProjOrtho', args = (cote, centre2), u = 0)
+        cote = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (p1, p3), u = 0)
+        point = self.action('Creature', plan, 'Point', nom = 0, method = 'ProjOrtho', args = (cote, centre2), u = 0)
         U, V = plan.U, plan.V
-        return Geo.Creature(plan, 'Courbe', nom = 1, method = 'cercle', args = (centre2, point, U, V), u = 1)
+        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre2, point, U, V), u = 1)
     
     def bissec(self):
         p1, p2, p3 = self.liste_derniers_clics
-        centre = Geo.Creature(self.plans[0], 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
-        Geo.Creature(self.plans[0], 'Droite', nom = 1, method = 'inter', args = (centre, p2), u = 1)
+        centre = self.action('Creature', self.plans[0], 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
+        self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (centre, p2), u = 1)
 
     def move(self):
         p = self.liste_derniers_clics[0]
@@ -619,7 +619,7 @@ class Main:
             return self.action('Creature', self.plans[0], 'Point', nom = 1,
                                method = 'inter', args = [courbe_1, courbe_2], u = 1)
         for i in range(courbe_1.deg * courbe_2.deg):
-            return Geo.Creature(self.plans[0], 'Point', nom = 1, method = 'inter2', args = [courbe_1, courbe_2, i], u = 1)
+            return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'inter2', args = [courbe_1, courbe_2, i], u = 1)
             
         
     def supprimer(self):
@@ -628,7 +628,7 @@ class Main:
         
     def soumettre(self):
         if self.action_canvas == self.courbe and len(self.liste_derniers_clics) >= 2:
-            courbe = Geo.Creature(self.plans[0], 'Courbe', nom = 1, method = 'interpol', deg = '', args = [i for i in self.liste_derniers_clics], u = 1)
+            courbe = self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', deg = '', args = [i for i in self.liste_derniers_clics], u = 1)
             self.deselectionner()
             courbe.dessin()
         
