@@ -3,6 +3,8 @@ from tkinter.ttk import Treeview, Combobox
 from tkinter import colorchooser as tk_cc
 from PIL import Image, ImageTk
 import os.path as op
+from threading import Thread
+from serveur import Serveur
 
 class AideFenetre:
     
@@ -122,7 +124,7 @@ class EditeurObjets:
                 self.tableau.delete(item)
         if self.selectionne == i:
             self.deselectionner()
-        if b: self.main.action('Supprimer', i)
+        if b: self.main.action('Supprimer', i.plan, i)
 
     def deselectionner(self):
         self.var1.set('')
@@ -170,7 +172,7 @@ class EditeurObjets:
             return
         self.label['text'] = '\n'
         anc_nom = self.selectionne.nom
-        self.main.action('Modif', self.selectionne, nom = nom, col = couleur, vis = aff)
+        self.main.action('Modif', self.selectionne.plan, self.selectionne, nom = nom, col = couleur, vis = aff)
         for item in self.tableau.get_children():
             ligne = self.tableau.item(item)['values']
             if ligne and ligne[0] == anc_nom:
@@ -279,6 +281,30 @@ class EtudieurObjets:
     def fermer_fenetre(self):
         self.main.editeur_objets = None
         self.grande_frame.destroy()
+        
+class LanceServeur:
+    def __init__(self, main):
+        self.main = main
+        self.frame = tk.Toplevel()
+        self.frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
+        tk.Label(self.frame, text = 'Lancer un serveur').grid(row = 0, column = 0, columnspan = 3, sticky = 'nsew', pady = 3, padx = 3)
+        tk.Label(self.frame, text = 'Mot de passe').grid(row = 1, column = 0, columnspan = 1, sticky = 'nsew', pady = 3, padx = 3)
+        self.entree = tk.Entry(self.frame)
+        self.entree.grid(row = 1, column = 1, columnspan = 2, sticky = 'nsew', pady = 3, padx = 3)
+        tk.Button(self.frame, text = 'Annuler', command = self.fermer_fenetre).grid(row = 2, column = 0, columnspan = 2, sticky = 'nsew', pady = 3, padx = 3)
+        tk.Button(self.frame, text = 'OK', command = self.lancer).grid(row = 2, column = 2, columnspan = 1, sticky = 'nsew', pady = 3, padx = 3)
+        
+        
+    def fermer_fenetre(self):
+        self.main.lanceurserveur = None
+        self.frame.destroy()
+    
+    def lancer(self):
+        mdp = self.entree.get()
+        t = Thread(target = lambda: Serveur(mdp, self.main.plans[0]))
+        t.start()
+        self.fermer_fenetre()
+        
         
 class Parametres:
     
