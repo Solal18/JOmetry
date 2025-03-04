@@ -2,7 +2,7 @@
 
 import itertools
 import threading
-import time
+from time import time, sleep
 import sys
 done = False
 def animate():
@@ -11,7 +11,7 @@ def animate():
             break
         sys.stdout.write('\rloading ' + c)
         sys.stdout.flush()
-        time.sleep(0.1)
+        sleep(0.1)
     sys.stdout.write('\rDone!     ')
 t = threading.Thread(target=animate)
 t.start()
@@ -21,7 +21,6 @@ from tkinter import ttk
 import Engine as Geo
 from PIL import Image, ImageDraw, ImageTk
 from math import sqrt, pi
-from time import time
 import os.path as op
 import Frames as Fenetres
 from Engine import txt, val
@@ -37,8 +36,6 @@ done=True
 def pprint(*args):
     #print(*args)
     return 
-
-
 
 
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
@@ -298,11 +295,15 @@ class Main:
     def bouger_point(self, ev):
         if self.point_move is None: return
         x, y = self.coord_canvas(ev.x, ev.y)
-        self.plans[0].action_utilisateur('bouger_point')
-        l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
-        print(l)
-        for obj in l:
-            obj.dessin(1)
+        if self.point_move[1] == "Weshis":
+            mov1, mov2 = x - self.point_move[0][0], y -self.point_move[0][1]
+            self.decaler((mov1/20, mov2/20))
+        else:
+            self.plans[0].action_utilisateur('bouger_point')
+            l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
+            print(l)
+            for obj in l:
+                obj.dessin(1)
             
     def connect(self):
         if self.plans[0].serveur is not None: return
@@ -654,11 +655,14 @@ class Main:
             if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
                 #clic éloigné d'un point
                 self.plans[0].action_utilisateur(None)
-                point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
-                if self.plans[0].serveur is not None:
-                    point = 'fantome'
+                if self.dernier_bouton !="main":
+                    point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
+                    if self.plans[0].serveur is not None:
+                        point = 'fantome'
+                    else:
+                        self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
                 else:
-                    self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
+                    point = ((x,y), "Weshis")
             else: 
                 if distances[0][1] not in self.liste_derniers_clics:
                     point = distances[0][2]
