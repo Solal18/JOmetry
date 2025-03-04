@@ -6,6 +6,7 @@ import sympy.abc
 import socket
 from groebner import grob
 from time import perf_counter_ns as perf
+import threading
 
 def txt(x):
     '''transforme une valeur en chaîne de caractères
@@ -21,6 +22,8 @@ def txt(x):
         return '[' + ','.join(map(txt, x)) + ']'
     if isinstance(x, dict):
         return '{' + ','.join([f'{txt(a)}:{txt(x[a])}' for a in x]) + '}'
+    if isinstance(x, bool):
+        return f'!B{1 if x else 0}!'
     raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
 
 #à executer avant toute modification :
@@ -29,6 +32,7 @@ def txt(x):
 texte = "[!TCreature!,[!TPoint!!!],{!Tnom!:!N1!,!Tmethod!:!Tcoord!,!Targs!:[[!N306.0!,!N104.0!,!N1!]],!Tu!:!N1!}]"
 
 def val(x, objets = None):
+    print(x)
     if (x[0], x[-1]) in (('(',')'), ('[',']'), ('{','}')):
         l, t, ec, n, v = [], x[1:-1], '', 0, 0
         while t:
@@ -83,6 +87,8 @@ def val(x, objets = None):
                     return t.replace('!!','!')
                 else:
                     return '0' + t.replace('!!','!')
+            case 'B':
+                return bool(int(t))
     return ValueError
 
 def xrint(*args):
@@ -561,8 +567,10 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, classe, nom = '', method = '', args = [], deg = 1, color = 'green', vis = 1, u = 0, complexe = True):
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = 'green', vis = 1, u = 0, complexe = True):
         self.plan = plan
+        if args is None: args = []
+        print('C', deg, args)
         if nom in (0, 1):
             nom = plan.nouveau_nom(nom, classe)
         if classe == 'Courbe':
@@ -575,7 +583,9 @@ class Creature:
                     args.pop(-1)
                 deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
             else:
+                deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
                 args = args[:(deg**2+3*deg)//2]
+        print('C',deg, args)
         self.nom = nom
         self.coord = None
         self.method = method
@@ -597,6 +607,7 @@ class Creature:
             listes[classe][nom] = (self)
         if self.nom != '':
             self.arbre = Arbre(args, self)
+        print('C',deg, args)
         if self.plan.main is not None:
             if plan.main.editeur_objets:
                 plan.main.editeur_objets.ajouter(self)
@@ -605,13 +616,15 @@ class Creature:
                 plan.contre_action(self.supprimer, (self.plan.main.canvas,))
         else:
             pass
+        print('C',deg, args)
         self.dessin()
         xrint(self.coord)
         xrint(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args} et couleur {color}')
+        print('C',deg, args)
         
 
     def __str__(self):
-        return self.nom
+        return f'Creature classe : {self.classe}|{self.classe_actuelle} nom : {self.nom}'
     
     __repr__ = __str__
 
@@ -1228,12 +1241,18 @@ class Plan:
             except ConnectionRefusedError:
                 print('raté')
         if not connecte: return 
-        print('connexion du client local')
+        print('connexion du client')
         client.send(f'JOmetry 0 {mdp}'.encode('utf-8'))
         reponse = client.recv(2048).decode('utf-8')
         if reponse == 'JOmetry connecte':
             self.serveur = client
-            print('authentification du client local')
+            print('authentification du client')
+        if reponse == 'JOmetry 0 non autorisé':
+            return print('mauvais mdp')
+        t = threading.Thread(target = self.ecoute_serveur, args = (client,))
+        t.start()
+        
+    def ecoute_serveur(self, client):
         while True:
             reponse = client.recv(2048)
             msg = reponse.decode('utf-8')
@@ -1244,7 +1263,9 @@ class Plan:
             self.decode_action(msg)
         
     def decode_action(self, msg):
-        cat, args, kwargs = val(msg, self.objets)
+        a = val(msg, self.objets)
+        print('serv :', a, type(a))
+        cat, args, kwargs = a
         print('decode_action a trouvé :',cat, args, kwargs)
         self.action(cat, *args, **kwargs)
     
@@ -1337,6 +1358,17 @@ class Plan:
         else:
             raise TypeError("Vous avez donné une largeur de trait non entière.")
 
+    def fichier(self):
+        return txt(((self.nom, self.notes, self.offset_x, self.offset_y),
+                    [[o.nom, o.classe, o.method, o.args, o.deg, o.color, o.vis, o.u, o.complexe] for o in self.objets.values()]))
+    
+    def ouvrir(self, texte):
+        while self.objets:
+            self.objets.values[0].supprimer()
+        plan, objets = val(texte)
+        self.nom, self.notes, self.offset_x, self.offset_y = plan[0][1:], plan[1][1:], plan[2], plan[3]
+        
+        
     
     def move(self, point, coords):
         objets = set()
@@ -1351,7 +1383,6 @@ class Plan:
                 objets.add(i[0].valeur)
             self.modifs = (True, True)
         return objets
-
     
     def new_harmonique(self, nom, A,B,C, u = 1):
         d = Creature(self, 'Point', nom = nom, method = 'harmonique', args = (A,B,C), u = u)
