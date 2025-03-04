@@ -49,7 +49,7 @@ class Main:
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
                      ['editeur_objets'], ['etude'],
-                     ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['serveur'], ['aide'],
+                     ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['connect', 'serveur'], ['aide'],
                      ]
         self.creer_canvas()
         self.plans[0] = Geo.Plan(self)
@@ -161,7 +161,7 @@ class Main:
                         'symetrie' : (self.symetrie, 1, ('objet', 'droite')),
                         'projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
                         'polyregul' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
-
+                        'connect' : (self.connect, 0),
                         }
         
     def act_ctrly(self): self.plans[0].ctrly()    
@@ -205,19 +205,14 @@ class Main:
     def etude(self):
         if self.fen_etude is None:
             self.fen_etude = Fenetres.EtudieurObjets(fenetre, self, 1)
-            
     
     def enregistrer(self):
         if not self.plans[0].dossier_default:
             return self.enregistrer_sous()
         f = open(self.plans[0].dossier_default, 'w')
-        liste = self.liste_objet()
-        f.write(' '.join(map(str, liste[0])) + '\n')
-        for o in liste[1]:
-            f.write(f'{o[0]} <{o[1]}> {o[2]} [{",".join(map(txt, o[3]))}] {o[4]} {o[5]} {o[6]} {o[7]}\n')
+        f.write(self.plans[0].fichier())
         f.close()
         self.plans[0].modifs = (self.plans[0].modifs[0], False)
-
 
     def enregistrer_sous(self):
         f = fd.asksaveasfilename(initialdir = op.dirname(__file__), title = 'Choisissez un emplacement')
@@ -294,6 +289,13 @@ class Main:
         print(l)
         for obj in l:
             obj.dessin(1)
+            
+    def connect(self):
+        if self.plans[0].serveur is not None: return
+        ip = tk_sd.askstring("Choix d'une adresse", '')
+        port = tk_sd.askinteger("Choix d'un port", '')
+        mdp = tk_sd.askstring("Choix d'un mot de passe", '')
+        self.plans[0].connecter_serveur(ip, port, mdp)
             
     def nouv_plan(self):
         i = 1
