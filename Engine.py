@@ -3,8 +3,87 @@ from math import floor, sqrt, exp, cos, sin, pi
 import time
 from sympy import Rational, groebner, Poly
 import sympy.abc
+import socket
 from groebner import grob
 from time import perf_counter_ns as perf
+
+def txt(x):
+    '''transforme une valeur en chaîne de caractères
+    pour la sauvegarde dans un fichier'''
+    if isinstance(x, str): return f"!T{x.replace('!','!!')}!"
+    if isinstance(x, (int, float)):
+        return f'!N{x}!'
+    if isinstance(x, complex):
+        return f'!I{x.real}+{x.imag}!'
+    if isinstance(x, Creature):
+        return f"!C{x.nom.replace('!','!!')}!"
+    if isinstance(x, (tuple, list)):
+        return '[' + ','.join(map(txt, x)) + ']'
+    if isinstance(x, dict):
+        return '{' + ','.join([f'{txt(a)}:{txt(x[a])}' for a in x]) + '}'
+    raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
+
+#à executer avant toute modification :
+#txt({Philemon : 34})
+
+texte = "[!TCreature!,[!TPoint!!!],{!Tnom!:!N1!,!Tmethod!:!Tcoord!,!Targs!:[[!N306.0!,!N104.0!,!N1!]],!Tu!:!N1!}]"
+
+def val(x, objets = None):
+    if (x[0], x[-1]) in (('(',')'), ('[',']'), ('{','}')):
+        l, t, ec, n, v = [], x[1:-1], '', 0, 0
+        while t:
+            if v:
+                if t[0] == '!':
+                    if len(t) == 1 or t[1] != '!':
+                        v = 0
+                        ec += t[0]
+                        t = t[1:] 
+                    else:
+                        ec += '!!'
+                        t = t[2:]  
+                else:
+                    ec += t[0]
+                    t = t[1:] 
+            else:
+                if t[0] in (',',':') and n == 0:
+                    l.append(ec)
+                    ec = ''
+                elif t[0] == '!':
+                    v = 1
+                    ec += t[0]
+                else:
+                    if t[0] in ('[','(','{'):
+                        n += 1
+                    if t[0] in (']',')','}'):
+                        n -= 1
+                    ec += t[0]
+                t = t[1:]
+        l.append(ec)
+        if n != 0: raise ValueError
+        if (x[0], x[-1]) == ('{','}'):
+            return {val(l[2*i], objets):val(l[2*i+1], objets) for i in range(len(l)//2)}
+        return [val(i, objets) for i in l]
+    if (x[0], x[-1]) == ('!','!'):
+        t, typ = x[2:-1], x[1]
+        match typ:
+            case 'C':
+                if objets:
+                    return objets[t.replace('!!','!')]
+                else:
+                    return '1' + t.replace('!!','!')
+            case 'I':
+                r, i = t.split('+')
+                return float(r)+1j*float(i)
+            case 'N':
+                if '.' in t:
+                    return float(t)
+                return int(t)
+            case 'T':
+                if objets:
+                    return t.replace('!!','!')
+                else:
+                    return '0' + t.replace('!!','!')
+    return ValueError
 
 def xrint(*args):
     pass 
@@ -497,9 +576,6 @@ class Creature:
                 deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
             else:
                 args = args[:(deg**2+3*deg)//2]
-        print("sos")
-        print(args)
-        print(deg)
         self.nom = nom
         self.coord = None
         self.method = method
@@ -521,11 +597,14 @@ class Creature:
             listes[classe][nom] = (self)
         if self.nom != '':
             self.arbre = Arbre(args, self)
-        if plan.main.editeur_objets:
-            plan.main.editeur_objets.ajouter(self)
-        if nom not in ('U', 'V', 'Inf'):
-            plan.action_utilisateur(f'creation de {nom}')
-            plan.contre_action(self.supprimer, (self.plan.main.canvas,))
+        if self.plan.main is not None:
+            if plan.main.editeur_objets:
+                plan.main.editeur_objets.ajouter(self)
+            if nom not in ('U', 'V', 'Inf'):
+                plan.action_utilisateur(f'creation de {nom}')
+                plan.contre_action(self.supprimer, (self.plan.main.canvas,))
+        else:
+            pass
         self.dessin()
         xrint(self.coord)
         xrint(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args} et couleur {color}')
@@ -542,20 +621,21 @@ class Creature:
     def bougeable(self):
         return (self.nom not in ('U', 'V') and (self.arbre.parents == set() or self.method in ('PsurCA', 'ProjOrtho')))
 
-    def supprimer(self, canvas):
+    def supprimer(self, canvas = None):
         '''fonction recursive pour supprimer des elements
         un peu bizarre pour selectionner un element d'un ensemble,
         mais le plus rapide, j'ai vérifié'''
         self.plan.contre_action(Creature, (self.plan, self.classe, self.nom, self.method, self.args, self.deg, self.color, self.u, self.vis))
-        if self.plan.main.editeur_objets:
-            self.plan.main.editeur_objets.supprimer_element(self)
+        if self.plan.main is not None:
+            if self.plan.main.editeur_objets:
+                self.plan.main.editeur_objets.supprimer_element(self)
         while self.arbre.descendants:
             for e in self.arbre.descendants:
                 break
             e.valeur.supprimer(canvas)
         self.arbre.supprimer()
         for i in self.tkinter:
-            if i is not None:
+            if i and canvas:
                 canvas.delete(i)
                 self.plan.tkinter_object.pop(i)
         for dic in (self.plan.points, self.plan.droites, self.plan.CAs, self.plan.objets):
@@ -574,7 +654,6 @@ class Creature:
                 transformations.append((method, objet.args[1:]))
                 method = parent.method
                 objet = parent
-            print(self, objet, objet.args)
             args = [(i.classe, i.coords()) if isinstance(i, Creature) else (0, i) for i in objet.args]
             classe = self.classe
             U, V = self.plan.U.coord, self.plan.V.coord
@@ -593,7 +672,6 @@ class Creature:
                         classe = 'Droite'
                 else:
                     args = transformation[method_tr](args, *args_tr)
-            print(self, method, args)
             self.classe_actuelle = classe
             self.deg_actu = deg
             args = [i[1] for i in args]
@@ -620,6 +698,7 @@ class Creature:
                 del dic[self.nom]
                 dic[nom] = self
         self.plan.noms.append(nom)
+        if self.plan.main is None: return
         edit = self.plan.main.editeur_objets
         if edit is not None:
             for item in edit.tableau.get_children():
@@ -636,7 +715,7 @@ class Creature:
         
     def dessin(self, calcul = 1):
         
-        if self.plan is not self.plan.main.plans[0]: return
+        if self.plan.main is None or self.plan is not self.plan.main.plans[0]: return
         
         can = self.plan.main.canvas
         for i in self.tkinter:
@@ -695,10 +774,9 @@ class Creature:
                         self.plan.tkinter_object[z]=self
             for objet in self.tkinter:
                 if objet is not None: can.tag_lower(objet, 'limite2')
-            print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
+            #print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
-            print(coords)
             if self == self.plan.inf: return
             if isinstance(coords, Polynome):
                 print("salut")
@@ -712,7 +790,6 @@ class Creature:
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
-            print(f'Fin affichage des points de la droite {self}. Temps estimé : devine')
             
 
         if self.classe_actuelle == 'Point':
@@ -746,7 +823,7 @@ def lignes(liste):
 
 def coord(c, d = 0, e = 0):
     """Définition d'un point par ses coordonnées"""
-    if isinstance(c, tuple):
+    if isinstance(c, (tuple, list)):
         x, y, z = c
         if x==y==z==0:
             raise ValueError("Point (0,0,0) impossible")
@@ -777,7 +854,7 @@ def inter2(courbe1, courbe2, numero):
     coooords = (0,0,0)
     rooot = []
     droite = None
-    if isinstance(courbe1, tuple):
+    if isinstance(courbe1, (tuple, list)):
         a, b, c = courbe1
         if a != 0:
             droite, courbe = Polynome([-c/a, -b/a]), courbe2
@@ -785,7 +862,7 @@ def inter2(courbe1, courbe2, numero):
             y = -c/b
             courbe = courbe2.change_variables()
             rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
-    if isinstance(courbe2, tuple):
+    if isinstance(courbe2, (tuple, list)):
         a, b, c = courbe2
         if a != 0:
             droite, courbe = Polynome([-c/a, -b/a]), courbe1
@@ -885,7 +962,7 @@ def tangente(C, p):
     b -> complexe
     Construit la tangente à C en le point (a,b)
     '''
-    if isinstance(C, tuple):
+    if isinstance(C, (tuple, list)):
         return C
     a, b = p[:2]
     polynomex = C.change_variables()
@@ -1048,9 +1125,12 @@ def ProjOrtho(d, p):
 def PsurCA(C, n, coo, main):
     xrint(coo)
     x, y = coo
-    defocaliser = main.coord_canvas
-    w, h = main.canvas.winfo_width(), main.canvas.winfo_height()
-    (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+    if main is not None:
+        defocaliser = main.coord_canvas
+        w, h = main.canvas.winfo_width(), main.canvas.winfo_height()
+        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+    else:
+        x1, y1, x2, y2 = -1000, -1000, 1000, 1000
     Liste = []
     P = C
     i = x1 - 10
@@ -1079,7 +1159,7 @@ def cercle(d, O, A, U, V):
     
 class Plan:
 
-    def __init__(self, main, nom = 'Plan 1', dd = None):
+    def __init__(self, main = None, nom = 'Plan 1', dd = None):
         self.main = main
         self.noms = []
         self.objets = {}
@@ -1107,8 +1187,67 @@ class Plan:
         self.ctrl_y = []
         self.annulation = 0
         self.derniere_action = None
+        self.serveur = None
+        self.notes = ''
 
-
+    def action(self, cat, *args, **kwargs):
+        '''Creature, Supprimer, Modif'''
+        print(f'action : de type {cat}, args : {args}, kwargs : {kwargs}')
+        if cat == 'Creature':
+            c = Creature(self, *args, **kwargs)
+            if self.main is not None and 'fantome' in self.main.liste_derniers_clics:
+                self.main.liste_derniers_clics[self.main.liste_derniers_clics.index('fantome')] = c
+                if c.classe == 'Point':
+                    self.main.canvas.itemconfigure(c.tkinter[0], fill = 'orange')
+            return c
+        if cat == 'Supprimer':
+            if self.main is None:
+                return args[0].supprimer()
+            else:
+                return args[0].supprimer(self.main.canvas)
+        if cat == 'Modif':
+            return args[0].set_param(**kwargs)
+        if cat == 'Move':
+            return self.move(*args)
+        return None 
+    
+    def envoi(self, cat, *args, **kwargs):
+        print('envoi')
+        self.serveur.send(('JOmetry ' + txt([cat, args, kwargs])).encode('utf-8'))
+    
+    def connecter_serveur(self, adresse, port, mdp):
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        t = perf()
+        connecte = 0
+        print((adresse, port))
+        while perf() - t < 10000000000:
+            try:
+                client.connect((adresse, port))
+                connecte = 1
+                break
+            except ConnectionRefusedError:
+                print('raté')
+        if not connecte: return 
+        print('connexion du client local')
+        client.send(f'JOmetry 0 {mdp}'.encode('utf-8'))
+        reponse = client.recv(2048).decode('utf-8')
+        if reponse == 'JOmetry connecte':
+            self.serveur = client
+            print('authentification du client local')
+        while True:
+            reponse = client.recv(2048)
+            msg = reponse.decode('utf-8')
+            if len(msg) < 9 or msg[:8] != 'JOmetry ':
+                continue
+            msg = msg[8:]
+            print(f'message recu : {msg}')
+            self.decode_action(msg)
+        
+    def decode_action(self, msg):
+        cat, args, kwargs = val(msg, self.objets)
+        print('decode_action a trouvé :',cat, args, kwargs)
+        self.action(cat, *args, **kwargs)
+    
     def nouveau_nom(self, u = 1, classe = 'Point'):
         lettre, chiffre = 0, 0
         nom = 'A'
@@ -1126,14 +1265,14 @@ class Plan:
             self.ctrl_y[-1].append((fonc, args))
         else:
             self.ctrl_z[-1].append((fonc, args))
-        self.main.maj_bouton()
+        if self.main is not None: self.main.maj_bouton()
 
     def action_utilisateur(self, act):
         if (self.derniere_action == act and act is not None) or act in ('ctrlz', 'ctrly'): return
         self.ctrl_y = []
         if len(self.ctrl_z) == 0 or self.ctrl_z[-1] != []:
             self.ctrl_z.append([])
-        self.main.maj_bouton()
+        if self.main is not None: self.main.maj_bouton()
         xrint('action utilisateur', act, self.ctrl_z, self.ctrl_y)
         self.derniere_action = act
             
@@ -1146,7 +1285,7 @@ class Plan:
         for fonc, args in liste[::-1]:
             fonc(*args)
         self.annulation = 0
-        self.main.maj_bouton()
+        if self.main is not None: self.main.maj_bouton()
         xrint(self.ctrl_y, self.ctrl_z)
         
     def ctrly(self):
@@ -1156,7 +1295,7 @@ class Plan:
             liste = self.ctrl_y.pop(-1)
         for fonc, args in liste[::-1]:
             fonc(*args)
-        self.main.maj_bouton()
+        if self.main is not None: self.main.maj_bouton()
 
     def closest_point(self, point):
         distances = []
