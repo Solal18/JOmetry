@@ -11,8 +11,8 @@ class Serveur:
         self.clients = []
         self.autorises = []
         self.commandes = []
-        ip, port = socket.gethostbyname(socket.gethostname()), 61804
-        t = threading.Thread(target = self.valider_commande, args = ('localhost', 61802, mdp))
+        ip, port = socket.gethostbyname(socket.gethostname()), 61806
+        t = threading.Thread(target = self.valider_commande)
         t.start()    
         if plan is not None:
             t = threading.Thread(target = plan.connecter_serveur, args = ('localhost', 61802, mdp))
@@ -26,10 +26,10 @@ class Serveur:
             self.autorises.append(0)
             t = threading.Thread(target = self.ecoute_client, args = (client, len(self.autorises) - 1))
             t.start()
+            serveur.close()
         self.plan = Geo.Plan()
         Geo.plan_default = self.plan
         print(f'Serveur lancé, adresse {ip}, port {port}, mot de passe : {mdp}')
-        serveur.close()
         serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         serveur.bind((ip, port))
         serveur.listen(3)
@@ -74,11 +74,11 @@ class Serveur:
         while True:
             if len(self.commandes):
                 requete = self.commandes.pop(0)
+                msg = requete.decode('utf-8')
                 for i, sock in enumerate(self.clients):
                     if self.autorises[i]:
                         sock.send(requete)
-                self.plan.decode_action(msg)
-        
+                self.plan.decode_action(msg[8:])
         
         
         
