@@ -1,6 +1,20 @@
 #!/bin/python3
 
-
+import itertools
+import threading
+import time
+import sys
+done = False
+def animate():
+    for c in itertools.cycle(['|', '/', '-', '\\']):
+        if done:
+            break
+        sys.stdout.write('\rloading ' + c)
+        sys.stdout.flush()
+        time.sleep(0.1)
+    sys.stdout.write('\rDone!     ')
+t = threading.Thread(target=animate)
+t.start()
 import tkinter as tk
 from tkinter import filedialog as fd, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
@@ -18,7 +32,7 @@ ttk.Style().theme_use('clam')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
-
+done=True
 
 def pprint(*args):
     #print(*args)
