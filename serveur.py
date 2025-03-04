@@ -10,7 +10,10 @@ class Serveur:
         self.mdp = mdp
         self.clients = []
         self.autorises = []
+        self.commandes = []
         ip, port = socket.gethostbyname(socket.gethostname()), 61804
+        t = threading.Thread(target = self.valider_commande, args = ('localhost', 61802, mdp))
+        t.start()    
         if plan is not None:
             t = threading.Thread(target = plan.connecter_serveur, args = ('localhost', 61802, mdp))
             t.start()
@@ -63,14 +66,18 @@ class Serveur:
                     break
                 continue
             print(f'serveur traite le message suivant recu de client {adresse} : {msg}')
-            for i, sock in enumerate(self.clients):
-                if self.autorises[i]:
-                    sock.send(requete)
-            self.plan.decode_action(msg)
+            self.commandes.append(requete)
         client.close()
         
         
-        
+    def valider_commande(self):
+        while True:
+            if len(self.commandes):
+                requete = self.commandes.pop(0)
+                for i, sock in enumerate(self.clients):
+                    if self.autorises[i]:
+                        sock.send(requete)
+                self.plan.decode_action(msg)
         
         
         
