@@ -10,6 +10,7 @@ from math import sqrt, pi
 from time import time
 import os.path as op
 import Frames as Fenetres
+from Engine import txt, val
 from random import random, randint
 
 fenetre = tk.Tk()
@@ -24,42 +25,7 @@ def pprint(*args):
     return 
 
 
-def txt(x):
-    '''transforme une valeur en chaîne de caractères
-    pour la sauvegarde dans un fichier'''
-    if type(x) == str: return x
-    if type(x) in (tuple, list):
-        texte = '[' + ','.join(map(txt, x)) + ']'
-        return texte
-    if type(x) in (int, float) or isinstance(x, Geo.Creature): return str(x)
-    if type(x) == complex: return str(x)[1:-1]
-    return str(x)
-    raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
 
-#à executer avant toute modification :
-#txt({Philemon : 34})
-
-def val(x):
-    if ' ' in x: return x
-    if (x[0] == '[' and x[-1] == ']') or (x[0] == '(' and x[-1] == ')'):
-        l, t, ec, n = [], x[1:-1], '', 0
-        while t:
-            if t[0] == ',' and n == 0:
-                l.append(ec)
-                ec = ''
-            else:
-                if t[0] in ['[', '(']:
-                    n += 1
-                if t[0] in [']', ')']:
-                    n -= 1
-                ec += t[0]
-            t = t[1:]
-        l.append(ec)
-        if n != 0: raise ValError
-        return [val(i) for i in l]
-    if all([(c in '0123456789+-.j') for c in x]):
-        return eval(x)
-    return x
 
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
     return (coord[0]/coord[2], coord[1]/coord[2])
@@ -83,7 +49,7 @@ class Main:
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
                      ['editeur_objets'], ['etude'],
-                     ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['aide'],
+                     ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['serveur'], ['aide'],
                      ]
         self.creer_canvas()
         self.plans[0] = Geo.Plan(self)
@@ -97,6 +63,7 @@ class Main:
         self.action_canvas = None
         self.dernier_bouton = None
         self.point_move = None
+        self.lanceurserveur = None
         self.fenetre_taille = '1x1'
         fenetre.bind('<Configure>', self.configure_fenetre)
         fenetre.bind('<Return>', self.entree_commande)
@@ -168,6 +135,7 @@ class Main:
                         'enregistrer_sous' : (self.enregistrer_sous, 0),
                         'ouvrir' : (self.ouvrir, 0),
                         'etude' : (self.etude, 0),
+                        'serveur' : (self.serveur, 0),
                         'caa' : (self.caa, 0),
                         'cercle_cent' : (self.cercle_cent, 1, ('point', 'point')),
                         'harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
@@ -318,17 +286,15 @@ class Main:
         if self.editeur_objets is None:
             self.editeur_objets = Fenetres.EditeurObjets(fenetre, self, 0)
             
-            
     def bouger_point(self, ev):
         if self.point_move is None: return
         x, y = self.coord_canvas(ev.x, ev.y)
         self.plans[0].action_utilisateur('bouger_point')
-        l = self.plans[0].move(self.point_move, (x, y, 1))
+        l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
         print(l)
         for obj in l:
             obj.dessin(1)
             
-        
     def nouv_plan(self):
         i = 1
         while f'Plan {i}' in [plan.nom for plan in self.plans]: i += 1
@@ -372,7 +338,11 @@ class Main:
             self.image_boutons.append(image)
             bout.grid(row = i, column = 0)
             bout.bind('<Button-3>', lambda ev: bout.invoke)
-        
+    
+    def serveur(self):
+        if self.lanceurserveur is not None or self.plans[0].serveur is not None: return
+        self.lanceurserveur = Fenetres.LanceServeur(self)
+    
     def echange(self, ind, nom):
         pprint('echange')
         self.detruire_menu()
@@ -396,7 +366,7 @@ class Main:
             self.men.destroy()
     
     def maj_bouton(self):        
-        for bout, liste in ((self.boutons[-3], self.plans[0].ctrl_z), (self.boutons[-2], self.plans[0].ctrl_y)):
+        for bout, liste in ((self.boutons[-4], self.plans[0].ctrl_z), (self.boutons[-3], self.plans[0].ctrl_y)):
             if len(liste) == 0:
                 bout['state'] = 'disabled'
             else:
@@ -624,7 +594,8 @@ class Main:
         
     def supprimer(self):
         pprint('\n\n\nsuppr\n\n\n')
-        self.action('Supprimer', self.liste_derniers_clics[0])
+        obj = self.liste_derniers_clics[0]
+        self.action('Supprimer', obj.plan, obj)
         
     def soumettre(self):
         if self.action_canvas == self.courbe and len(self.liste_derniers_clics) >= 2:
@@ -660,7 +631,6 @@ class Main:
                 p_x, p_y, p_z = p.coords()
                 if p_z == 0: continue
                 p_x, p_y = norm((p_x, p_y, p_z))
-                print(p_x, p_y)
                 if p_x.imag != 0 or p_y.imag != 0: continue
                 distances.append((dist((x, y), (p_x, p_y)), i, p))
             distances.sort()
@@ -668,7 +638,10 @@ class Main:
                 #clic éloigné d'un point
                 self.plans[0].action_utilisateur(None)
                 point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
-                self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
+                if self.plans[0].serveur is not None:
+                    point = 'fantome'
+                else:
+                    self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
             else: 
                 if distances[0][1] not in self.liste_derniers_clics:
                     point = distances[0][2]
@@ -676,17 +649,17 @@ class Main:
                     self.canvas.tag_raise(point.tkinter[0], self.canvas.find_all()[-1])
                     self.canvas.tag_raise(point.tkinter[1], self.canvas.find_all()[-1])
             self.liste_derniers_clics.append(point)
-            if self.liste_derniers_clics.count(point) not in {0,1}:
+            if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1}:
                 self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
         if attendu in ['droite', 'courbe']:
-            print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
+            #print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
                                              {'droite':self.limite2, 'courbe':self.limite1}[attendu])
-            print(self.canvas.gettags({'droite':self.limite2, 'courbe':self.limite1}[attendu]))
+            #print(self.canvas.gettags({'droite':self.limite2, 'courbe':self.limite1}[attendu]))
             if len(objet) == 0: return
-            print(self.canvas.gettags(objet[0]))
+            #print(self.canvas.gettags(objet[0]))
             courbe = self.plans[0].tkinter_object[objet[0]]
-            print(courbe)
+            #print(courbe)
             if courbe not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(courbe)
         if attendu == 'objet':
@@ -696,18 +669,25 @@ class Main:
             if objet not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(objet)
         while len(self.liste_derniers_clics) < len(self.attendus) and isinstance(self.attendus[len(self.liste_derniers_clics)], tuple) and self.attendus[len(self.liste_derniers_clics)][0] == 'nombre':
-            entier = None
-            while entier is None:
-                entier = tk_sd.askfloat("Choix d'un nombre", self.attendus[len(self.liste_derniers_clics)][0][1])
-            self.liste_derniers_clics.append(entier)
+            entier = tk_sd.askfloat("Choix d'un nombre", self.attendus[len(self.liste_derniers_clics)][0][1])
+            if entier is None:
+                self.deselectionner()
+            else:
+                self.liste_derniers_clics.append(entier)
         if len(self.liste_derniers_clics) == len(self.attendus):
-            self.plans[0].action_utilisateur(None)
-            self.deselectionner()
-            self.action_canvas()
-            self.liste_derniers_clics = []
+            self.fin_clic_canvas()
         return
 
-
+    def fin_clic_canvas(self):
+        if 'fantome' in self.liste_derniers_clics:
+            fenetre.after(50, self.fin_clic_canvas)
+            return
+        self.plans[0].action_utilisateur(None)
+        self.deselectionner()
+        self.action_canvas()
+        self.liste_derniers_clics = []
+        return
+    
     def deselectionner(self):
         for objet in self.liste_derniers_clics:
             if isinstance(objet, Geo.Creature):
@@ -757,15 +737,11 @@ class Main:
         texte = f'({round(x,2)}, {round(y, 2)})'
         self.Texte.config(text = texte)
         
-    def action(self, cat, *args, **kwargs):
-        '''Creature, Supprimer, Zoom, Mouv, Modif'''
-        print(cat, args, kwargs)
-        if cat == 'Creature':
-            return Geo.Creature(*args, **kwargs)
-        if cat == 'Supprimer':
-            return args[0].supprimer(self.canvas)
-        if cat == 'Modif':
-            return args[0].set_param(**kwargs)
+    def action(self, cat, plan, *args, **kwargs):
+        if plan.serveur is None:
+            return plan.action(cat, *args, **kwargs)
+        else:
+            return plan.envoi(cat, *args, **kwargs)
     
     
 def ouvrir_erreur():
