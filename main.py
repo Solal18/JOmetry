@@ -609,7 +609,8 @@ class Main:
         commande = self.entree_texte.get()
         self.entree_texte.set('')
         print(f"Vous avez essayé d'executer la commande suivante :\n{commande}\nMalheureusement, votre incompetence en informatique vous a empeché d'arriver à vos fins.")
-        exec(commande)
+        if commande[0] == '#':
+            exec(commande[1:])
     
     def configure_fenetre(self, evenement):
         if evenement.widget is not fenetre: return
