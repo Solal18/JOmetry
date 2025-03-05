@@ -14,18 +14,18 @@ def txt(x):
     '''transforme une valeur en chaîne de caractères
     pour la sauvegarde dans un fichier'''
     if isinstance(x, str): return f"!T{x.replace('!','!!')}!"
+    if isinstance(x, bool):
+        return f'!B{1 if x else 0}!'
     if isinstance(x, (int, float)):
         return f'!N{x}!'
     if isinstance(x, complex):
         return f'!I{x.real}+{x.imag}!'
     if isinstance(x, Creature):
-        return f"!C{x.idet}!"
+        return f"!C{x.ide}!"
     if isinstance(x, (tuple, list)):
         return '[' + ','.join(map(txt, x)) + ']'
     if isinstance(x, dict):
         return '{' + ','.join([f'{txt(a)}:{txt(x[a])}' for a in x]) + '}'
-    if isinstance(x, bool):
-        return f'!B{1 if x else 0}!'
     raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
 
 #à executer avant toute modification :
@@ -613,7 +613,7 @@ class Creature:
                 plan.main.editeur_objets.ajouter(self)
             if nom not in ('U', 'V', 'Inf'):
                 plan.action_utilisateur(f'creation de {nom}')
-                plan.contre_action(self.supprimer, (self.plan.main.canvas,))
+                #plan.contre_action(self.supprimer, (self.plan.main.canvas,))
         else:
             pass
         print('C',deg, args)
@@ -638,7 +638,7 @@ class Creature:
         '''fonction recursive pour supprimer des elements
         un peu bizarre pour selectionner un element d'un ensemble,
         mais le plus rapide, j'ai vérifié'''
-        self.plan.contre_action(Creature, (self.plan, self.classe, self.nom, self.method, self.args, self.deg, self.color, self.u, self.vis))
+        #self.plan.contre_action(Creature, (self.plan, self.classe, self.nom, self.method, self.args, self.deg, self.color, self.u, self.vis))
         if self.plan.main is not None:
             if self.plan.main.editeur_objets:
                 self.plan.main.editeur_objets.supprimer_element(self)
@@ -654,7 +654,7 @@ class Creature:
         for dic in (self.plan.points, self.plan.droites, self.plan.CAs, self.plan.objets):
             if self.ide in dic:
                 del dic[self.ide]
-        self.plan.noms.remove(self.ide)
+        self.plan.noms.remove(self.nom)
         del self
                 
     def coords(self, calcul = 0):
@@ -1225,7 +1225,7 @@ class Plan:
         print('envoi')
         self.serveur.send(('JOmetry ' + txt([cat, args, kwargs])).encode('utf-8'))
     
-    def connecter_serveur(self, adresse, port, mdp):
+    def connecter_serveur(self, adresse, port, mdp, fich = 1):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         t = perf()
         connecte = 0
@@ -1239,11 +1239,18 @@ class Plan:
                 print('raté')
         if not connecte: return 
         print('connexion du client')
-        client.send(f'JOmetry 0 {mdp}'.encode('utf-8'))
+        client.send(f'JOmetry 0 {mdp} {fich}'.encode('utf-8'))
         reponse = client.recv(2048).decode('utf-8')
         if reponse == 'JOmetry connecte':
             self.serveur = client
             print('authentification du client')
+        else: return
+        if fich:
+            fichier, i = '', 0
+            while fichier[-16:] != ' stop!stop!stop!' and i < 1000:
+                i += 1
+                fichier += client.recv(2048).decode('utf-8')
+        self.ouvrir(fichier)
         if reponse == 'JOmetry 0 non autorisé':
             return print('mauvais mdp')
         t = threading.Thread(target = self.ecoute_serveur, args = (client,))
@@ -1374,9 +1381,9 @@ class Plan:
     
     def ouvrir(self, texte):
         while self.objets:
-            self.objets.values[0].supprimer()
+            list(self.objets.values())[0].supprimer()
         plan, objets = val(texte)
-        self.nom, self.notes, self.offset_x, self.offset_y = plan[0], plan[1], plan[2][1], plan[3][1]
+        self.nom, self.notes, self.offset_x, self.offset_y = plan[0], plan[1], plan[2], plan[3]
         ides, parents = [o[0] for o in objets], [o[4] for o in objets]
         objets = {o[0]:o[1:]+[0] for o in objets}
         dic = {}
