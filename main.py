@@ -636,7 +636,7 @@ class Main:
             self.liste_derniers_clics.append(point)
             if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1}:
                 self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
-        if attendu in ['droite', 'courbe']:
+        if attendu in ['droite', 'courbe'] and self.plans[0].tkinter_object != {}:
             #print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
                                              {'droite':self.limite2, 'courbe':self.limite1}[attendu])
@@ -647,7 +647,7 @@ class Main:
             #print(courbe)
             if courbe not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(courbe)
-        if attendu == 'objet':
+        if attendu == 'objet' and self.plans[0].tkinter_object != {}:
             objet = self.canvas.find_closest(evenement.x, evenement.y)
             if len(objet) == 0: return
             objet = self.plans[0].tkinter_object[objet[0]]
