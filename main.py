@@ -118,9 +118,9 @@ class Main:
             
     def creer_canvas(self):
         self.canvas = tk.Canvas(fenetre, relief = 'sunken')
-        self.limite0 = self.canvas.create_text(5, 0, text = ' ', tag = 'limite0')
-        self.limite1 = self.canvas.create_text(10, 0, text = ' ', tag = 'limite1')
-        self.limite2 = self.canvas.create_text(0, 0, text = ' ', tag = 'limite2')
+        self.limite0 = self.canvas.create_text(5, 0, text = '', tag = 'limite0')
+        self.limite1 = self.canvas.create_text(10, 0, text = '', tag = 'limite1')
+        self.limite2 = self.canvas.create_text(0, 0, text = '', tag = 'limite2')
         self.canvas.grid(row = 1, column = 0, sticky = 'nsew')
         self.canvas.bind('<Button-1>', self.canvas_clic)
         fleches = [('<Right>', (1, 0)), ('<Left>', (-1, 0)), ('<Down>', (0, 1)), ('<Up>', (0, -1))]
@@ -242,7 +242,7 @@ class Main:
         texte = fichier.read()
         fichier.close()
         self.nouv_plan()
-        self.plans[0].ouvrir()
+        self.plans[0].ouvrir(texte)
         return 
         
         
@@ -636,7 +636,7 @@ class Main:
             self.liste_derniers_clics.append(point)
             if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1}:
                 self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
-        if attendu in ['droite', 'courbe'] and self.plans[0].tkinter_object != {}:
+        if attendu in ['droite', 'courbe']:
             #print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
                                              {'droite':self.limite2, 'courbe':self.limite1}[attendu])
@@ -647,7 +647,7 @@ class Main:
             #print(courbe)
             if courbe not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(courbe)
-        if attendu == 'objet' and self.plans[0].tkinter_object != {}:
+        if attendu == 'objet':
             objet = self.canvas.find_closest(evenement.x, evenement.y)
             if len(objet) == 0: return
             objet = self.plans[0].tkinter_object[objet[0]]
