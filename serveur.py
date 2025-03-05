@@ -5,7 +5,7 @@ import threading
 
 class Serveur:
     
-    def __init__(self, mdp, plan = None):
+    def __init__(self, mdp, plan = None, fichier = None):
         print(f'Serveur lancé, mot de passe : {mdp}')
         self.mdp = mdp
         self.clients = []
@@ -14,8 +14,11 @@ class Serveur:
         ip, port = socket.gethostbyname(socket.gethostname()), 61806
         t = threading.Thread(target = self.valider_commande)
         t.start()    
+        self.plan = Geo.Plan()
+        Geo.plan_default = self.plan
+        self.plan.ouvrir(fichier)
         if plan is not None:
-            t = threading.Thread(target = plan.connecter_serveur, args = ('localhost', 61802, mdp))
+            t = threading.Thread(target = plan.connecter_serveur, args = ('localhost', 61802, mdp, 0))
             t.start()
             serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             serveur.bind(('localhost', 61802))
@@ -27,8 +30,6 @@ class Serveur:
             t = threading.Thread(target = self.ecoute_client, args = (client, len(self.autorises) - 1))
             t.start()
             serveur.close()
-        self.plan = Geo.Plan()
-        Geo.plan_default = self.plan
         print(f'Serveur lancé, adresse {ip}, port {port}, mot de passe : {mdp}')
         serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         serveur.bind((ip, port))
@@ -53,8 +54,11 @@ class Serveur:
             if msg == 'fin':
                 client.send('JOmetry deconnecte'.encode('utf-8'))
                 break
-            if msg == f'0 {self.mdp}':
+            if msg in (f'0 {self.mdp} 0', f'0 {self.mdp} 1'):
+                fich = int(msg[-1])
                 client.send('JOmetry connecte'.encode('utf-8'))
+                if fich:
+                    envoyer_long(client, self.plan.fichier())
                 autorisation = 1
                 self.autorises[i] = 1
                 print(f"appareil à l'adresse {adresse} autorisé")
@@ -80,7 +84,11 @@ class Serveur:
                         sock.send(requete)
                 self.plan.decode_action(msg[8:])
         
-        
+def envoyer_long(client, texte):
+    t = ('JOmetry ' + texte + ' stop!stop!stop!').encode('utf-8')
+    while t:
+        envoi, t = t[:2048], t[2048:]
+        client.send(envoi)
         
         
 if __name__ == '__main__':
