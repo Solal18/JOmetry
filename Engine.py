@@ -8,6 +8,8 @@ from groebner import grob
 from time import perf_counter_ns as perf
 import threading
 
+class ID(int): pass
+
 def txt(x):
     '''transforme une valeur en chaîne de caractères
     pour la sauvegarde dans un fichier'''
@@ -17,7 +19,7 @@ def txt(x):
     if isinstance(x, complex):
         return f'!I{x.real}+{x.imag}!'
     if isinstance(x, Creature):
-        return f"!C{x.nom.replace('!','!!')}!"
+        return f"!C{x.idet}!"
     if isinstance(x, (tuple, list)):
         return '[' + ','.join(map(txt, x)) + ']'
     if isinstance(x, dict):
@@ -72,9 +74,9 @@ def val(x, objets = None):
         match typ:
             case 'C':
                 if objets:
-                    return objets[t.replace('!!','!')]
+                    return objets[int(t)]
                 else:
-                    return '1' + t.replace('!!','!')
+                    return ID(t)
             case 'I':
                 r, i = t.split('+')
                 return float(r)+1j*float(i)
@@ -83,10 +85,7 @@ def val(x, objets = None):
                     return float(t)
                 return int(t)
             case 'T':
-                if objets:
-                    return t.replace('!!','!')
-                else:
-                    return '0' + t.replace('!!','!')
+                 return t.replace('!!','!')
             case 'B':
                 return bool(int(t))
     return ValueError
@@ -599,7 +598,8 @@ class Creature:
         self.u = u
         self.complexe = complexe
         self.tkinter = [None, None] #[cercle, texte] pour les points
-        plan.objets[nom] = self
+        self.ide = self.plan.nouv_ide()
+        plan.objets[self.ide] = self
         plan.noms.append(nom)
         plan.modifs = (True, True)
         listes = {'Point' : plan.points, 'Droite' : plan.droites, 'Courbe' : plan.CAs}
@@ -632,7 +632,7 @@ class Creature:
         return id(self)
     
     def bougeable(self):
-        return (self.nom not in ('U', 'V') and (self.arbre.parents == set() or self.method in ('PsurCA', 'ProjOrtho')))
+        return (self.ide > 2 and (self.arbre.parents == set() or self.method in ('PsurCA', 'ProjOrtho')))
 
     def supprimer(self, canvas = None):
         '''fonction recursive pour supprimer des elements
@@ -652,9 +652,9 @@ class Creature:
                 canvas.delete(i)
                 self.plan.tkinter_object.pop(i)
         for dic in (self.plan.points, self.plan.droites, self.plan.CAs, self.plan.objets):
-            if self.nom in dic:
-                del dic[self.nom]
-        self.plan.noms.remove(self.nom)
+            if self.ide in dic:
+                del dic[self.ide]
+        self.plan.noms.remove(self.ide)
         del self
                 
     def coords(self, calcul = 0):
@@ -706,10 +706,6 @@ class Creature:
         if vis is None: vis = self.vis
         self.plan.contre_action(self.set_param, (self.nom, self.color, self.vis))
         self.plan.noms.remove(self.nom)
-        for dic in (self.plan.points, self.plan.droites, self.plan.CAs, self.plan.objets):
-            if self.nom in dic:
-                del dic[self.nom]
-                dic[nom] = self
         self.plan.noms.append(nom)
         if self.plan.main is None: return
         edit = self.plan.main.editeur_objets
@@ -752,7 +748,7 @@ class Creature:
         if self.classe_actuelle == 'Courbe' and self.deg_actu !=1:
             xrint("Calcul des points.")
             zzzz=time.time()
-            self.plan.CAst[self.nom]=[]
+            self.plan.CAst[self.ide]=[]
             polynomex = coords.change_variables()
             polynomey = coords
             
@@ -764,12 +760,12 @@ class Creature:
                 for y in roots:
                     if y1 - 50 <= y <= y2 + 50:
                         l_y.append((i, y))
-                self.plan.CAst[self.nom].append(l_y)
+                self.plan.CAst[self.ide].append(l_y)
                 i += 1
             print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
             xrint("Début affichage des points")
             zzzz = time.time()
-            points = self.plan.CAst[self.nom]
+            points = self.plan.CAst[self.ide]
             for x, l_p in enumerate(points[1:-1]):
                 p_moins = points[x]
                 p_plus = points[x+2]
@@ -782,11 +778,11 @@ class Creature:
                     a_p = min([d_moins, d_nor])[1]
                     p, a_p = focaliser(p), focaliser(a_p)
                     if dist(p, a_p) < 50:
-                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.nom)
+                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
                         self.tkinter.append(z)
                         self.plan.tkinter_object[z]=self
-            can.tag_lower(self.nom, 'limite2')
-            print(can.find_withtag(self.nom))
+            can.tag_lower(self.ide, 'limite2')
+            print(can.find_withtag(self.ide))
             #print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
@@ -797,9 +793,9 @@ class Creature:
                 print(coords)
             nor = norm(coords)
             if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
-                z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.nom)
+                z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
             else:
-                z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.nom)
+                z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.ide)
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
@@ -810,8 +806,8 @@ class Creature:
             if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
                 a = (a[0]/a[2], a[1]/a[2],1)
                 c = focaliser([a[0], a[1]])
-                k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color, tag = self.nom)
-                z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6), tag = self.nom)
+                k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color, tag = self.ide)
+                z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6), tag = self.ide)
                 self.tkinter[1] = z
                 self.tkinter[0] = k
                 self.plan.tkinter_object[k] = self
@@ -1280,6 +1276,12 @@ class Plan:
             lettre = lettre%26
             nom = ('' if u else '_') + chr(dep + lettre) + (str(chiffre) if chiffre else '')
         return nom
+    
+    def nouv_ide(self):
+        ide = 0
+        while 1:
+            if ide not in self.objets: return ide
+            ide += 1
 
     def contre_action(self, fonc, args):
         xrint(fonc, args)
@@ -1367,16 +1369,40 @@ class Plan:
             raise TypeError("Vous avez donné une largeur de trait non entière.")
 
     def fichier(self):
-        return txt(((id(self), self.nom, self.notes, self.offset_x, self.offset_y),
-                    [[o.nom, o.classe, o.method, o.args, o.deg, o.color, o.vis, o.u, o.complexe] for o in self.objets.values()]))
+        return txt(((self.nom, self.notes, self.offset_x, self.offset_y),
+                    [[o.ide, o.classe, o.nom, o.method, o.args, o.deg, o.color, o.vis, o.u, o.complexe] for o in self.objets.values()]))
     
     def ouvrir(self, texte):
         while self.objets:
             self.objets.values[0].supprimer()
         plan, objets = val(texte)
-        self.nom, self.notes, self.offset_x, self.offset_y = plan[0][1:], plan[1][1:], plan[2], plan[3]
-        
-        
+        self.nom, self.notes, self.offset_x, self.offset_y = plan[0], plan[1], plan[2][1], plan[3][1]
+        ides, parents = [o[0] for o in objets], [o[4] for o in objets]
+        objets = {o[0]:o[1:]+[0] for o in objets}
+        dic = {}
+        for obj, args in zip(ides, parents):
+            dic[obj] = ([arg for arg in args if isinstance(arg, ID)], set())
+        for obj, parents in dic.items():
+            for parent in parents[0]:
+                dic[parent][1].add(obj)
+        ordre = []
+        while dic:
+            s = set()
+            o = next(iter(dic))
+            while dic[o][0]:
+                if o in s:
+                    raise RecursionError
+                s.add(o)
+                o = dic[o][0][0]
+            for enf in dic[o][1]:
+                dic[enf][0].remove(o)
+            del dic[o]
+            ordre.append(o)
+        for ide in ordre:
+            l = objets[ide][:-1]
+            l[3] = [objets[arg][-1] if isinstance(arg, ID) else arg for arg in l[3]]
+            c = Creature(self, *l)
+            objets[ide][-1] = c
     
     def move(self, point, coords):
         objets = set()
@@ -1480,36 +1506,4 @@ class Plan:
         d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p1), u = u)
         return d
 
-    def eq(self, a, b):
-        return self.objets[a]==self.objets[b]
-    
-    def infos(self, x):
-        return self.objets[x]
-    
-    def switchNom(self, nom, canv):
-        point = self.points[nom]
-        if canv.itemcget(point.tkinter[1], "text")=="":
-            canv.itemconfig(point.tkinter[1], text=point.nom)
-        else:
-            canv.itemconfig(point.tkinter[1], text="")
 
-    def switchPoint(self, nom, canv):
-        point = self.points[nom]
-        if canv.itemcget(point.tkinter[0], "state")=='hidden':
-            canv.itemconfig(point.tkinter[0], state="normal")
-            canv.itemconfig(point.tkinter[1], text=point.nom)    
-        else:
-            canv.itemconfig(point.tkinter[0], state='hidden')
-            canv.itemconfig(point.tkinter[1], text="")
-
-    def Hide(self, nom, canv):
-        point = self.points[nom]
-        canv.itemconfig(point.tkinter[1], text="")
-
-    def rename(self, nom, nom2, canv):
-        if nom2 not in list(self.objets.keys()):
-            self.points[nom].nom =nom2
-            self.points[nom2] = self.points.pop(nom)
-            self.objets[nom2] = self.objets.pop(nom)
-            canv.itemconfig(self.points[nom2].tkinter[1], text=self.points[nom2].nom)
-        self.modifs = (True, True)
