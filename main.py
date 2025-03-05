@@ -4,15 +4,15 @@ import itertools
 import threading
 from time import time, sleep
 import sys
-done = False
+finito = False
 def animate():
     for c in itertools.cycle(['|', '/', '-', '\\']):
-        if done:
+        if finito:
             break
-        sys.stdout.write('\rloading ' + c)
+        sys.stdout.write('\rChargement ' + c)
         sys.stdout.flush()
         sleep(0.1)
-    sys.stdout.write('\rDone!     ')
+    sys.stdout.write('\rC\'est bon !')
 t = threading.Thread(target=animate)
 t.start()
 import tkinter as tk
@@ -31,12 +31,12 @@ ttk.Style().theme_use('clam')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
-done=True
+finito=True
+print('')
 
 def pprint(*args):
     #print(*args)
     return 
-
 
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
     return (coord[0]/coord[2], coord[1]/coord[2])
@@ -295,7 +295,7 @@ class Main:
     def bouger_point(self, ev):
         if self.point_move is None: return
         x, y = self.coord_canvas(ev.x, ev.y)
-        if self.point_move[1] == "Weshis":
+        if isinstance(self.point_move, tuple):
             mov1, mov2 = x - self.point_move[0][0], y -self.point_move[0][1]
             self.decaler((mov1/20, mov2/20))
         else:
@@ -321,18 +321,22 @@ class Main:
         self.dessin_canvas()
     
     def suppr_plan(self):
+        result="wesh"
         if self.plans[0].modifs[1]:
-            result = tk_mb.askquestion(f'fermeture de {self.plans[0].nom}', 'Voulez-vous enregistrer avant de fermer ?', icon = tk_mb.WARNING)
+            result = tk_mb.askyesnocancel(f'fermeture de {self.plans[0].nom}', 'Voulez-vous enregistrer avant de fermer ?', icon = tk_mb.WARNING)
             if result == 'yes':
                 self.enregistrer()
-        if len(self.plans) == 1:
-            self.plans[0] = Geo.Plan(self)
-            Geo.plan_default = self.plans[0]
-        else: 
-            self.plans.pop(0)
-        fenetre.title(f'JOmetry - {self.plans[0].nom}')
-        self.maj_menu()
-        self.dessin_canvas()
+        print(result)
+        if result is not None:
+            print(2)
+            if len(self.plans) == 1:
+                self.plans[0] = Geo.Plan(self)
+                Geo.plan_default = self.plans[0]
+            else: 
+                self.plans.pop(0)
+            fenetre.title(f'JOmetry - {self.plans[0].nom}')
+            self.maj_menu()
+            self.dessin_canvas()
     
     def creer_menu(self, ind, liste, bouton):
         if len(liste) == 1: return
