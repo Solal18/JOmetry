@@ -118,9 +118,9 @@ class Main:
             
     def creer_canvas(self):
         self.canvas = tk.Canvas(fenetre, relief = 'sunken')
-        self.limite0 = self.canvas.create_text(5, 0, text = '', tag = 'limite0')
-        self.limite1 = self.canvas.create_text(10, 0, text = '', tag = 'limite1')
-        self.limite2 = self.canvas.create_text(0, 0, text = '', tag = 'limite2')
+        self.limite0 = self.canvas.create_text(5, 0, text = ' ', tag = 'limite0')
+        self.limite1 = self.canvas.create_text(10, 0, text = ' ', tag = 'limite1')
+        self.limite2 = self.canvas.create_text(0, 0, text = ' ', tag = 'limite2')
         self.canvas.grid(row = 1, column = 0, sticky = 'nsew')
         self.canvas.bind('<Button-1>', self.canvas_clic)
         fleches = [('<Right>', (1, 0)), ('<Left>', (-1, 0)), ('<Down>', (0, 1)), ('<Up>', (0, -1))]
