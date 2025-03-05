@@ -785,8 +785,8 @@ class Creature:
                         z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.nom)
                         self.tkinter.append(z)
                         self.plan.tkinter_object[z]=self
-            for objet in self.tkinter:
-                if objet is not None: can.tag_lower(objet, 'limite2')
+            can.tag_lower(self.nom, 'limite2')
+            print(can.find_withtag(self.nom))
             #print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
@@ -1202,6 +1202,7 @@ class Plan:
         self.derniere_action = None
         self.serveur = None
         self.notes = ''
+        self.en_y = 0
 
     def action(self, cat, *args, **kwargs):
         '''Creature, Supprimer, Modif'''
@@ -1290,7 +1291,8 @@ class Plan:
 
     def action_utilisateur(self, act):
         if (self.derniere_action == act and act is not None) or act in ('ctrlz', 'ctrly'): return
-        self.ctrl_y = []
+        if not self.en_y:
+            self.ctrl_y = []
         if len(self.ctrl_z) == 0 or self.ctrl_z[-1] != []:
             self.ctrl_z.append([])
         if self.main is not None: self.main.maj_bouton()
@@ -1307,16 +1309,22 @@ class Plan:
             fonc(*args)
         self.annulation = 0
         if self.main is not None: self.main.maj_bouton()
-        xrint(self.ctrl_y, self.ctrl_z)
+        print('Y :',self.ctrl_y, '\nZ :',self.ctrl_z)
         
     def ctrly(self):
         self.ctrl_z.append([])
         liste = []
+        print('Y :',self.ctrl_y)
         while liste == []:
             liste = self.ctrl_y.pop(-1)
+        print('Y :',self.ctrl_y)
+        self.en_y = 1
         for fonc, args in liste[::-1]:
             fonc(*args)
+        self.en_y = 0
+        print('Y :',self.ctrl_y)
         if self.main is not None: self.main.maj_bouton()
+        print('Y :',self.ctrl_y)
 
     def closest_point(self, point):
         distances = []
@@ -1359,7 +1367,7 @@ class Plan:
             raise TypeError("Vous avez donné une largeur de trait non entière.")
 
     def fichier(self):
-        return txt(((self.nom, self.notes, self.offset_x, self.offset_y),
+        return txt(((id(self), self.nom, self.notes, self.offset_x, self.offset_y),
                     [[o.nom, o.classe, o.method, o.args, o.deg, o.color, o.vis, o.u, o.complexe] for o in self.objets.values()]))
     
     def ouvrir(self, texte):
