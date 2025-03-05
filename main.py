@@ -1,18 +1,19 @@
 #!/bin/python3
 
+
+print('Chargement  ', end = '')
+
 import itertools
 import threading
 from time import time, sleep
-import sys
 finito = False
 def animate():
     for c in itertools.cycle(['|', '/', '-', '\\']):
         if finito:
             break
-        sys.stdout.write('\rChargement ' + c)
-        sys.stdout.flush()
+        print('\b' + c, end = '', flush = 1)
         sleep(0.1)
-    sys.stdout.write('\rC\'est bon !')
+    print('\rC\'est bon !')
 t = threading.Thread(target=animate)
 t.start()
 import tkinter as tk
@@ -31,7 +32,7 @@ ttk.Style().theme_use('clam')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
-finito=True
+finito = True
 print('')
 
 def pprint(*args):
@@ -238,52 +239,10 @@ class Main:
             fichier = open(f)
         except Exception:
             return ouvrir_erreur()
-        texte = fichier.read().split('\n')
+        texte = fichier.read()
         fichier.close()
-        a = texte[0].split('<')
-        try:
-            texte_plan = list(map(val, a[0].split(' ')[:-1])) + [a[1][:-1]]
-        except Exception: return ouvrir_erreur()
-        if self.plans[0].modifs[0]:
-            self.plans.append(self.plans[0])
-        plan = Geo.Plan(self, nom = texte_plan[6], dd = f)
-        plan.bold = texte_plan[0]
-        plan.boldP, plan.boldC = texte_plan[1], texte_plan[2]
-        plan.focal = texte_plan[3]
-        plan.offset_x, plan.offset_y = texte_plan[4], texte_plan[5]
-        self.plans[0] = plan
-        Geo.plan_default = self.plans[0]
-
-        texte_objets = texte[1:]
-        objets = []
-        noms = []
-        l = []
-        for ligne in texte_objets:
-            if not ligne: continue
-            pprint(ligne.split('<'))
-            nom = ligne.split('<')[1].split('>')[0]
-            l.append([nom] + list(map(val, ligne.replace(f' <{nom}>', '').split(' '))))
-            noms.append(nom)
-        i = -1
-        nom_objets = set()
-        while l:
-            i += 1
-            if i>10000: return ouvrir_erreur()
-            ajout = True
-            for arg in l[i%len(l)][3]:
-                if arg in noms and arg not in nom_objets:
-                    ajout = False
-            if ajout:
-                objets.append(l.pop(i%len(l)))
-                nom_objets.add(objets[-1][0])
-        args = {}
-        for o in objets:
-            arguments = [args[arg] if type(arg) != list and arg in args else arg for arg in o[3]]
-            nouv = self.action('Creature', self.plans[0], o[1], nom = o[0], method = o[2], args = arguments, color = o[5], vis = o[6], u = o[7])
-            args[o[0]] = nouv
-            nouv.dessin()
-        fenetre.title(f'JOmetry - {self.plans[0].nom}')
-        self.maj_menu()
+        self.nouv_plan()
+        self.plans[0].ouvrir()
         return 
         
         
@@ -296,7 +255,7 @@ class Main:
         if self.point_move is None: return
         x, y = self.coord_canvas(ev.x, ev.y)
         if isinstance(self.point_move, tuple):
-            mov1, mov2 = x - self.point_move[0][0], y -self.point_move[0][1]
+            mov1, mov2 = x - self.point_move[0], y -self.point_move[1]
             self.decaler((mov1/20, mov2/20))
         else:
             self.plans[0].action_utilisateur('bouger_point')
@@ -316,6 +275,7 @@ class Main:
         i = 1
         while f'Plan {i}' in [plan.nom for plan in self.plans]: i += 1
         self.plans.insert(0, Geo.Plan(self, nom = f'Plan {i}'))
+        Geo.plan_default = self.plans[0]
         fenetre.title(f'JOmetry - {self.plans[0].nom}')
         self.maj_menu()
         self.dessin_canvas()
@@ -610,9 +570,9 @@ class Main:
             return self.action('Creature', self.plans[0], 'Point', nom = 1,
                                method = 'inter', args = [courbe_1, courbe_2], u = 1)
         for i in range(courbe_1.deg * courbe_2.deg):
-            return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'inter2', args = [courbe_1, courbe_2, i], u = 1)
+            self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'inter2', args = [courbe_1, courbe_2, i], u = 1)
+        return None
             
-        
     def supprimer(self):
         pprint('\n\n\nsuppr\n\n\n')
         obj = self.liste_derniers_clics[0]
@@ -666,7 +626,7 @@ class Main:
                     else:
                         self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
                 else:
-                    point = ((x,y), "Weshis")
+                    point = (x,y)
             else: 
                 if distances[0][1] not in self.liste_derniers_clics:
                     point = distances[0][2]
@@ -693,10 +653,12 @@ class Main:
             objet = self.plans[0].tkinter_object[objet[0]]
             if objet not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(objet)
-        while len(self.liste_derniers_clics) < len(self.attendus) and isinstance(self.attendus[len(self.liste_derniers_clics)], tuple) and self.attendus[len(self.liste_derniers_clics)][0] == 'nombre':
+        nombres = True
+        while len(self.liste_derniers_clics) < len(self.attendus) and isinstance(self.attendus[len(self.liste_derniers_clics)], tuple) and self.attendus[len(self.liste_derniers_clics)][0] == 'nombre' and nombres:
             entier = tk_sd.askfloat("Choix d'un nombre", self.attendus[len(self.liste_derniers_clics)][0][1])
             if entier is None:
                 self.deselectionner()
+                nombres = False
             else:
                 self.liste_derniers_clics.append(entier)
         if len(self.liste_derniers_clics) == len(self.attendus):
@@ -719,6 +681,7 @@ class Main:
                 self.canvas.itemconfigure(objet.tkinter[0], fill = objet.color)
                 self.canvas.itemconfigure(objet.tkinter[1], text = objet.nom)
         self.point_move = None
+        
                 
     def decaler(self, mouvement):
         if self.dernier_bouton != 'courbe':
