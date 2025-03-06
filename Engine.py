@@ -744,9 +744,7 @@ class Creature:
         
         coords = self.coords() if (calcul or self.coord is None) else self.coord
         
-        xrint(f"on dessine l'objet {self}")
         if self.classe_actuelle == 'Courbe' and self.deg_actu !=1:
-            xrint("Calcul des points.")
             zzzz=time.time()
             self.plan.CAst[self.ide]=[]
             polynomex = coords.change_variables()
@@ -763,7 +761,6 @@ class Creature:
                 self.plan.CAst[self.ide].append(l_y)
                 i += 1
             print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
-            xrint("Début affichage des points")
             zzzz = time.time()
             points = self.plan.CAst[self.ide]
             for x, l_p in enumerate(points[1:-1]):
@@ -782,8 +779,7 @@ class Creature:
                         self.tkinter.append(z)
                         self.plan.tkinter_object[z]=self
             can.tag_lower(self.ide, 'limite2')
-            print(can.find_withtag(self.ide))
-            #print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
+            print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
             if self == self.plan.inf: return
@@ -1132,7 +1128,7 @@ def ProjOrtho(d, p):
 
 
 def PsurCA(C, n, coo, main):
-    xrint(coo)
+    '''
     x, y = coo
     if main is not None:
         defocaliser = main.coord_canvas
@@ -1156,6 +1152,24 @@ def PsurCA(C, n, coo, main):
     for i in a:
         A += inter2(P, i, -1)
     return min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2)
+'''
+    x,y = coo
+    print(f'Début')
+    print((x,y))
+    done=False
+    deriveex = C.derivee()
+    deriveey = C.change_variables().derivee()
+    i=0
+    while not done:
+        a = x-C(x)(y)/(deriveex(x)(y)**2 +deriveey(y)(x)**2)*deriveex(x)(y)
+        b = y-C(x)(y)/(deriveex(x)(y)**2 +deriveey(y)(x)**2)*deriveey(y)(x)
+        print((a,b))
+        i+=1
+        if dist((a,b), (x,y))<10**(-5) or i>100:
+            done=True
+        x,y = a,b
+    return (x,y,1)
+
 
 def cercle(d, O, A, U, V):
     d1, d2 = inter(O, U), inter(O, V)
@@ -1512,5 +1526,4 @@ class Plan:
         p1 = Creature(self, 'Point', nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
         d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p1), u = u)
         return d
-
 
