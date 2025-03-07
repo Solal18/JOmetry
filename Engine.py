@@ -91,7 +91,7 @@ def val(x, objets = None):
     return ValueError
 
 def xrint(*args):
-    pass 
+    pass
 
 plan_default = 0
 
@@ -363,6 +363,7 @@ class Polynome:
             for a, b in mat.items():
                 mat2[a[0]][a[1]] = b[0]/b[1]
             mat = mat2
+        mat = list(mat)
         while mat != [] and mat[-1] == 0: mat.pop()
         for coef in mat:
             if isinstance(coef, numpy.float64):
@@ -394,7 +395,7 @@ class Polynome:
         if not isinstance(other, Polynome):
             other = Polynome((other,))
         i, a, b, l = 0, 1, 1, []
-        while not (a == 0 and b == 0):
+        while i <= max(len(self.coefs), len(other.coefs)):
             a, b = self[i], other[i]
             l.append(a + b)
             i += 1
@@ -412,7 +413,7 @@ class Polynome:
     def __rsub__(self, other):
         return (-1)*self + other
     
-    def __mul__(self, other : int):
+    def __mul__(self, other):
         if isinstance(other, (int, float, complex, numpy.float64)):
             return Polynome([coef*other for coef in self])
         if isinstance(other, Polynome):
@@ -421,7 +422,7 @@ class Polynome:
 
     def __pow__(self, other):
         if other == 0:
-            return 1
+            return Polynome((1,))
         if other == 1:
             return self
         if isinstance(other, int) and other > 1:
@@ -429,22 +430,30 @@ class Polynome:
 
     def __call__(self, arg):
         if arg == float('inf'):
-            return float('inf')*self.coef_domin()
+            return float('inf')*self.coef_domin
         if arg == -float('inf'):
             if self.deg % 2 == 0:
-                return float('inf')*self.coef_domin()
-            return -float('inf')*self.coef_domin()
+                return float('inf')*self.coef_domin
+            return -float('inf')*self.coef_domin
         return sum(arg**e*coef for e, coef in enumerate(self))
     
     def coefficients(self):
         return self.coefs
     
+    def substitution(self, P):
+        '''x -> P(x)'''
+        return sum([Polynome([c*coef for c in P**i]) for i, coef in enumerate(self)])
+    
+    @property
     def coef_domin(self):
         return self[self.deg]
     
     @property
     def deg(self):
         return max(e + self[e].deg if isinstance(self[e], Polynome) else e for e, coef in enumerate(self.coefs)) if self.coefs != [] else 0
+    
+    def composante_homogene(self, d):
+        return Polynome({(i, d - i):(self[i][d - i], 1) for i in range(d + 1)})
     
     def change_variables(self):
         for e in range(self.deg + 1):
@@ -531,7 +540,16 @@ class Polynome:
                 r = Rational(coef)
                 l[(i, j)] = (r.p, r.q)
         return l
-            
+    
+    def parametrisation(self, point):
+        a, b = norm(point)
+        coords = self.substitution(Polynome((a, 1)))
+        coords = coords.change_variables()
+        coords = coords.substitution(Polynome((b, 1)))
+        coords = coords.change_variables()
+        g1, g2 = coords.composante_homogene(1)(1), coords.composante_homogene(2)(1)
+        p1, p2 = a*g2 - g1, b*g2 - g1*Polynome((0, 1))
+        return p1, p2, g2
     
     __radd__ = __add__
     __rmul__ = __mul__ 
@@ -685,9 +703,11 @@ class Creature:
                         classe = 'Droite'
                 else:
                     args = transformation[method_tr](args, *args_tr)
+            self.method_actu = method
             self.classe_actuelle = classe
             self.deg_actu = deg
             args = [i[1] for i in args]
+            self.args_actu = args
             if self.classe_actuelle == 'Courbe':
                 self.coord = globals()[method](deg, *args)
             elif self.classe_actuelle == 'Droite' and method == 'inter':
@@ -744,41 +764,64 @@ class Creature:
         
         coords = self.coords() if (calcul or self.coord is None) else self.coord
         
-        if self.classe_actuelle == 'Courbe' and self.deg_actu !=1:
+        def dessin_entre(p1, p2, g2, inf, sup, a, b, i = 0):
+            print(i)
+            if abs(a[0] - b[0])+abs(a[1] - b[1]) <= 5 or i >= 20:
+                z = can.create_line(a[0], a[1], b[0], b[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
+                self.tkinter.append(z)
+                self.plan.tkinter_object[z]=self
+            else:
+                bo = (inf+sup)/2
+                p = focaliser((p1(bo)/g2(bo), p2(bo)/g2(bo)))
+                dessin_entre(p1, p2, g2, inf, bo, a, p, i+1)
+                dessin_entre(p1, p2, g2, bo, sup, p, b, i+1)
+        
+        xrint(f"on dessine l'objet {self}")
+        if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
+            xrint("Calcul des points.")
             zzzz=time.time()
-            self.plan.CAst[self.ide]=[]
-            polynomex = coords.change_variables()
-            polynomey = coords
-            
-            i = x1
-            while i<x2:
-                polynome2y = polynomey(i)
-                roots = polynome2y.resoudre()[0]
-                l_y = []
-                for y in roots:
-                    if y1 - 50 <= y <= y2 + 50:
-                        l_y.append((i, y))
-                self.plan.CAst[self.ide].append(l_y)
-                i += 1
-            print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
-            zzzz = time.time()
-            points = self.plan.CAst[self.ide]
-            for x, l_p in enumerate(points[1:-1]):
-                p_moins = points[x]
-                p_plus = points[x+2]
-                for p in l_p:
-                    d_moins = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_moins] + [(float('inf'), 0)])
-                    d_plus = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_plus] + [(float('inf'), 0)])
-                    d_nor = min([(abs(p[1]-p_[1]), p_) for p_ in l_p if p_ != p] + [(float('inf'), 0)])
-                    if d_moins == d_nor == (float('inf'), 0):
-                        continue
-                    a_p = min([d_moins, d_nor])[1]
-                    p, a_p = focaliser(p), focaliser(a_p)
-                    if dist(p, a_p) < 50:
-                        z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
-                        self.tkinter.append(z)
-                        self.plan.tkinter_object[z]=self
+            if self.deg_actu == 2:
+                p1, p2, g2 = coords.parametrisation(self.args_actu[2])
+                coo = [(p1(i)/g2(i), p2(i)/g2(i)) for i in range(-50, 50)]
+                p_m50, p_m0, p_0, p_50 = focaliser((p1(50)/g2(50), p2(50)/g2(50))), focaliser((p1(-1e-10)/g2(-1e-10), p2(-1e-10)/g2(-1e-10))), focaliser((p1(1e-10)/g2(1e-10), p2(1e-10)/g2(1e-10))), focaliser((p1(50)/g2(50), p2(50)/g2(50)))
+                dessin_entre(p1, p2, g2, -50, -1e-10, p_m50, p_m0)
+                dessin_entre(p1, p2, g2, 1e-10, 50, p_0, p_50)                    
+            else:
+                self.plan.CAst[self.ide]=[]
+                polynomex = coords.change_variables()
+                polynomey = coords
+                
+                i = x1
+                while i<x2:
+                    polynome2y = polynomey(i)
+                    roots = polynome2y.resoudre()[0]
+                    l_y = []
+                    for y in roots:
+                        if y1 - 50 <= y <= y2 + 50:
+                            l_y.append((i, y))
+                    self.plan.CAst[self.ide].append(l_y)
+                    i += 1
+                print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
+                xrint("Début affichage des points")
+                zzzz = time.time()
+                points = self.plan.CAst[self.ide]
+                for x, l_p in enumerate(points[1:-1]):
+                    p_moins = points[x]
+                    p_plus = points[x+2]
+                    for p in l_p:
+                        d_moins = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_moins] + [(float('inf'), 0)])
+                        d_plus = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_plus] + [(float('inf'), 0)])
+                        d_nor = min([(abs(p[1]-p_[1]), p_) for p_ in l_p if p_ != p] + [(float('inf'), 0)])
+                        if d_moins == d_nor == (float('inf'), 0):
+                            continue
+                        a_p = min([d_moins, d_nor])[1]
+                        p, a_p = focaliser(p), focaliser(a_p)
+                        if dist(p, a_p) < 50:
+                            z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
+                            self.tkinter.append(z)
+                            self.plan.tkinter_object[z]=self
             can.tag_lower(self.ide, 'limite2')
+            print(can.find_withtag(self.ide))
             print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
@@ -799,17 +842,17 @@ class Creature:
 
         if self.classe_actuelle == 'Point':
             a = coords
-            if a[0].imag == 0 and a[1].imag == 0 and a[2] != 0:
-                a = (a[0]/a[2], a[1]/a[2],1)
-                c = focaliser([a[0], a[1]])
-                k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color, tag = self.ide)
-                z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6), tag = self.ide)
-                self.tkinter[1] = z
-                self.tkinter[0] = k
-                self.plan.tkinter_object[k] = self
-                self.plan.tkinter_object[z] = self
-                can.tag_raise(k, 'limite2')
-                can.tag_raise(z, 'limite2')
+            if not(a[0].imag == 0 and a[1].imag == 0 and a[2] != 0): return
+            a = (a[0]/a[2], a[1]/a[2],1)
+            c = focaliser([a[0], a[1]])
+            k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color, tag = self.ide)
+            z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6), tag = self.ide)
+            self.tkinter[1] = z
+            self.tkinter[0] = k
+            self.plan.tkinter_object[k] = self
+            self.plan.tkinter_object[z] = self
+            can.tag_raise(k, 'limite2')
+            can.tag_raise(z, 'limite2')
 
 
  
@@ -1128,48 +1171,22 @@ def ProjOrtho(d, p):
 
 
 def PsurCA(C, n, coo, main):
-    '''
-    x, y = coo
-    if main is not None:
-        defocaliser = main.coord_canvas
-        w, h = main.canvas.winfo_width(), main.canvas.winfo_height()
-        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
-    else:
-        x1, y1, x2, y2 = -1000, -1000, 1000, 1000
-    Liste = []
-    P = C
-    i = x1 - 10
-    while len(Liste) < 2*n**2+3*n and i < x2 + 10:
-        polynome2y = P(i)
-        Liste += [(i, y, 1) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
-        i += 1
-    Liste3 = [[tangente(C, i), i] for i in Liste]
-    Liste2 = [perp(i[0], i[1]) for i in Liste3]
-    xrint(Liste2)
-    CA2 = interpol(2*n, *Liste2)
-    A = []
-    a = inter2(CA2, (x,y,1), -1)
-    for i in a:
-        A += inter2(P, i, -1)
-    return min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2)
-'''
     x,y = coo
     print(f'Début')
     print((x,y))
-    done=False
+    done = False
     deriveex = C.derivee()
     deriveey = C.change_variables().derivee()
-    i=0
+    i = 0
     while not done:
-        a = x-C(x)(y)/(deriveex(x)(y)**2 +deriveey(y)(x)**2)*deriveex(x)(y)
-        b = y-C(x)(y)/(deriveex(x)(y)**2 +deriveey(y)(x)**2)*deriveey(y)(x)
+        a = x - C(x)(y)/(deriveex(x)(y)**2 + deriveey(y)(x)**2)*deriveex(x)(y)
+        b = y - C(x)(y)/(deriveex(x)(y)**2 + deriveey(y)(x)**2)*deriveey(y)(x)
         print((a,b))
-        i+=1
-        if dist((a,b), (x,y))<10**(-5) or i>100:
-            done=True
-        x,y = a,b
+        i += 1
+        if abs(a-x) + abs(b-y) < 1e-10 or i > 100:
+            done = True
+        x, y = a, b
     return (x,y,1)
-
 
 def cercle(d, O, A, U, V):
     d1, d2 = inter(O, U), inter(O, V)
@@ -1264,7 +1281,9 @@ class Plan:
             while fichier[-16:] != ' stop!stop!stop!' and i < 1000:
                 i += 1
                 fichier += client.recv(2048).decode('utf-8')
-        self.ouvrir(fichier)
+            fichier = fichier[8:-16]
+            print(fichier)
+            self.ouvrir(fichier)
         if reponse == 'JOmetry 0 non autorisé':
             return print('mauvais mdp')
         t = threading.Thread(target = self.ecoute_serveur, args = (client,))
@@ -1272,7 +1291,12 @@ class Plan:
         
     def ecoute_serveur(self, client):
         while True:
-            reponse = client.recv(2048)
+            try:
+                reponse = client.recv(2048)
+            except ConnectionResetError:
+                self.serveur = None
+                print('deconnecte')
+                return
             msg = reponse.decode('utf-8')
             if len(msg) < 9 or msg[:8] != 'JOmetry ':
                 continue
@@ -1526,4 +1550,5 @@ class Plan:
         p1 = Creature(self, 'Point', nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
         d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p1), u = u)
         return d
+
 
