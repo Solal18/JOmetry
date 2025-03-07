@@ -229,7 +229,7 @@ def projective(A, liste1, liste2):
 
 def inversion(p, centre, r, UV = None):
     if isinstance(r, tuple):
-        r = cercle(2, inter(UV[0].coord, centre), inter(UV[1].coord, centre), r, UV[0].coord, UV[1].coord)
+        r = CAtan2(2, inter(UV[0].coord, centre), inter(UV[1].coord, centre), r, UV[0].coord, UV[1].coord)
     if centre == p:
         return (1, 1, 0)
     d = inter(p, centre)
@@ -243,7 +243,7 @@ def inverser(classe, method, deg, args, UV, c, r):
         c = c.coords()
     if not isinstance(r, tuple):
         r = r.coords()
-    cercl = cercle(2, inter(UV[0], c), inter(UV[1], c), r, UV[0], UV[1])
+    cercl = CAtan2(2, inter(UV[0], c), inter(UV[1], c), r, UV[0], UV[1])
     if classe == 'Droite':
         A, B = args[0][1], args[1][1]
         d = globals()[method](A, B)
@@ -679,16 +679,11 @@ class Creature:
             deg = self.deg
             while transformations:
                 method_tr, args_tr = transformations.pop()
-                print(f'On effectue : {method_tr} sur {args} avec {args_tr}')
                 if method_tr == "inversion":
-                    print(f'on fait une inversion avec {self.deg}')
-                    print(self)
                     classe, method, deg, args = transformation["inversion"](self.classe, method, self.deg, args, (self.plan.U.coord, self.plan.V.coord), *args_tr)
-                    print(f'On obtient {self.deg}')
-                    print(f'et comme arguments {self.args}')
-                    print(type(self.args[0]))
                     if deg == 1:
                         classe = 'Droite'
+                        method = "inter"
                 else:
                     args = transformation[method_tr](args, *args_tr)
             self.classe_actuelle = classe
@@ -697,14 +692,10 @@ class Creature:
             if self.classe_actuelle == 'Courbe':
                 self.coord = globals()[method](deg, *args)
             elif self.classe_actuelle == 'Droite' and method == 'inter':
-                xrint(self)
                 self.coord = inter(*args)
             else:
                 self.coord = globals()[method](*args)
         return self.coord
-
-    def set_coords(self):
-        self.coord = globals()[method](*self.args)
             
     def set_param(self, nom = None, col = None, vis = None):
         if nom is None: nom = self.nom
@@ -855,11 +846,8 @@ def symetrie(A, B):
 def harmonique(A, B, C):
     liste = [A, B, (14,11,1), (3,4,1)]
     liste2 =[(-1, 0, 1), (1, 0,1), (14,11,1), (3,4,1)]
-    x,y,z = norm(transfo_proj(C, liste, liste2))
-    return transfo_proj((1/x, 0, 1), liste2, liste)
-
-def projective(A, liste1, liste2):
-    return transfo_proj(A, liste1, liste2)
+    x,y,z = norm(projective(C, liste, liste2))
+    return projective((1/x, 0, 1), liste2, liste)
 
 def inter2(courbe1, courbe2, numero):
     coooords = (0,0,0)
