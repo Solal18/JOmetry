@@ -464,7 +464,7 @@ class Main:
     def cercle_cent(self):
         centre, point =  self.liste_derniers_clics[0], self.liste_derniers_clics[1]
         U, V = self.plans[0].U, self.plans[0].V
-        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
+        return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
     
     def perp(self):
         d, p = self.liste_derniers_clics
