@@ -6,6 +6,31 @@ import os.path as op
 from threading import Thread
 from serveur import Serveur
 
+class Scrollable_Frame(tk.Frame):
+    
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent)
+        self.grid(**kwargs)
+        self.canvas = tk.Canvas(self, bd = 0)
+        self.frame = tk.Frame(self.canvas)
+        self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview)
+        
+        self.canvas.configure(yscrollcommand = self.scrollbar.set)
+        self.canvas.create_window(0, 0, anchor = 'nw', window = self.frame, tags = ('frame',))
+        self.canvas.bind('<Configure>', self.configure_frame)
+        self.frame.bind('<Configure>', self.maj_scrollregion)
+        
+        self.canvas.grid(row = 0, column = 0, sticky = 'nsew')
+        self.scrollbar.grid(row = 0, column = 1, sticky = 'nsew')
+
+    def maj_scrollregion(self, event):
+        self.canvas.configure(scrollregion = self.canvas.bbox('all'))
+
+    def configure_frame(self, ev):
+        self.canvas.itemconfig('frame', width=ev.width)
+
+
+
 class AideFenetre:
     
     def __init__(self, fenetre, doc):
@@ -301,54 +326,67 @@ class LanceServeur:
     
     def lancer(self):
         mdp = self.entree.get()
-        t = Thread(target = lambda: Serveur(mdp, self.main.plans[0]))
+        t = Thread(target = Serveur, args = (mdp, self.main.plans[0], self.main.plans[0].fichier()))
         t.start()
         self.fermer_fenetre()
         
         
 class Parametres:
     
-    def __init__(self, fenetre, main, separe):
+    def __init__(self, fenetre, main, style):
         self.fenetre = fenetre
-        self.grande_frame = tk.Toplevel()
-        self.frame = self.grande_frame
-        self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
+        self.style = style
+        self.main = main
+        self.toplevel = tk.Toplevel()
+        self.frame = Scrollable_Frame(self.toplevel, row = 0, column = 0).frame
+        for colonne in range(4):
+            self.frame.columnconfigure(colonne, weight = 1)
+        self.toplevel.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
         plan = main.plans[0]
         self.p = [('nombre', 'Taille des points', plan.boldP, 3),
                   ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
-                  ('choix', "Style de l'interface", '', 'clam', 'clam', ('clam', 'old')),
+                  ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
                   ('texte', 'Nom du plan', plan.nom, 'Plan 1')]
         self.widgets = []
+        self.valeurs = []
         tk.Label(self.frame, text = 'Paramètres').grid(row = 0, column = 0, columnspan = 4)
         for i, e in enumerate(self.p):
             if e[0] == 'nombre':
-                w = tk.Spinbox(self.frame, from_ = 0)
+                v = tk.IntVar()
+                w = tk.Spinbox(self.frame, textvariable = v, from_ = 0)
             if e[0] == 'choix':
-                w = Combobox(self.frame, state = 'readonly', values = e[4])
+                v = tk.StringVar()
+                w = Combobox(self.frame, state = 'readonly', textvariable = v, values = e[4])
             if e[0] == 'texte':
-                w = tk.Entry(self.frame)
-            w.grid(row = i+1, column = 0, columnspan = 2)
+                v = tk.StringVar()
+                w = tk.Entry(self.frame, textvariable = v)
+            w.grid(row = i+1, column = 0, columnspan = 2, sticky = 'nsew')
+            self.valeurs.append(v)
             self.widgets.append(w)
-            tk.Label(self.frame, text = e[1]).grid(row = i+1, column = 2, columnspan = 2)
-        tk.Button(self.frame, text = 'Reinitialiser').grid(row = i+2, column = 0)
-        tk.Button(self.frame, text = '   Annuler   ').grid(row = i+2, column = 1, columnspan = 2)
-        tk.Button(self.frame, text = '     OK     ').grid(row = i+2, column = 3)
+            tk.Label(self.frame, text = e[1]).grid(row = i+1, column = 2, columnspan = 2, sticky = 'nsew')
+        tk.Button(self.frame, text = 'Reinitialiser', command = lambda: self.assigner_valeurs([e[3] for e in self.p])).grid(row = i+2, column = 0, sticky = 'nsew')
+        tk.Button(self.frame, text = '   Annuler   ', command = self.fermer_fenetre).grid(row = i+2, column = 1, columnspan = 2, sticky = 'nsew')
+        tk.Button(self.frame, text = '     OK     ', command = self.changer_param).grid(row = i+2, column = 3, sticky = 'nsew')
         self.assigner_valeurs([e[2] for e in self.p])
             
     def fermer_fenetre(self):
-        pass
+        self.main.parametres = None
+        self.toplevel.destroy()
     
     def maj(self):
         pass
     
     def assigner_valeurs(self, liste):
-        pass
-    
-    def par_defaut(self):
-        pass
+        for v, w in zip(self.p, self.valeurs):
+            w.set(v[2])
     
     def changer_param(self):
-        pass
+        l = [w.get() for w in self.valeurs]
+        plan = self.main.plans[0]
+        plan.boldP, plan.boldC, plan.nom = l[0], l[1], l[3]
+        self.style.theme_use(l[2])
+        self.fermer_fenetre()
+        self.main.menub.configure(text = f'{l[3]}  \u25bc')
                 
 class Notes:
     
