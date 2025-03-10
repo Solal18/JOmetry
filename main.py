@@ -590,6 +590,7 @@ class Main:
             courbe = self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', deg = '', args = [i for i in self.liste_derniers_clics], u = 1)
             self.deselectionner()
             courbe.dessin()
+            self.action_bouton('courbe', self.boutons[7])
         
     courbe = soumettre
         
