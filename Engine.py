@@ -828,15 +828,19 @@ class Creature:
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
             if self == self.plan.inf: return
-            if isinstance(coords, Polynome):
-                print("salut")
-                coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
-                print(coords)
-            nor = norm(coords)
-            if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
-                z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
+            if self.method == 'segment':
+                A, B = self.args_actu
+                z = can.create_line(focaliser(A)[:2], focaliser(B)[:2], width=self.plan.bold, fill=self.color, tag = self.ide)
             else:
-                z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.ide)
+                if isinstance(coords, Polynome):
+                    print("salut")
+                    coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
+                    print(coords)
+                nor = norm(coords)
+                if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
+                    z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
+                else:
+                    z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.ide)
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
@@ -878,6 +882,9 @@ def coord(c, d = 0, e = 0):
             raise ValueError("Point (0,0,0) impossible")
         return (x, y, z)
     return (c, d, e)
+    
+def segment(A, B):
+    return inter(A, B)
 
 def inter(A, B):
     """Définition d'un point par deux droites"""
