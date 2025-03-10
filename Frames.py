@@ -121,7 +121,7 @@ class EditeurObjets:
             self.tableau.heading(i, text = t)
         self.nom_methodes = {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
-                        'cercle' : 'conique tangente à deux droites', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion'}
+                        'cercle' : 'conique tangente à deux droites', 'segment':'segment', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion'}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
         self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
         self.couleur = tk.Frame(self.frame)
@@ -176,19 +176,22 @@ class EditeurObjets:
     def maj(self):
         for item in self.tableau.get_children():
             self.tableau.delete(item)
-        self.objets = self.main.liste_objet()[1]
-        for i, l in enumerate(self.objets):
-            self.objets[i] = [l[1], l[0], self.nom_methodes[l[2]], l[3], l[5], ('non', 'oui')[l[6]], l[7]]
+        self.ides = {}
+        self.objets = []
+        for objet in self.main.plans[0].objets.values():
+            if objet.u:
+                self.ides[objet.nom] = objet.ide
+                self.objets.append((objet.nom, objet.classe, self.nom_methodes[objet.method],
+                                    objet.args, objet.color, ('non', 'oui')[objet.vis]))
         for l in self.objets:
-            if l[6]:
-                self.tableau.insert('', 'end', values = l[:6])
+            self.tableau.insert('', 'end', values = l)
         self.deselectionner()
 
     def clic_entree(self, event):
         self.main.plans[0].action_utilisateur(f'proprietes{self.selectionne}')
         if self.selectionne is None: return
         nom, couleur, aff = self.var1.get(), self.var2.get(), self.var3.get()
-        if nom in self.main.plans[0].noms and self.main.plans[0].objets[nom] is not self.selectionne:
+        if nom in ('U', 'V'):
             self.label['text'] = 'Nom déjà utilisé\n'
             return
         try: self.fenetre.winfo_rgb(couleur)
@@ -210,7 +213,8 @@ class EditeurObjets:
         if self.tableau.selection() == tuple(): return
         ligne = self.tableau.item(self.tableau.selection()[0])['values']
         self.ligne_select = self.tableau.selection()[0]
-        self.selectionne = self.main.plans[0].objets[ligne[0]]
+        ide = self.ides[ligne[0]]
+        self.selectionne = self.main.plans[0].objets[ide]
         for widget in (self.entree, self.couleur_choix, self.bouton_col,
                        self.aff, self.suppr):
             widget['state'] = 'normal'
