@@ -59,7 +59,7 @@ class Main:
                      ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
                      ['cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex'],
                      ['courbe'], ['caa'], ['soumettre'],
-                     ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
+                     ['droite', 'segment', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
                      ['editeur_objets'], ['etude'], ['parametres'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['connect', 'serveur'], ['aide'],
@@ -137,6 +137,7 @@ class Main:
                         'cercle_circ' : (self.cercle, 1, ('point', 'point', 'point')),
                         'courbe' : (self.courbe, 1, ('point',)*90),
                         'droite' : (self.droite, 1, ('point', 'point')),
+                        'segment' : (self.segment, 1, ('point', 'point')),
                         'plus' : (self.plus, 0),
                         'moins' : (self.moins, 0),
                         'main' : (self.move, 1, ('point',)),
@@ -463,6 +464,10 @@ class Main:
     def droite(self):
         A, B = self.liste_derniers_clics
         return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, B), u = 1)
+    
+    def segment(self):
+        A, B = self.liste_derniers_clics
+        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'segment', args = (A, B), u = 1)
         
     def tangente(self):
         C, p = self.liste_derniers_clics
