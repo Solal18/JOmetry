@@ -293,7 +293,7 @@ permut2=[[2, 0, 0], [0, 2, 0], [0, 0, 2], [1, 1, 0], [0, 1, 1], [1, 0, 1]]
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
     if coord[2]==0:
         return coord
-    return (coord[0]/coord[2], coord[1]/coord[2],1)
+    return (coord[0]/coord[2], coord[1]/coord[2], 1)
 
 def find_eq_homogene(coords, deg):
     permut = permutations(deg)
@@ -555,7 +555,7 @@ class Polynome:
         return l
             
     def parametrisation(self, point):
-        a, b = norm(point)
+        a, b = norm(point)[:2]
         coords = self.substitution(Polynome((a, 1)))
         coords = coords.change_variables()
         coords = coords.substitution(Polynome((b, 1)))
@@ -713,8 +713,8 @@ class Creature:
                     args = transformation[method_tr](args, *args_tr)
             self.classe_actuelle = classe
             self.deg_actu = deg
-            self.args_actu = args
             args = [i[1] for i in args]
+            self.args_actu = args
             if self.classe_actuelle == 'Courbe':
                 self.coord = globals()[method](deg, *args)
             elif self.classe_actuelle == 'Droite' and method == 'inter':
@@ -768,7 +768,6 @@ class Creature:
         coords = self.coords() if (calcul or self.coord is None) else self.coord
         
         def dessin_entre(p1, p2, g2, inf, sup, a, b, i = 0):
-            print(i)
             if abs(a[0] - b[0])+abs(a[1] - b[1]) <= 5 or i >= 20:
                 z = can.create_line(a[0], a[1], b[0], b[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
                 self.tkinter.append(z)
