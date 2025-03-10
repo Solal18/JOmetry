@@ -28,7 +28,8 @@ from Engine import txt, val
 from random import random, randint
 
 fenetre = tk.Tk()
-ttk.Style().theme_use('clam')
+style = ttk.Style()
+style.theme_use('clam')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
@@ -60,7 +61,7 @@ class Main:
                      ['courbe'], ['caa'], ['soumettre'],
                      ['droite', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
                      ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
-                     ['editeur_objets'], ['etude'],
+                     ['editeur_objets'], ['etude'], ['parametres'],
                      ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['connect', 'serveur'], ['aide'],
                      ]
         self.creer_canvas()
@@ -76,6 +77,7 @@ class Main:
         self.dernier_bouton = None
         self.point_move = None
         self.lanceurserveur = None
+        self.parametres = None
         self.fenetre_taille = '1x1'
         fenetre.bind('<Configure>', self.configure_fenetre)
         fenetre.bind('<Return>', self.entree_commande)
@@ -161,6 +163,7 @@ class Main:
                         'nouv_plan' : (self.nouv_plan, 0),
                         'suppr_plan' : (self.suppr_plan, 0),
                         'editeur_objets' : (self.edit_objets, 0),
+                        'parametres' : (self.parametres, 0),
                         'aide' : (self.aide, 0),
                         'perp' : (self.perp, 1, ('droite', 'point')),
                         'media' : (self.media, 1, ('point', 'point')),
@@ -323,6 +326,10 @@ class Main:
     def serveur(self):
         if self.lanceurserveur is not None or self.plans[0].serveur is not None: return
         self.lanceurserveur = Fenetres.LanceServeur(self)
+        
+    def parametres(self):
+        if self.parametres is not None: return
+        self.parametres = Fenetres.Parametres(fenetre, self, style)        
     
     def echange(self, ind, nom):
         pprint('echange')
@@ -464,7 +471,7 @@ class Main:
     def cercle_cent(self):
         centre, point =  self.liste_derniers_clics[0], self.liste_derniers_clics[1]
         U, V = self.plans[0].U, self.plans[0].V
-        return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
+        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
     
     def perp(self):
         d, p = self.liste_derniers_clics
