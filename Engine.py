@@ -469,11 +469,23 @@ class Polynome:
         return Polynome({(i, d - i):(self[i][d - i], 1) for i in range(d + 1)})
     
     def change_variables(self):
+        '''P(x,y) -> P(y,x), P(x,y,z) -> P(y,x,z)''' 
         for e in range(self.deg + 1):
             if not isinstance(self[e], Polynome):
                 self[e] = Polynome((self[e],))
         return Polynome([Polynome([coef[e] for coef in self]) for e in range(max(poly.deg for poly in self) + 1)])
             
+    def change_variables3(self):
+        '''P(x,y,z) -> P(x,z,y)'''
+        for e in range(self.deg + 1):
+            if not isinstance(self[e], Polynome):
+                self[e] = Polynome((self[e],))
+        return Polynome([coef.change_variables() for coef in self])
+    
+    def change_variables32(self):
+        '''P(x,y,z) -> P(z,x,y)'''
+        return self.change_variables3().change_variables()
+        
     def derivee(self):
         return Polynome([e*self[e] for e in range(1, self.deg + 1)])
     
@@ -782,6 +794,7 @@ class Creature:
         if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
             xrint("Calcul des points.")
             zzzz=time.time()
+            coords = coords.change_variables32()(1)
             if self.deg_actu == 2:
                 p1, p2, g2 = coords.parametrisation(self.args_actu[2])
                 coo = [(p1(i)/g2(i), p2(i)/g2(i)) for i in range(-50, 50)]
@@ -903,27 +916,29 @@ def harmonique(A, B, C):
     x,y,z = norm(projective(C, liste, liste2))
     return projective((1/x, 0, 1), liste2, liste)
 
-def inter2(courbe1, courbe2, numero):
+def inter2(courbe1, courbe2, numero, z = 1):
     coooords = (0,0,0)
     rooot = []
     droite = None
     if isinstance(courbe1, (tuple, list)):
         a, b, c = courbe1
         if a != 0:
-            droite, courbe = Polynome([-c/a, -b/a]), courbe2
+            droite, courbe = Polynome([-c/a, -b/a]), courbe2.change_variables32()(z)
         else:
             y = -c/b
-            courbe = courbe2.change_variables()
+            courbe = courbe2.change_variables32()(z).change_variables()
             rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
     if isinstance(courbe2, (tuple, list)):
         a, b, c = courbe2
         if a != 0:
-            droite, courbe = Polynome([-c/a, -b/a]), courbe1
+            droite, courbe = Polynome([-c/a, -b/a]), courbe1.change_variables32()(z)
         else:
             y = -c/b
-            courbe = courbe1.change_variables()
+            courbe = courbe1.change_variables32()(z).change_variables()
             rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
     if droite is None and rooot == []:
+        courbe1 = courbe1.change_variables32()(z)
+        courbe2 = courbe2.change_variables32()(z)
         p1, p2 = courbe1.expr_dict_monomes(), courbe2.expr_dict_monomes()
         #c = grob([p1, p2])
         #P2 = Polynome(c[1]).change_variables()
@@ -1075,7 +1090,7 @@ def interpol(deg, *args):#INTERpolation
             detConi[i][j] = detConi[i][j]/(10**a)
     for i in range(len(permut)):
         sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
     print(coords)
     nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
     a = 0
@@ -1106,7 +1121,7 @@ def CAtan1(deg, *args):
     coords = []
     for i in range(len(permut)):
         sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
     nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
     a, i = 0, 0
     while a == 0 and i < len(coords):
@@ -1143,7 +1158,7 @@ def CAtan2(deg, *args):
     coords = []
     for i in range(len(permut)):
         sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i][:2])))
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
     nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
     a = 0
     i = 0
