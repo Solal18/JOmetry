@@ -1032,12 +1032,18 @@ def tangente(C, p):
     '''
     if isinstance(C, (tuple, list)):
         return C
-    a, b = p[:2]
+    a, b,c = p
+    print(p)
+    print(C)
     polynomex = C.change_variables()
     polynomey = C
-    coef1 = polynomex(b).derivee()(a)
-    coef2 = polynomey(a).derivee()(b)
-    coords_droite = (coef1, coef2, -coef1*a -coef2*b)
+    polynomez = C.change_variables32()
+    print('polynomezzzzz')
+    print(f'{polynomez}')
+    coef1 = polynomex(b).derivee()(a)(c)
+    coef2 = polynomey(a).derivee()(b)(c)
+    coef3 = polynomez.derivee()(c)(a)(b)
+    coords_droite = (coef1, coef2, -coef1*a -coef2*b+coef3*(1-c))
     return coords_droite
 
 def interpol(deg, *args):#INTERpolation
