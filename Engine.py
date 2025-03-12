@@ -364,11 +364,18 @@ class Polynome:
     def __init__(self, mat):
         self.coefs = []
         if isinstance(mat, dict):
-            h, l = max(mat)[0], max(mat, key = lambda x: x[1])[1]
-            mat2 = nouv_coords = [[0]*(l + 1) for i in range(h + 1)]
-            for a, b in mat.items():
-                mat2[a[0]][a[1]] = b[0]/b[1]
-            mat = mat2
+            if len(list(mat.keys())[0]) == 2:
+                h, l = max(mat)[0], max(mat, key = lambda x: x[1])[1]
+                mat2 = nouv_coords = [[0]*(l + 1) for i in range(h + 1)]
+                for a, b in mat.items():
+                    mat2[a[0]][a[1]] = b[0]/b[1]
+                mat = mat2
+            elif len(list(mat.keys())[0]) == 3:
+                h, l, m = max(mat)[0], max(mat, key = lambda x: x[1])[1], max(mat, key = lambda x: x[2])[2]
+                mat2 = nouv_coords = [[[0]*(m + 1) for j in range(l + 1)] for i in range(h + 1)]
+                for a, b in mat.items():
+                    mat2[a[0]][a[1]][a[2]] = b[0]/b[1]
+                mat = mat2
         mat = list(mat)
         while mat != [] and mat[-1] == 0: mat.pop()
         for coef in mat:
@@ -438,6 +445,7 @@ class Polynome:
             return self ** (other - 1) * self
 
     def __call__(self, arg):
+        if self.coefs == []: return 0
         if arg == float('inf'):
             return float('inf')*self.coef_domin
         if arg == -float('inf'):
@@ -779,16 +787,22 @@ class Creature:
         
         coords = self.coords() if (calcul or self.coord is None) else self.coord
         
-        def dessin_entre(p1, p2, g2, inf, sup, a, b, i = 0):
-            if abs(a[0] - b[0])+abs(a[1] - b[1]) <= 5 or i >= 20:
+        def dessin_entre(p1, p2, g2, inf, sup, a, b, i = 0, infi = 0):
+            if abs(a[0] - b[0])+abs(a[1] - b[1]) <= 7 or i >= 20:
                 z = can.create_line(a[0], a[1], b[0], b[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
                 self.tkinter.append(z)
                 self.plan.tkinter_object[z]=self
             else:
-                bo = (inf+sup)/2
+                if infi:
+                    if sup >= -inf:
+                        bo = 10*inf
+                    else:
+                        bo = 10*sup
+                else:
+                    bo = (inf+sup)/2
                 p = focaliser((p1(bo)/g2(bo), p2(bo)/g2(bo)))
-                dessin_entre(p1, p2, g2, inf, bo, a, p, i+1)
-                dessin_entre(p1, p2, g2, bo, sup, p, b, i+1)
+                dessin_entre(p1, p2, g2, inf, bo, a, p, i+1, infi)
+                dessin_entre(p1, p2, g2, bo, sup, p, b, i+1, infi)
         
         xrint(f"on dessine l'objet {self}")
         if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
@@ -798,9 +812,19 @@ class Creature:
             if self.deg_actu == 2:
                 p1, p2, g2 = coords.parametrisation(self.args_actu[2])
                 coo = [(p1(i)/g2(i), p2(i)/g2(i)) for i in range(-50, 50)]
-                p_m50, p_m0, p_0, p_50 = focaliser((p1(50)/g2(50), p2(50)/g2(50))), focaliser((p1(-1e-10)/g2(-1e-10), p2(-1e-10)/g2(-1e-10))), focaliser((p1(1e-10)/g2(1e-10), p2(1e-10)/g2(1e-10))), focaliser((p1(50)/g2(50), p2(50)/g2(50)))
-                dessin_entre(p1, p2, g2, -50, -1e-10, p_m50, p_m0)
-                dessin_entre(p1, p2, g2, 1e-10, 50, p_0, p_50)                    
+                pol = lambda x: focaliser((p1(x)/g2(x), p2(x)/g2(x)))
+                racines = sorted(g2.resoudre()[0])
+                print('racines du polynome dans la parametrisation :', racines)
+                if len(racines) == 2:
+                    r0, r1, r2, r3, r4, r5 = racines[0]-10, racines[0]-1e-2, racines[0]+1e-2, racines[1]-1e-2, racines[1]+1e-2, racines[1]+10
+                    dessin_entre(p1, p2, g2, r0, r5, pol(r0), pol(r5), infi = 1)
+                    dessin_entre(p1, p2, g2, r0, r1, pol(r0), pol(r1))
+                    dessin_entre(p1, p2, g2, r2, r3, pol(r2), pol(r3))
+                    dessin_entre(p1, p2, g2, r4, r5, pol(r4), pol(r5))
+                else:
+                    p_m50, p_m0, p_0, p_50 = pol(50), focaliser((p1(-1e-10)/g2(-1e-10), p2(-1e-10)/g2(-1e-10))), focaliser((p1(1e-10)/g2(1e-10), p2(1e-10)/g2(1e-10))), focaliser((p1(50)/g2(50), p2(50)/g2(50)))
+                    dessin_entre(p1, p2, g2, 1e-10, 50, p_0, p_50)
+                    dessin_entre(p1, p2, g2, -50, -1e-10, p_m50, p_m0)                  
             else:
                 self.plan.CAst[self.ide]=[]
                 polynomex = coords.change_variables()
@@ -1049,10 +1073,10 @@ def tangente(C, p):
 def interpol(deg, *args):#INTERpolation
     xrint('Début interpolation')
     zzzz=time.time()
-    permut = permutations(deg)
     detConi = []
     dicoArgs ={}
     args = [tuple(i) for i in args]
+    permut = permutations(deg)
     for i in args:
         dicoArgs[i] = dicoArgs.get(i, 0)+1
     for i in list(dicoArgs.keys()):
@@ -1086,7 +1110,6 @@ def interpol(deg, *args):#INTERpolation
             detConi.append(detConibis)
     print("wooo")
     print(detConi)
-    coords = []
     if deg <=7:
         a = deg + 3
     else:
@@ -1094,11 +1117,15 @@ def interpol(deg, *args):#INTERpolation
     for i in range(len(detConi)):
         for j in range(len(detConi[i])):
             detConi[i][j] = detConi[i][j]/(10**a)
+    return en_poly(detConi, deg)
+
+def en_poly(detConi, deg):
+    permut = permutations(deg)
+    coords = []
     for i in range(len(permut)):
         sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
         coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
-    print(coords)
-    nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
+    nouv_coords = {}
     a = 0
     i = 0
     while a == 0 and i < len(coords):
@@ -1107,16 +1134,12 @@ def interpol(deg, *args):#INTERpolation
         i+=1
     if a != 0:
         for j in range(len(coords)):
-            c, b = coords[j][1][0], coords[j][1][1]
-            nouv_coords[c][b] = numpy.real(coords[j][0] / a)
+            nouv_coords[tuple(coords[j][1])] = ((coords[j][0] / a).real, 1)
     poly = Polynome(nouv_coords)
-    xrint('poly :', poly)
-    xrint(f'Fin interpolation. Temps estimé : {time.time()-zzzz}')
     return poly
 
 def CAtan1(deg, *args):
     '''crée une conique tangente à d1 en A passant par les points B, C et D'''
-    permut = permutations(deg)
     d1, A, B, C, D = args[:5]
     b, c = d1[1], d1[2]
     detConi =  [[A[0]**2, A[0]*A[1], A[1]**2, A[2]*A[0], A[1]*A[2], A[2]**2],
@@ -1124,27 +1147,11 @@ def CAtan1(deg, *args):
                  [B[0]**2,B[0]*B[1], B[1]**2, B[0]*B[2], B[1]*B[2], B[2]**2],
                  [C[0]**2,C[0]*C[1], C[1]**2, C[0]*C[2], C[1]*C[2], C[2]**2],
                  [D[0]**2,D[0]*D[1], D[1]**2, D[0]*D[2], D[1]*D[2], D[2]**2]]
-    coords = []
-    for i in range(len(permut)):
-        sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
-    nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
-    a, i = 0, 0
-    while a == 0 and i < len(coords):
-        if coords[i][0] != 0:
-            a = coords[i][0]
-        i+=1
-    if a != 0:
-        for j in range(len(coords)):
-            c, b = coords[j][1][0], coords[j][1][1]
-            nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-    poly = Polynome(nouv_coords)
-    return poly
+    return en_poly(detConi, deg)
 
 def CAtan2(deg, *args):
     ''' crée une conique tangente à d1 en U et à d2 en V passant par le point B
     permet notamment de faire un cercle de centre c1 si confondu avec c2'''
-    permut = permutations(deg)
     d1, d2 = args[0], args[1]
     U, V = args[3], args[4]
     B = args[2]
@@ -1161,25 +1168,7 @@ def CAtan2(deg, *args):
     #             [V.coords()[0]**2, V.coords()[0]*V.coords()[1], V.coords()[1]**2,V.coords()[2]*V.coords()[0], V.coords()[1]*V.coords()[2],V.coords()[2]**2],
     #             [2*V.coords()[0]*d,d*V.coords()[1]-c*V.coords()[0], -2*V.coords()[1]*c, V.coords()[2]*d, -V.coords()[2]*c, 0],
     #             [E.coords()[0]**2, E.coords()[0]*E.coords()[1],E.coords()[1]**2, E.coords()[0]*E.coords()[2], E.coords()[1]*E.coords()[2], E.coords()[2]**2]]
-    coords = []
-    for i in range(len(permut)):
-        sousDet = [[detConi[j][k] for k in range(i)] + [detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
-        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
-    nouv_coords = [[0]*(deg+1) for i in range(deg + 1)]
-    a = 0
-    i = 0
-    while a == 0 and i < len(coords):
-        if coords[i][0] != 0:
-            a = coords[i][0]
-        i+=1
-    if a != 0:
-        for j in range(len(coords)):
-            c, b = coords[j][1][0], coords[j][1][1]
-            nouv_coords[c][b] = numpy.real(coords[j][0] / a)
-    xrint('nouv_coords :', nouv_coords)
-    poly = Polynome(nouv_coords)
-    xrint('poly :', poly)
-    return poly
+    return en_poly(detConi, deg)
 
 def perp(d, p):
     '''args -> Droite, Point; retourne la perpendiculaire'''
@@ -1197,31 +1186,6 @@ def ProjOrtho(d, p):
 
 
 def PsurCA(C, n, coo, main):
-    '''
-    x, y = coo
-    if main is not None:
-        defocaliser = main.coord_canvas
-        w, h = main.canvas.winfo_width(), main.canvas.winfo_height()
-        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
-    else:
-        x1, y1, x2, y2 = -1000, -1000, 1000, 1000
-    Liste = []
-    P = C
-    i = x1 - 10
-    while len(Liste) < 2*n**2+3*n and i < x2 + 10:
-        polynome2y = P(i)
-        Liste += [(i, y, 1) for y in polynome2y.resoudre()[0] if y1 - 50 <= y <= y2 + 50]
-        i += 1
-    Liste3 = [[tangente(C, i), i] for i in Liste]
-    Liste2 = [perp(i[0], i[1]) for i in Liste3]
-    xrint(Liste2)
-    CA2 = interpol(2*n, *Liste2)
-    A = []
-    a = inter2(CA2, (x,y,1), -1)
-    for i in a:
-        A += inter2(P, i, -1)
-    return min(A, key = lambda z : (z[0]-x)**2+(z[1]-y)**2)
-'''
     x,y = coo
     deriveex = C.derivee()
     deriveey = C.change_variables().derivee()
