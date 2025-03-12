@@ -8,29 +8,37 @@ from serveur import Serveur
 
 class Scrollable_Frame(tk.Frame):
     
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, orientation = 'vertical', **kwargs):
         super().__init__(parent)
         self.grid(**kwargs)
-        self.canvas = tk.Canvas(self, bd = 0, bg = 'red')
+        self.canvas = tk.Canvas(self, bd = 0)
         self.frame = tk.Frame(self.canvas)
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
-        self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview)
+        self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview, orient = orientation)
         
-        self.canvas.configure(yscrollcommand = self.scrollbar.set)
+        if orientation == 'vertical':
+            self.canvas.configure(yscrollcommand = self.scrollbar.set)
+            self.scrollbar.grid(row = 0, column = 1, sticky = 'nsew')
+        else:
+            self.canvas.configure(xscrollcommand = self.scrollbar.set)
+            self.scrollbar.grid(row = 1, column = 0, sticky = 'nsew')
         self.canvas.create_window(0, 0, anchor = 'nw', window = self.frame, tags = ('frame',))
         self.canvas.bind('<Configure>', self.configure_frame)
         self.frame.bind('<Configure>', self.maj_canvas)
         
         self.canvas.grid(row = 0, column = 0, sticky = 'nsew')
-        self.scrollbar.grid(row = 0, column = 1, sticky = 'nsew')
 
     def maj_canvas(self, ev):
-        self.canvas.configure(height = self.frame.winfo_height())
+        if self.canvas.winfo_height() > self.frame.winfo_height():
+            self.canvas.configure(height = self.frame.winfo_height())
+        if self.canvas.winfo_width() > self.frame.winfo_width():
+            self.canvas.configure(width = self.frame.winfo_width())
         self.canvas.configure(scrollregion = self.canvas.bbox('all'))
 
     def configure_frame(self, ev):
         self.canvas.itemconfig('frame', width = ev.width)
+        #self.canvas.itemconfig('frame', height = ev.height)
 
 
 
@@ -348,11 +356,19 @@ class Parametres:
         self.toplevel.columnconfigure(0, weight = 1)
         self.toplevel.rowconfigure(0, weight = 1)
         self.frame = Scrollable_Frame(self.toplevel, row = 0, column = 0, sticky = 'nsew').frame
-        for colonne in range(4):
+        for colonne in range(2):
             self.frame.columnconfigure(colonne, weight = 1)
         self.toplevel.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
         plan = main.plans[0]
         self.p = [('nombre', 'Taille des points', plan.boldP, 3),
+                  ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
+                  ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
+                  ('texte', 'Nom du plan', plan.nom, 'Plan 1'),
+                  ('nombre', 'Taille des points', plan.boldP, 3),
+                  ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
+                  ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
+                  ('texte', 'Nom du plan', plan.nom, 'Plan 1'),
+                  ('nombre', 'Taille des points', plan.boldP, 3),
                   ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
                   ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
                   ('texte', 'Nom du plan', plan.nom, 'Plan 1')]
@@ -369,13 +385,17 @@ class Parametres:
             if e[0] == 'texte':
                 v = tk.StringVar()
                 w = tk.Entry(self.frame, textvariable = v)
-            w.grid(row = i+1, column = 0, columnspan = 2, sticky = 'nsew')
+            w.grid(row = i+1, column = 0, sticky = 'nsew')
             self.valeurs.append(v)
             self.widgets.append(w)
-            tk.Label(self.frame, text = e[1]).grid(row = i+1, column = 2, columnspan = 2, sticky = 'nsew')
-        tk.Button(self.frame, text = 'Reinitialiser', command = lambda: self.assigner_valeurs([e[3] for e in self.p])).grid(row = i+2, column = 0, sticky = 'nsew')
-        tk.Button(self.frame, text = '   Annuler   ', command = self.fermer_fenetre).grid(row = i+2, column = 1, columnspan = 2, sticky = 'nsew')
-        tk.Button(self.frame, text = '     OK     ', command = self.changer_param).grid(row = i+2, column = 3, sticky = 'nsew')
+            tk.Label(self.frame, text = e[1]).grid(row = i+1, column = 1, sticky = 'nsew')
+        f = tk.Frame(self.frame, padx = 3, pady = 3)
+        for colonne in range(3):
+            f.columnconfigure(colonne, weight = 1)
+        f.grid(row = i+2, column = 0, columnspan = 2)
+        tk.Button(f, text = 'Reinitialiser', command = lambda: self.assigner_valeurs([e[3] for e in self.p])).grid(row = 0, column = 0, sticky = 'nsew')
+        tk.Button(f, text = '   Annuler   ', command = self.fermer_fenetre).grid(row = 0, column = 1, sticky = 'nsew')
+        tk.Button(f, text = '     OK     ', command = self.changer_param).grid(row = 0, column = 2, sticky = 'nsew')
         self.assigner_valeurs([e[2] for e in self.p])
             
     def fermer_fenetre(self):
