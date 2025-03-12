@@ -11,23 +11,26 @@ class Scrollable_Frame(tk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent)
         self.grid(**kwargs)
-        self.canvas = tk.Canvas(self, bd = 0)
+        self.canvas = tk.Canvas(self, bd = 0, bg = 'red')
         self.frame = tk.Frame(self.canvas)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
         self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview)
         
         self.canvas.configure(yscrollcommand = self.scrollbar.set)
         self.canvas.create_window(0, 0, anchor = 'nw', window = self.frame, tags = ('frame',))
         self.canvas.bind('<Configure>', self.configure_frame)
-        self.frame.bind('<Configure>', self.maj_scrollregion)
+        self.frame.bind('<Configure>', self.maj_canvas)
         
         self.canvas.grid(row = 0, column = 0, sticky = 'nsew')
         self.scrollbar.grid(row = 0, column = 1, sticky = 'nsew')
 
-    def maj_scrollregion(self, event):
+    def maj_canvas(self, ev):
+        self.canvas.configure(height = self.frame.winfo_height())
         self.canvas.configure(scrollregion = self.canvas.bbox('all'))
 
     def configure_frame(self, ev):
-        self.canvas.itemconfig('frame', width=ev.width)
+        self.canvas.itemconfig('frame', width = ev.width)
 
 
 
@@ -342,7 +345,9 @@ class Parametres:
         self.style = style
         self.main = main
         self.toplevel = tk.Toplevel()
-        self.frame = Scrollable_Frame(self.toplevel, row = 0, column = 0).frame
+        self.toplevel.columnconfigure(0, weight = 1)
+        self.toplevel.rowconfigure(0, weight = 1)
+        self.frame = Scrollable_Frame(self.toplevel, row = 0, column = 0, sticky = 'nsew').frame
         for colonne in range(4):
             self.frame.columnconfigure(colonne, weight = 1)
         self.toplevel.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
