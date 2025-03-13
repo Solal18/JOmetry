@@ -415,11 +415,8 @@ class Main:
 
     def translation(self):
         obj, p1, p2 = self.liste_derniers_clics
-        x2, y2, z2 = p2.coords()
-        x1, y1, z1 = p1.coords()
-        v = ((x2-x1)/z1, (y2-y1)/z1, z2/z1)
-        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'translation', args = (obj, v), u = 1)
-    
+        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'translation', args = (obj, (p1.coords(), p2.coords())), u = 1)
+        
     def polyregul(self):
         p1, p2, nombre = self.liste_derniers_clics
         nombre = int(nombre)
@@ -476,8 +473,8 @@ class Main:
     def cercle_cent(self):
         centre, point =  self.liste_derniers_clics[0], self.liste_derniers_clics[1]
         U, V = self.plans[0].U, self.plans[0].V
-        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
-    
+        return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
+        
     def perp(self):
         d, p = self.liste_derniers_clics
         return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'perp', args = (d, p), u = 1)
@@ -649,7 +646,7 @@ class Main:
             self.liste_derniers_clics.append(point)
             if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1}:
                 self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
-        if attendu in ['droite', 'courbe']:
+        if attendu in ['droite', 'courbe'] and self.plans[0].tkinter_object != {}:
             #print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
                                              {'droite':self.limite2, 'courbe':self.limite1}[attendu])
@@ -660,7 +657,7 @@ class Main:
             #print(courbe)
             if courbe not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(courbe)
-        if attendu == 'objet':
+        if attendu == 'objet' and self.plans[0].tkinter_object != {}:
             objet = self.canvas.find_closest(evenement.x, evenement.y)
             if len(objet) == 0: return
             objet = self.plans[0].tkinter_object[objet[0]]
