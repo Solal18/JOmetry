@@ -203,9 +203,9 @@ def symetrer(args, B):
         for i in args:
             if i[0] == 'Point':
                 d1 = Creature(plan=plan_default,classe="Droite", method='coord', args = B, u= 0)
-                x,y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, (0, c/b, 1)), u = 0).coords()
+                x,y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, ((0, -c/b, 1), (0, 0,1))), u = 0).coords()
                 k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
-                nouv_args.append(('Point', translation(multi_matrix(translation(i[1], (0, c/b, 1)), k),(0, -c/b, 1))))
+                nouv_args.append(('Point', translation(multi_matrix(translation(i[1], ((0, -c/b, 1), (0, 0, 1))), k),((0,0,1), (0, -c/b, 1)))))
     elif a!=0:
         for i in args:
             if i[0] == 'Point':
