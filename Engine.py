@@ -1182,19 +1182,22 @@ def ProjOrtho(d, p):
     p2 = ortho(p1)
     d1 = inter(p, p2)
     return inter(d, d1)
-    
-
 
 def PsurCA(C, n, coo, main):
     x,y = coo
+    done = False
+    C = C.change_variables32()(1)
     deriveex = C.derivee()
     deriveey = C.change_variables().derivee()
-    done=False
-    a = x-C(x)(y)/(deriveex(x)(y)**2 +deriveey(y)(x)**2)*deriveex(x)(y)        
-    b = y-C(x)(y)/(deriveex(x)(y)**2 +deriveey(y)(x)**2)*deriveey(y)(x)
-    x,y = a,b
+    i = 0
+    while not done:
+        a = x - C(x)(y)/(deriveex(x)(y)**2 + deriveey(y)(x)**2)*deriveex(x)(y)
+        b = y - C(x)(y)/(deriveex(x)(y)**2 + deriveey(y)(x)**2)*deriveey(y)(x)
+        i += 1
+        if abs(a-x) + abs(b-y) < 1e-10 or i > 100:
+            done = True
+        x, y = a, b
     return (x,y,1)
-
 
 def cercle(d, O, A, U, V):
     d1, d2 = inter(O, U), inter(O, V)
