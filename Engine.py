@@ -768,7 +768,6 @@ class Creature:
         self.dessin()
         
     def dessin(self, calcul = 1):
-        
         if self.plan.main is None or self.plan is not self.plan.main.plans[0]: return
         
         can = self.plan.main.canvas
@@ -808,15 +807,18 @@ class Creature:
         
         xrint(f"on dessine l'objet {self}")
         if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
+            print(f'{self.nom}: {self.method}')
+            print(self.coords())
+            print(self.args_actu)
             xrint("Calcul des points.")
             zzzz=time.time()
             coords = coords.change_variables32()(1)
             if self.deg_actu == 2:
-                p1, p2, g2 = coords.parametrisation(self.args_actu[2])
+                p1, p2, g2 = coords.parametrisation(self.args_actu[1])
                 coo = [(p1(i)/g2(i), p2(i)/g2(i)) for i in range(-50, 50)]
                 pol = lambda x: focaliser((p1(x)/g2(x), p2(x)/g2(x)))
                 racines = sorted(g2.resoudre()[0])
-                print('racines du polynome dans la parametrisation :', racines)
+                print('racines du polynome dans la par parametrisation :', racines)
                 if len(racines) == 2:
                     r0, r1, r2, r3, r4, r5 = racines[0]-10, racines[0]-1e-2, racines[0]+1e-2, racines[1]-1e-2, racines[1]+1e-2, racines[1]+10
                     dessin_entre(p1, p2, g2, r0, r5, pol(r0), pol(r5), infi = 1)
