@@ -617,7 +617,7 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = 'green', vis = 1, u = 0, complexe = True):
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = 'green', vis = 1, u = 0, complexe =False):
         self.plan = plan
         if args is None: args = []
         print('C', deg, args)
@@ -741,6 +741,8 @@ class Creature:
                 self.coord = inter(*args)
             else:
                 self.coord = globals()[method](*args)
+        if self.complexe and self.coord[2] != 0:
+            self.coord = ((self.coord[0]/self.coord[2]).real, (self.coord[1]/self.coord[2]).real, 1) 
         return self.coord
             
     def set_param(self, nom = None, col = None, vis = None):
@@ -1533,8 +1535,8 @@ class Plan:
     def newCentre(self, nom, args, u = 1):
         d1 = Creature(self, 'Droite', 0, method = 'tangente', args = (args[0], self.U), u = 0)
         d2 = Creature(self, 'Droite', 0, method = 'tangente', args = (args[0], self.V), u = 0)
-        return Creature(self, 'Point', nom = nom, method = 'inter', args = (d1, d2), u = u, complexe = False)
-
+        return Creature(self, 'Point', nom = nom, method = 'inter', args = (d1, d2), u = u, complexe = True)
+    
     def newMedia(self, nom, args, u = 1):
         d1 = Creature(self, 'Droite', 0, method = 'inter', args = (args[0], args[1]), u = 0)
         p1 = Creature(self, 'Point', 0, method = 'inf', args = (d1,), u = 0)
