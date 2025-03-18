@@ -184,69 +184,50 @@ class Main:
         
     def creer_boutons(self):
         self.barre_haut = ttk.Frame(fenetre)
-        self.menub = ttk.Menubutton(self.barre_haut, text = f'{self.plans[0].nom}', width = 10)
+        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
+        
+        self.frameg = ttk.Frame(self.barre_haut)
+        self.framed = ttk.Frame(self.barre_haut)
+        self.fen_onglets = ttk.Notebook(self.barre_haut)
+        self.frameg.grid(row = 0, column = 0)
+        self.framed.grid(row = 0, column = 2)
+        self.fen_onglets.grid(row = 0, column = 1, padx = 5)
+        
+        self.menub = ttk.Menubutton(self.frameg, text = f'{self.plans[0].nom}', width = 10)
         self.menu_deroulant = tk.Menu(self.menub, tearoff=0)
         self.menub.configure(menu = self.menu_deroulant)
+        self.menub.grid(row = 0, column = 0, pady = 5)
+        self.Texte = ttk.Label(self.frameg, text = '', width = 20, anchor = 'n')
+        self.Texte.grid(row = 1, column = 0)
+        
+        def bouton(f, nom):
+            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
+            bout = ttk.Button(f, image = image, style = 'BoutonVert.TButton')
+            self.boutons.append(bout)
+            bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
+            self.image_boutons.append(image)
+            return bout
+        
         self.boutons = []
         self.image_boutons = []
-        #f = Fenetres.Scrollable_Frame(self.barre_haut, fenetre, orientation = 'horizontal', row = 0, column = 1).frame
-        self.fen_onglets = ttk.Notebook(self.barre_haut)
         for i, (ong, bouts) in enumerate(zip(self.onglets, self.boutons2)):
             f = ttk.Frame(self.fen_onglets)
             for j, nom in enumerate(bouts):
-                image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
-                bout = ttk.Button(f, image = image, style = 'BoutonVert.TButton')
-                self.boutons.append(bout)
-                bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
-                self.image_boutons.append(image)
+                bout = bouton(f, nom)
                 bout.grid(row = 0, column = j)
             self.fen_onglets.add(f, text = ong)
             Trad(ong, langue, (self.fen_onglets, i))
-        self.fen_onglets.grid(row = 0, column = 1)
-        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
-        self.menub.grid(row = 0, column = 0, padx = 20, pady = 5)
-        self.entree_texte = tk.StringVar()
-        entree = ttk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
-        entree.grid(row = 0, column = 2, padx = 20)
         
-        self.t = ttk.Label(self.barre_haut, textvariable = Trad('Courbes', langue))
-        self.t.grid(row = 0, column = 4, padx = 2)
-        self.Texte = ttk.Label(self.barre_haut, text = '', width = 20)
-        self.Texte.grid(row = 0, column = 3, padx = 5)
+        #self.entree_texte = tk.StringVar()
+        #entree = ttk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
+        #entree.grid(row = 0, column = 2, padx = 20)
+        
+        for nom, x, y in (('ctrlz', 0, 0), ('ctrly', 0, 1), ('plus', 1, 0), ('moins', 1, 1)):
+            bout = bouton(self.framed, nom)
+            bout.grid(row = x, column = y)
+        
         self.maj_menu()
         self.maj_bouton()
-           
-#    def creer_boutons(self):
-#        self.barre_haut = ttk.Frame(fenetre)
-#        self.menub = tk.Menubutton(self.barre_haut, text = f'{self.plans[0].nom}', borderwidth = 2, relief = 'raised', width = 10)
-#        self.menu_deroulant = tk.Menu(self.menub, tearoff=0)
-#        self.menub.configure(menu = self.menu_deroulant)
-#        self.boutons = []
-#        self.image_boutons = []
-#        f = Fenetres.Scrollable_Frame(self.barre_haut, fenetre, orientation = 'horizontal', row = 0, column = 1).frame
-#        
-#        for nom in self.nom_boutons:
-#            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
-#            bout = tk.Button(f, image = image)
-#            self.boutons.append(bout)
-#            bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
-#            self.image_boutons.append(image)        
-#        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
-#        self.menub.grid(row = 0, column = 0, padx = 20, pady = 5)
-#        for i, bouton in enumerate(self.boutons):
-#            bouton.grid(row = 0, column = i)
-#            bouton.bind('<Button-3>', lambda ev, ind = i, bout = bouton: self.creer_menu(ind, self.menu[ind].copy(), bout))
-#            
-#        self.entree_texte = tk.StringVar()
-#        entree = tk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
-#        entree.grid(row = 0, column = len(self.boutons) + 1, padx = 20)
-#        
-#        self.Texte = tk.Label(self.barre_haut, text = '', width = 20)
-#        self.Texte.grid(row = 0, column = len(self.boutons) + 2, padx = 5)
-#        self.maj_menu()
-#        self.maj_bouton()
-#        fenetre.update_idletasks()
-#        print(f.winfo_geometry())
            
     def creer_canvas(self):
         self.canvas = tk.Canvas(fenetre, relief = 'sunken')
@@ -486,7 +467,6 @@ class Main:
             self.men.destroy()
     
     def maj_bouton(self):
-        if 1:return
         for bout, liste in ((self.boutons[-4], self.plans[0].ctrl_z), (self.boutons[-3], self.plans[0].ctrl_y)):
             if len(liste) == 0:
                 bout['state'] = 'disabled'
