@@ -3,14 +3,15 @@
 
 print('Chargement  ', end = '')
 
-import itertools
 import threading
 from time import time, sleep
-finito = False
+chargement = True
 def animate():
-    for c in itertools.cycle(['|', '/', '-', '\\']):
-        if finito:
-            break
+    i = 0
+    l = ('|', '/', '-', '\\')
+    while chargement:
+        c = l[i]
+        i = (i+1)%4
         print('\b' + c, end = '', flush = 1)
         sleep(0.1)
     print('\rC\'est bon !')
@@ -30,11 +31,90 @@ from random import random, randint
 fenetre = tk.Tk()
 style = ttk.Style()
 style.theme_use('clam')
+for s in ('Tbutton',):#style.theme_names():
+    s2 = ttk.Style()
+    s2.map(f'BoutonVert.{s}', 'alternate', background = 'green', foreground = 'green')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
-finito = True
 print('')
+
+def traduction():
+    f = open(f'{op.dirname(__file__)}\\traduction.txt', encoding = 'utf-8')
+    texte = f.read().split('\n\n')
+    f.close()
+    langues = []
+    dicos = []
+    for p in texte:
+        lignes = p.split('\n')
+        langues.append(lignes[0])
+        lignes = [l[2:] for l in lignes[1:]]
+        dic = {}
+        for l in lignes:
+            guill = [i for i,c in enumerate(l) if c == '"']
+            doubp = [i for i,c in enumerate(l) if c == ':' and not guill[0]<i<guill[1]][0]
+            cle, val = l[:doubp], l[doubp+1:]
+            if not (cle[0] == cle[-1] == '"'):
+                cle = int(cle)
+            else: cle = cle[1:-1]
+            if not (val[0] == val[-1] == '"'):
+                val = int(val)
+            else: val = val[1:-1]
+            dic[cle] = val
+        dicos.append(dic)
+    print(langues, dicos)
+    langue = langues[0]
+    def trad(lang, mot):
+        if lang not in langues or mot not in dicos[0]:
+            return mot
+        if dicos[0][mot] not in dicos[langues.index(lang)]:
+            return mot
+        return dicos[langues.index(lang)][dicos[0][mot]]
+    return langue, langues, trad
+
+try:
+    langue, langues, trad = traduction()
+except Exception as e:
+    print(e)
+    langue = 'Français'
+    langues = ['Français']
+    trad = lambda x: x
+
+langue_def = langue
+
+class Trad(tk.StringVar):
+    variables = []
+    
+    def __init__(self, mot, langue = None, noteb = None):
+        super().__init__()
+        self.variables.append(self)
+        self._lang = None
+        self.noteb = noteb
+        self.mot = mot
+        if langue is None: langue = main.langue
+        self.langue = langue
+    
+    @property
+    def langue(self):
+        return self._lang
+    
+    @langue.setter
+    def langue(self, lang):
+        self._lang = lang
+        print(f"On assigne la langue {lang} à l'objet {self.mot} qui devient {trad(lang, self.mot)}")
+        if self.noteb is not None:
+            self.noteb[0].tab(self.noteb[1], text = trad(lang, self.mot))
+            print('On a essayé de configurer un widget')
+        else:
+            self.set(trad(lang, self.mot))
+    
+    @classmethod
+    def set_lang(cls, lang):
+        for variable in cls.variables:
+            variable.langue = lang
+        
+
+print(trad('English', 'Courbes'))
 
 def pprint(*args):
     #print(*args)
@@ -54,6 +134,15 @@ class Main:
         self.editeur_objets = None
         self.liste_derniers_clics = []
         self.plans = [None]
+        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
+        self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
+                         ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre'],
+                         ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
+                         ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangentes_communes'],
+                         ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
+                         ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
+                         ['editeur_objets', 'etude', 'poubelle', 'connect', 'serveur', 'aide'],
+                         ]
         self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
                      ['nouv_plan'], ['suppr_plan'], ['main'],
                      ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
@@ -71,6 +160,9 @@ class Main:
         self.creer_actions()
         self.creer_boutons()
         self.men = None
+        self.langue = langue
+        self.langue_def = langue_def
+        self.langues = langues
         self.fen_etude = None
         self.attendus = None
         self.action_canvas = None
@@ -92,32 +184,70 @@ class Main:
         
     def creer_boutons(self):
         self.barre_haut = ttk.Frame(fenetre)
-        self.menub = tk.Menubutton(self.barre_haut, text = f'{self.plans[0].nom}  \u25bc', borderwidth = 2, relief = 'raised', width = 10)
+        self.menub = ttk.Menubutton(self.barre_haut, text = f'{self.plans[0].nom}', width = 10)
         self.menu_deroulant = tk.Menu(self.menub, tearoff=0)
         self.menub.configure(menu = self.menu_deroulant)
         self.boutons = []
         self.image_boutons = []
-        for nom in self.nom_boutons:
-            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
-            bout = tk.Button(self.barre_haut, image = image)
-            self.boutons.append(bout)
-            bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
-            self.image_boutons.append(image)        
-            self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
+        #f = Fenetres.Scrollable_Frame(self.barre_haut, fenetre, orientation = 'horizontal', row = 0, column = 1).frame
+        self.fen_onglets = ttk.Notebook(self.barre_haut)
+        for i, (ong, bouts) in enumerate(zip(self.onglets, self.boutons2)):
+            f = ttk.Frame(self.fen_onglets)
+            for j, nom in enumerate(bouts):
+                image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
+                bout = ttk.Button(f, image = image, style = 'BoutonVert.TButton')
+                self.boutons.append(bout)
+                bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
+                self.image_boutons.append(image)
+                bout.grid(row = 0, column = j)
+            self.fen_onglets.add(f, text = ong)
+            Trad(ong, langue, (self.fen_onglets, i))
+        self.fen_onglets.grid(row = 0, column = 1)
+        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
         self.menub.grid(row = 0, column = 0, padx = 20, pady = 5)
-        for i, bouton in enumerate(self.boutons):
-            bouton.grid(row = 0, column = i + 1)
-            bouton.bind('<Button-3>', lambda ev, ind = i, bout = bouton: self.creer_menu(ind, self.menu[ind].copy(), bout))
-            
         self.entree_texte = tk.StringVar()
-        entree = tk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
-        entree.grid(row = 0, column = len(self.boutons) + 1, padx = 20)
+        entree = ttk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
+        entree.grid(row = 0, column = 2, padx = 20)
         
-        self.Texte = tk.Label(self.barre_haut, text = '', width = 20)
-        self.Texte.grid(row = 0, column = len(self.boutons) + 2, padx = 5)
+        self.t = ttk.Label(self.barre_haut, textvariable = Trad('Courbes', langue))
+        self.t.grid(row = 0, column = 4, padx = 2)
+        self.Texte = ttk.Label(self.barre_haut, text = '', width = 20)
+        self.Texte.grid(row = 0, column = 3, padx = 5)
         self.maj_menu()
         self.maj_bouton()
-            
+           
+#    def creer_boutons(self):
+#        self.barre_haut = ttk.Frame(fenetre)
+#        self.menub = tk.Menubutton(self.barre_haut, text = f'{self.plans[0].nom}', borderwidth = 2, relief = 'raised', width = 10)
+#        self.menu_deroulant = tk.Menu(self.menub, tearoff=0)
+#        self.menub.configure(menu = self.menu_deroulant)
+#        self.boutons = []
+#        self.image_boutons = []
+#        f = Fenetres.Scrollable_Frame(self.barre_haut, fenetre, orientation = 'horizontal', row = 0, column = 1).frame
+#        
+#        for nom in self.nom_boutons:
+#            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
+#            bout = tk.Button(f, image = image)
+#            self.boutons.append(bout)
+#            bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
+#            self.image_boutons.append(image)        
+#        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
+#        self.menub.grid(row = 0, column = 0, padx = 20, pady = 5)
+#        for i, bouton in enumerate(self.boutons):
+#            bouton.grid(row = 0, column = i)
+#            bouton.bind('<Button-3>', lambda ev, ind = i, bout = bouton: self.creer_menu(ind, self.menu[ind].copy(), bout))
+#            
+#        self.entree_texte = tk.StringVar()
+#        entree = tk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
+#        entree.grid(row = 0, column = len(self.boutons) + 1, padx = 20)
+#        
+#        self.Texte = tk.Label(self.barre_haut, text = '', width = 20)
+#        self.Texte.grid(row = 0, column = len(self.boutons) + 2, padx = 5)
+#        self.maj_menu()
+#        self.maj_bouton()
+#        fenetre.update_idletasks()
+#        print(f.winfo_geometry())
+           
     def creer_canvas(self):
         self.canvas = tk.Canvas(fenetre, relief = 'sunken')
         self.limite0 = self.canvas.create_text(-505, 0, text = ' ', tag = 'limite0')
@@ -199,7 +329,7 @@ class Main:
     def maj_menu(self):
         '''Met à jour le menu de selection des plans'''
         self.menu_deroulant.delete(0, 'end')
-        self.menub.configure(text = f'{self.plans[0].nom}  \u25bc')
+        self.menub.configure(text = f'{self.plans[0].nom}')
         for i in range(1, len(self.plans)):
             self.menu_deroulant.add_command(label = self.plans[i].nom, command = lambda i = i: self.passer_plan(i))
         if len(self.plans) < 2:
@@ -270,7 +400,7 @@ class Main:
             
     def connect(self):
         if self.plans[0].serveur is not None: return
-        ip = tk_sd.askstring("Choix d'une adresse", '')
+        ip = tk_sd.askstring(Trad("Choix d'une adresse"), '')
         port = tk_sd.askinteger("Choix d'un port", '')
         mdp = tk_sd.askstring("Choix d'un mot de passe", '')
         self.plans[0].connecter_serveur(ip, port, mdp)
@@ -307,18 +437,19 @@ class Main:
         self.men_time = time()
         liste.remove(self.nom_boutons[ind])
         posb, posf = bouton.winfo_geometry(), fenetre.geometry()
+        print(posb, posf)
         p, x, y = posb.split('+')
         fx, fy = posf.split('+')[1:]
         dx, dy = p.split('x')
-        pprint(int(x), int(dx), int(fx), int(y), int(dy), int(fy))
-        x, y = int(x) + int(dx) + int(fx) - 26, int(y) + int(dy) + int(fy) + 34
+        print(int(x), int(dx), int(fx), int(y), int(dy), int(fy))
+        x, y = int(x) + int(fx) + 10, int(y) + int(dy) + int(fy) + 34
         self.men = tk.Toplevel(borderwidth = 1, relief = 'solid',
                    background = 'white')
         self.men.overrideredirect(True)
         self.men.geometry(f'+{x}+{y}')
         for i, nom in enumerate(liste):
             image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
-            bout = tk.Button(self.men, image = image)
+            bout = ttk.Button(self.men, image = image)
             bout.config(command = lambda n = nom: self.echange(ind, n))
             self.image_boutons.append(image)
             bout.grid(row = i, column = 0)
@@ -330,7 +461,7 @@ class Main:
         
     def parametres(self):
         if self.parametres is not None: return
-        self.parametres = Fenetres.Parametres(fenetre, self, style)        
+        self.parametres = Fenetres.Parametres(fenetre, self, Trad, style)        
     
     def echange(self, ind, nom):
         pprint('echange')
@@ -342,7 +473,7 @@ class Main:
         pprint(self.menu[ind])
         self.boutons[ind].destroy()
         image = image_tk(f'{op.dirname(__file__)}\\images\{nom}.jpg')
-        bout = tk.Button(self.barre_haut, image = image)
+        bout = ttk.Button(self.barre_haut, image = image)
         self.boutons[ind] = bout
         bout.config(command = (lambda n = nom, bout = bout: self.action_bouton(n, bout)))
         self.image_boutons.append(image)
@@ -354,7 +485,8 @@ class Main:
         if self.men and time() - self.men_time > .1:
             self.men.destroy()
     
-    def maj_bouton(self):        
+    def maj_bouton(self):
+        if 1:return
         for bout, liste in ((self.boutons[-4], self.plans[0].ctrl_z), (self.boutons[-3], self.plans[0].ctrl_y)):
             if len(liste) == 0:
                 bout['state'] = 'disabled'
@@ -364,12 +496,16 @@ class Main:
     def action_bouton(self, nom, bout):
         self.dernier_bouton = nom
         for bouton in self.boutons:
-            bouton.config(bg = 'white')
+            s = style.theme_use()
+            bout.state(('!alternate',))
         if self.actions[nom][1]:
+            print(nom)
             self.attendus = self.actions[nom][2]
-            bout.config(bg = 'green')
+            s = style.theme_use()
+            bout.state(('alternate',))
             self.action_canvas = self.actions[nom][0]
         else:
+            print(nom)
             self.plans[0].action_utilisateur(nom)
             self.attendus = None
             self.actions[nom][0]()
@@ -745,6 +881,7 @@ class Main:
 def ouvrir_erreur():
     tk_mb.showerror('Erreur', 'Impossible de lire ce fichier.')
         
+chargement = False
 
 
 
