@@ -1,0 +1,16 @@
+Français
+  "Points":0
+  "Droites":1
+  "Courbes":2
+  "Transformations":3
+  "Choix d'une adresse":4
+
+English
+  0:"Points"
+  1:"Lines"
+  2:"Curves"
+  3:"Transformations"
+  4:"Please enter an adress"
+
+Deutsch
+  0:"Punkts"
