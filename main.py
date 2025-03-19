@@ -4,7 +4,7 @@
 print('Chargement  ', end = '')
 
 import threading
-from time import time, sleep
+from time import sleep
 chargement = True
 def animate():
     i = 0
@@ -17,6 +17,7 @@ def animate():
     print('\rC\'est bon !')
 t = threading.Thread(target=animate)
 t.start()
+import weakref
 import tkinter as tk
 from tkinter import filedialog as fd, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
@@ -25,6 +26,7 @@ from PIL import Image, ImageDraw, ImageTk
 from math import sqrt, pi
 import os.path as op
 import Frames as Fenetres
+from time import time
 from Engine import txt, val
 from random import random, randint
 
@@ -83,16 +85,23 @@ except Exception as e:
 langue_def = langue
 
 class Trad(tk.StringVar):
-    variables = []
+    variables = set()
+    variables_weak = weakref.WeakSet()
     
-    def __init__(self, mot, langue = None, noteb = None):
+    def __init__(self, mot, langue = None, noteb = None, weak = 0):
         super().__init__()
-        self.variables.append(self)
+        if weak:
+            self.variables_weak.add(self)
+        else:
+            self.variables.add(self)
         self._lang = None
         self.noteb = noteb
         self.mot = mot
         if langue is None: langue = main.langue
         self.langue = langue
+    
+    def __hash__(self):
+        return id(self)
     
     @property
     def langue(self):
@@ -110,7 +119,7 @@ class Trad(tk.StringVar):
     
     @classmethod
     def set_lang(cls, lang):
-        for variable in cls.variables:
+        for variable in cls.variables|set(cls.variables_weak):
             variable.langue = lang
         
 
@@ -129,11 +138,41 @@ def dist(a, b):
 def image_tk(adresse):
     return ImageTk.PhotoImage(file = adresse)
 
+class Tooltip:
+    
+    def __init__(self, bout, texte, main):
+        bout.bind('<Enter>', self.deb)
+        bout.bind('<Motion>', self.deb)
+        bout.bind('<Leave>', self.fin)
+        self.bout = bout
+        self.top = None
+        self.texte = texte
+        self.timer = None
+        self.main = main
+        
+    def deb(self, ev = None):
+        self.fin()
+        self.timer = fenetre.after(self.main.delai_tooltip, self.aff)
+    
+    def fin(self, ev = None):
+        if self.top is not None: self.top.destroy()
+        if self.timer is not None: fenetre.after_cancel(self.timer)
+    
+    def aff(self):
+        self.top = tk.Toplevel(borderwidth = 1, relief = 'solid',
+                   background = 'white')
+        dx, dy = fenetre.winfo_pointerxy()
+        self.top.overrideredirect(True)
+        self.top.geometry(f'+{dx+15}+{dy+20}')
+        ttk.Label(self.top, text = self.texte).grid(row = 0, column = 0)
+        
+
 class Main:
     def __init__(self):
         self.editeur_objets = None
         self.liste_derniers_clics = []
         self.plans = [None]
+        self.delai_tooltip = 300
         self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
         self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
                          ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre'],
@@ -143,20 +182,9 @@ class Main:
                          ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
                          ['editeur_objets', 'etude', 'poubelle', 'connect', 'serveur', 'aide'],
                          ]
-        self.menu = [['enregistrer', 'enregistrer_sous'], ['ouvrir'],
-                     ['nouv_plan'], ['suppr_plan'], ['main'],
-                     ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
-                     ['cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex'],
-                     ['courbe'], ['caa'], ['soumettre'],
-                     ['droite', 'segment', 'bissec', 'perp', 'tangente','para', 'media', 'tangentes_communes'],
-                     ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
-                     ['editeur_objets'], ['etude'], ['parametres'],
-                     ['poubelle'], ['plus'], ['moins'], ['ctrlz'], ['ctrly'], ['connect', 'serveur'], ['aide'],
-                     ]
         self.creer_canvas()
         self.plans[0] = Geo.Plan(self)
         Geo.plan_default = self.plans[0]
-        self.nom_boutons = [l[0] for l in self.menu]
         self.creer_actions()
         self.creer_boutons()
         self.men = None
@@ -171,6 +199,7 @@ class Main:
         self.lanceurserveur = None
         self.parametres = None
         self.fenetre_taille = '1x1'
+        self.connecteur_serv = None
         fenetre.bind('<Configure>', self.configure_fenetre)
         fenetre.bind('<Return>', self.entree_commande)
         fenetre.bind('<Button-1>', self.detruire_menu)
@@ -190,7 +219,7 @@ class Main:
         self.framed = ttk.Frame(self.barre_haut)
         self.fen_onglets = ttk.Notebook(self.barre_haut)
         self.frameg.grid(row = 0, column = 0)
-        self.framed.grid(row = 0, column = 2)
+        self.framed.grid(row = 0, column = 2, pady = 3, padx = 3)
         self.fen_onglets.grid(row = 0, column = 1, padx = 5)
         
         self.menub = ttk.Menubutton(self.frameg, text = f'{self.plans[0].nom}', width = 10)
@@ -225,6 +254,8 @@ class Main:
         for nom, x, y in (('ctrlz', 0, 0), ('ctrly', 0, 1), ('plus', 1, 0), ('moins', 1, 1)):
             bout = bouton(self.framed, nom)
             bout.grid(row = x, column = y)
+            
+        Tooltip(self.boutons[-3], 'redo', self)
         
         self.maj_menu()
         self.maj_bouton()
@@ -239,7 +270,6 @@ class Main:
         fleches = [('<Right>', (1, 0)), ('<Left>', (-1, 0)), ('<Down>', (0, 1)), ('<Up>', (0, -1))]
         for touche, mouvement in fleches:
             fenetre.bind(touche, lambda ev, mouv = mouvement: self.decaler(mouv))
-        self.canvas.bind("<Motion>", self.afficher_coord_souris)
         self.canvas.bind('<ButtonRelease>', self.bouger_point)
 
     def creer_actions(self):
@@ -379,12 +409,6 @@ class Main:
             for obj in l:
                 obj.dessin(1)
             
-    def connect(self):
-        if self.plans[0].serveur is not None: return
-        ip = tk_sd.askstring(Trad("Choix d'une adresse"), '')
-        port = tk_sd.askinteger("Choix d'un port", '')
-        mdp = tk_sd.askstring("Choix d'un mot de passe", '')
-        self.plans[0].connecter_serveur(ip, port, mdp)
             
     def nouv_plan(self):
         i = 1
@@ -444,6 +468,16 @@ class Main:
         if self.parametres is not None: return
         self.parametres = Fenetres.Parametres(fenetre, self, Trad, style)        
     
+    def connect(self):
+        if self.plans[0].serveur is not None: return
+        if self.connecteur_serv is not None: return
+        self.connecteur_serv = Fenetres.ConnectServeur(self)
+        #ip = tk_sd.askstring(Trad("Choix d'une adresse"), '')
+        #port = tk_sd.askinteger("Choix d'un port", '')
+        #mdp = tk_sd.askstring("Choix d'un mot de passe", '')
+        #self.plans[0].connecter_serveur(ip, port, mdp)
+        
+        
     def echange(self, ind, nom):
         pprint('echange')
         self.detruire_menu()
@@ -489,6 +523,7 @@ class Main:
             self.plans[0].action_utilisateur(nom)
             self.attendus = None
             self.actions[nom][0]()
+        self.afficher_attendu()
         self.deselectionner()
         self.liste_derniers_clics = []
         
@@ -789,6 +824,7 @@ class Main:
                 self.liste_derniers_clics.append(entier)
         if len(self.liste_derniers_clics) == len(self.attendus):
             self.fin_clic_canvas()
+        self.afficher_attendu()
         return
 
     def fin_clic_canvas(self):
@@ -846,10 +882,12 @@ class Main:
         return ((x - self.plans[0].offset_x[1]) / self.plans[0].offset_x[0],
                 (y - self.plans[0].offset_y[1]) / self.plans[0].offset_y[0])
     
-    def afficher_coord_souris(self, evenement):
-        x, y = self.coord_canvas(evenement.x, evenement.y)
-        texte = f'({round(x,2)}, {round(y, 2)})'
-        self.Texte.config(text = texte)
+    def afficher_attendu(self):
+        if self.attendus is None: return self.Texte.config(text = '')
+        print(self.attendus)
+        self.texte_att_aff = Trad(self.attendus[len(self.liste_derniers_clics)], weak = 1)
+        self.Texte.config(textvariable = self.texte_att_aff)
+        print(Trad.variables, Trad.variables_weak)
         
     def action(self, cat, plan, *args, **kwargs):
         if plan.serveur is None:
