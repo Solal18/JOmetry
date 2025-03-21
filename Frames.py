@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 from tkinter.ttk import Treeview, Combobox
 from tkinter import colorchooser as tk_cc
 from PIL import Image, ImageTk
@@ -15,7 +16,11 @@ class Scrollable_Frame(tk.Frame):
         self.frame = tk.Frame(self.canvas)
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
-        self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview, orient = orientation)
+        if orientation == 'vertical':
+            self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview, orient = orientation)
+        else:
+            self.scrollbar = tk.Scrollbar(self, command = self.canvas.xview, orient = orientation)
+            
         
         if orientation == 'vertical':
             self.canvas.configure(yscrollcommand = self.scrollbar.set)
@@ -26,10 +31,10 @@ class Scrollable_Frame(tk.Frame):
         self.canvas.create_window(0, 0, anchor = 'nw', window = self.frame, tags = ('frame',))
         self.canvas.bind('<Configure>', self.configure_frame)
         self.frame.bind('<Configure>', self.maj_canvas)
-        
+        self.maj_canvas()
         self.canvas.grid(row = 0, column = 0, sticky = 'nsew')
 
-    def maj_canvas(self, ev):
+    def maj_canvas(self, ev = None):
         if self.canvas.winfo_height() > self.frame.winfo_height():
             self.canvas.configure(height = self.frame.winfo_height())
         if self.canvas.winfo_width() > self.frame.winfo_width():
@@ -102,6 +107,27 @@ class AideFenetre:
     
  
 
+class ColorChooser(ttk.Frame):
+    
+    def __init__(parent, textvariable):
+        super().__init__()
+        self.textvariable = textvariable
+        self.entree = tk.Entry(self, textvariable = textvariable)
+        self.columnconfigure(0, weight = 0)
+        self.entree.grid(row = 0, column = 0, sticky = 'nsew')
+        img = tk.BitmapImage(data = \
+          '#define colorpicker_width 10\n\#define colorpicker_height 10\n\
+           static unsigned char colorpicker_bits[] = {\
+             0xc0, 0x01, 0xe0, 0x03, 0xe0, 0x03, 0xd8, 0x03, 0xb0, 0x01,\
+             0x78, 0x00, 0x5c, 0x00, 0x0e, 0x00, 0x07, 0x00, 0x03, 0x00 };')
+        self.bouton = tk.Button(self.couleur, image = self.imgs[0], state = 'disabled', command = self.tk_couleur)
+        self.bouton.grid(row = 0, column = 1)
+        
+    def tk_couleur(self):
+        couleur = tk_cc.askcolor()
+        if couleur[1] is not None:
+            self.textvariable.set(couleur[1])
+
 class EditeurObjets:
     
     def __init__(self, fenetre, main, separe):
@@ -110,13 +136,14 @@ class EditeurObjets:
             self.grande_frame = tk.Toplevel()
             self.frame = self.grande_frame
             self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
-        else :
-            self.grande_frame = tk.Frame(fenetre, bg = '#ddd')
-            self.grande_frame.grid(row = 1, column = 1, sticky = 'ns')
+        else:
+            self.grande_frame = tk.Frame(main.panedwindow, bg = '#ddd')
+            main.panedwindow.insert('end', self.grande_frame)
             self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
             self.frame.grid(row = 0, column = 0)
             tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
+        print(self.grande_frame.winfo_manager())
         self.imgs = (tk.BitmapImage(data = \
           '#define colorpicker_width 10\n\#define colorpicker_height 10\n\
            static unsigned char colorpicker_bits[] = {\
@@ -248,9 +275,9 @@ class EtudieurObjets:
             self.grande_frame = tk.Toplevel()
             self.frame = self.grande_frame
             self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
-        else :
-            self.grande_frame = tk.Frame(fenetre, bg = '#ddd')
-            self.grande_frame.grid(row = 1, column = 1, sticky = 'ns')
+        else:
+            self.grande_frame = tk.Frame(main.panedwindow, bg = '#ddd')
+            main.panedwindow.add(self.grande_frame, weight = 0)
             self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
             self.frame.grid(row = 0, column = 0)
             tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
@@ -346,10 +373,35 @@ class LanceServeur:
         self.fermer_fenetre()
         
         
+class ConnectServeur:
+    def __init__(self, main):
+        self.main = main
+        self.frame = tk.Toplevel()
+        self.frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
+        self.vars = []
+        for i, text in enumerate(('adresse IP', 'Port', 'Mot de passe')):
+            v = tk.StringVar()
+            tk.Entry(self.frame, textvariable = v).grid(row = i + 1, column = 0, sticky = 'nsew', pady = 3, padx = 3)
+            tk.Label(self.frame, text = text).grid(row = i + 1, column = 1, sticky = 'nsew', pady = 3, padx = 3)
+            self.vars.append(v)
+        tk.Button(self.frame, text = 'Annuler', command = self.fermer_fenetre).grid(row = 4, column = 0, sticky = 'nsew', pady = 3, padx = 3)
+        tk.Button(self.frame, text = 'OK', command = self.connect).grid(row = 4, column = 1, sticky = 'nsew', pady = 3, padx = 3)
+        
+    def fermer_fenetre(self):
+        self.main.connecteur_serv = None
+        self.frame.destroy()
+    
+    def connect(self):
+        ip, port, mdp = [v.get() for v in self.vars]
+        self.main.plans[0].connecter_serveur(ip, int(port), mdp)
+        self.fermer_fenetre()
+        
+        
 class Parametres:
     
-    def __init__(self, fenetre, main, style):
+    def __init__(self, fenetre, main, trad, style, params):
         self.fenetre = fenetre
+        self.classeTrad = trad
         self.style = style
         self.main = main
         self.toplevel = tk.Toplevel()
@@ -360,31 +412,32 @@ class Parametres:
             self.frame.columnconfigure(colonne, weight = 1)
         self.toplevel.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
         plan = main.plans[0]
-        self.p = [('nombre', 'Taille des points', plan.boldP, 3),
-                  ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
-                  ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
+        self.p = [('nombre', 'Taille des points', 'BoldP', 3, (0, 20)),
+                  ('nombre', 'Epaisseur des lignes', 'BoldC', 3, (0, 20)),
+                  ('choix', "Style de l'interface", 'Style', 'default', style.theme_names()),
+                  ('choix', 'Langue', 'Langue', main.langue_def, main.langues),
+                  ('couleur', 'Couleur des tooltips', 'ColTooltip', 'gray'),
+                  ('nombre', 'Delai des tooltips (ms)', 'TempsTooltip', 300, (0, 5000)),
+                  ('couleur', 'Couleur des points', 'ColP', 'green'),
+                  ('couleur', 'Couleur des courbes', 'ColC', 'green'),
                   ('texte', 'Nom du plan', plan.nom, 'Plan 1'),
-                  ('nombre', 'Taille des points', plan.boldP, 3),
-                  ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
-                  ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
-                  ('texte', 'Nom du plan', plan.nom, 'Plan 1'),
-                  ('nombre', 'Taille des points', plan.boldP, 3),
-                  ('nombre', 'Epaisseur des lignes', plan.boldC, 3),
-                  ('choix', "Style de l'interface", style.theme_use(), 'clam', style.theme_names()),
-                  ('texte', 'Nom du plan', plan.nom, 'Plan 1')]
+                  ]
         self.widgets = []
         self.valeurs = []
         tk.Label(self.frame, text = 'Paramètres').grid(row = 0, column = 0, columnspan = 4)
         for i, e in enumerate(self.p):
             if e[0] == 'nombre':
                 v = tk.IntVar()
-                w = tk.Spinbox(self.frame, textvariable = v, from_ = 0)
+                w = tk.Spinbox(self.frame, textvariable = v, from_ = e[4][0], to = e[4][1])
             if e[0] == 'choix':
                 v = tk.StringVar()
                 w = Combobox(self.frame, state = 'readonly', textvariable = v, values = e[4])
             if e[0] == 'texte':
                 v = tk.StringVar()
                 w = tk.Entry(self.frame, textvariable = v)
+            if e[0] == 'couleur':
+                v = tk.StringVar()
+                w = ColorChooser(self.frame, textvariable = v)
             w.grid(row = i+1, column = 0, sticky = 'nsew')
             self.valeurs.append(v)
             self.widgets.append(w)
@@ -415,7 +468,10 @@ class Parametres:
         plan.boldP, plan.boldC, plan.nom = l[0], l[1], l[3]
         self.style.theme_use(l[2])
         self.fermer_fenetre()
-        self.main.menub.configure(text = f'{l[3]}  \u25bc')
+        self.main.menub.configure(text = f'{l[3]}')
+        self.classeTrad.set_lang(l[4])
+        self.main.langue = l[4]
+        
                 
 class Notes:
     
