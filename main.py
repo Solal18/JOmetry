@@ -32,7 +32,7 @@ from random import random, randint
 
 fenetre = tk.Tk()
 style = ttk.Style()
-style.theme_use('clam')
+style.theme_use('default')
 for s in ('Tbutton',):#style.theme_names():
     s2 = ttk.Style()
     s2.map(f'BoutonVert.{s}', 'alternate', background = 'green', foreground = 'green')
@@ -77,10 +77,19 @@ def traduction():
 try:
     langue, langues, trad = traduction()
 except Exception as e:
-    print(e)
+    print('Impossible de charger les traductions')
     langue = 'Français'
     langues = ['Français']
     trad = lambda x: x
+
+params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', }
+try:
+    f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8')
+    charges = val(f.read())
+    params = params|charges 
+    f.close()
+except Exception as e:
+    print('Impossible de charger les parametres')
 
 langue_def = langue
 
@@ -176,7 +185,7 @@ class Main:
         self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
         self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
                          ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre'],
-                         ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre'],
+                         ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre', 'angle'], #Il faudra mettre angle dans une autre categorie
                          ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangentes_communes'],
                          ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
                          ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
@@ -213,7 +222,7 @@ class Main:
         
     def creer_boutons(self):
         self.barre_haut = ttk.Frame(fenetre)
-        self.barre_haut.grid(row = 0, column = 0, columnspan = 2, sticky = 'ew')
+        self.barre_haut.grid(row = 0, column = 0, sticky = 'ew')
         
         self.frameg = ttk.Frame(self.barre_haut)
         self.framed = ttk.Frame(self.barre_haut)
@@ -235,6 +244,7 @@ class Main:
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
             self.image_boutons.append(image)
+            Tooltip(bout, nom, self)
             return bout
         
         self.boutons = []
@@ -255,17 +265,18 @@ class Main:
             bout = bouton(self.framed, nom)
             bout.grid(row = x, column = y)
             
-        Tooltip(self.boutons[-3], 'redo', self)
         
         self.maj_menu()
         self.maj_bouton()
            
     def creer_canvas(self):
-        self.canvas = tk.Canvas(fenetre, relief = 'sunken')
+        self.panedwindow = ttk.PanedWindow(fenetre, orient = 'horizontal')
+        self.canvas = tk.Canvas(self.panedwindow, relief = 'sunken')
+        self.panedwindow.add(self.canvas, weight = 1)
         self.limite0 = self.canvas.create_text(-505, 0, text = ' ', tag = 'limite0')
         self.limite1 = self.canvas.create_text(-510, 0, text = ' ', tag = 'limite1')
         self.limite2 = self.canvas.create_text(-500, 0, text = ' ', tag = 'limite2')
-        self.canvas.grid(row = 1, column = 0, sticky = 'nsew')
+        self.panedwindow.grid(row = 1, column = 0, sticky = 'nsew')
         self.canvas.bind('<Button-1>', self.canvas_clic)
         fleches = [('<Right>', (1, 0)), ('<Left>', (-1, 0)), ('<Down>', (0, 1)), ('<Up>', (0, -1))]
         for touche, mouvement in fleches:
@@ -282,6 +293,7 @@ class Main:
                         'plus' : (self.plus, 0),
                         'moins' : (self.moins, 0),
                         'main' : (self.move, 1, ('point',)),
+                        'angle' : (self.angle, 1, ('point', 'point', 'point')),
                         'intersection' : (self.intersection, 1, ('courbe', 'courbe')),
                         'milieu' : (self.milieu, 1, ('point', 'point')),
                         'centre' : (self.centre, 1, ('courbe',)),
@@ -477,7 +489,6 @@ class Main:
         #mdp = tk_sd.askstring("Choix d'un mot de passe", '')
         #self.plans[0].connecter_serveur(ip, port, mdp)
         
-        
     def echange(self, ind, nom):
         pprint('echange')
         self.detruire_menu()
@@ -538,6 +549,10 @@ class Main:
         for i in range(c1_dual.deg * c2_dual.deg):
             self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter2', args = (c1_dual, c2_dual, i), u = 1)
             
+    def angle(self):
+        A, B, C = self.liste_derniers_clics
+        return self.action('Creature', self.plans[0], 'Angle', nom = 1, method = 'angle', args = [A, B, C, self.plans[0].U, self.plans[0].V], u = 1)
+        
     def surcourbe(self):
         obj, pos = self.liste_derniers_clics
         if obj.classe == 'Droite':
@@ -764,6 +779,7 @@ class Main:
         if self.attendus is None:
             return
         x, y = self.coord_canvas(evenement.x, evenement.y)
+        print(self.attendus, self.liste_derniers_clics)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
             self.liste_derniers_clics.append((x, y))
@@ -830,6 +846,7 @@ class Main:
     def fin_clic_canvas(self):
         if 'fantome' in self.liste_derniers_clics:
             fenetre.after(50, self.fin_clic_canvas)
+            print('on attend pour un fantome')
             return
         self.plans[0].action_utilisateur(None)
         self.deselectionner()
@@ -884,7 +901,7 @@ class Main:
     
     def afficher_attendu(self):
         if self.attendus is None: return self.Texte.config(text = '')
-        print(self.attendus)
+        print(self.attendus, self.liste_derniers_clics)
         self.texte_att_aff = Trad(self.attendus[len(self.liste_derniers_clics)], weak = 1)
         self.Texte.config(textvariable = self.texte_att_aff)
         print(Trad.variables, Trad.variables_weak)
