@@ -417,7 +417,6 @@ class Main:
         else:
             self.plans[0].action_utilisateur('bouger_point')
             l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
-            print(l)
             for obj in l:
                 obj.dessin(1)
             
@@ -519,6 +518,8 @@ class Main:
                 bout['state'] = 'normal'
     
     def action_bouton(self, nom, bout):
+        print(nom)
+        print("action_bouton")
         self.dernier_bouton = nom
         for bouton in self.boutons:
             s = style.theme_use()
@@ -534,9 +535,9 @@ class Main:
             self.plans[0].action_utilisateur(nom)
             self.attendus = None
             self.actions[nom][0]()
-        self.afficher_attendu()
         self.deselectionner()
         self.liste_derniers_clics = []
+        self.afficher_attendu()
         
     def tangentes_communes(self):
         c1, c2 = self.liste_derniers_clics
@@ -779,7 +780,6 @@ class Main:
         if self.attendus is None:
             return
         x, y = self.coord_canvas(evenement.x, evenement.y)
-        print(self.attendus, self.liste_derniers_clics)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
             self.liste_derniers_clics.append((x, y))
@@ -901,7 +901,6 @@ class Main:
     
     def afficher_attendu(self):
         if self.attendus is None: return self.Texte.config(text = '')
-        print(self.attendus, self.liste_derniers_clics)
         self.texte_att_aff = Trad(self.attendus[len(self.liste_derniers_clics)], weak = 1)
         self.Texte.config(textvariable = self.texte_att_aff)
         print(Trad.variables, Trad.variables_weak)
