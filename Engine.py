@@ -1,5 +1,5 @@
 import numpy
-from math import floor, sqrt, exp, cos, sin, pi
+from math import floor, sqrt, exp, cos, sin, pi, atan2
 import time
 from random import random
 from sympy import Rational, groebner, Poly
@@ -299,7 +299,7 @@ def find_eq_homogene(coords, deg):
     permut = permutations(deg)
     stre=""
     for i in range(len(permut)):
-        stre+= "x"+"**"+str(permut[i][0])+"*"+"y" + "**"+ str(permut[i][1]) + "*" + str(Rational(coords[i]))+"+"
+        stre+= "x"+"**"+str(permut[i][0])+"*"+"y" + "**"+ str(permut[i][1]) + "*" + str((coords[i]).as_integer_ratio())+"+"
     stre=stre[:len(stre)-1]
     return stre
 
@@ -563,15 +563,15 @@ class Polynome:
                 txt = self[e].expr_rationals(variables[1:], 0)
                 liste.append('+'.join(map(lambda x: (f'{variables[0]}**{e}*' if e != 0 else '') + x, txt)))
             else:
-                liste.append((f'{variables[0]}**{e}*' if e != 0 else '') + str(Rational(self[e])))
+                liste.append((f'{variables[0]}**{e}*' if e != 0 else '') + str((self[e]).as_integer_ratio()))
         return '+'.join(liste) if join else liste
     
     def expr_dict_monomes(self):
         l = {}
         for i, poly in enumerate(self):
             for j, coef in enumerate(poly):
-                r = Rational(coef)
-                l[(i, j)] = (r.p, r.q)
+                p, q = coef.as_integer_ratio()
+                l[(i, j)] = (p, q)
         return l
             
     def parametrisation(self, point):
@@ -780,6 +780,10 @@ class Creature:
         h, w = can.winfo_height(), can.winfo_width()
         defocaliser = self.plan.main.coord_canvas
         (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+        print("defocaliser")
+        print(defocaliser(0,0))
+        print(defocaliser(w,h))
+        w,h = x2-x1, y2-y1
         self.tkinter=[None, None]
         
         
@@ -879,9 +883,9 @@ class Creature:
                     print(coords)
                 nor = norm(coords)
                 if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
-                    z = can.create_line(focaliser((0, (-1/nor[1]))),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
+                    z = can.create_line(focaliser((x1, (-1-x1*nor[0])/nor[1])),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
                 else:
-                    z = can.create_line(focaliser((-1/nor[0],0)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.ide)
+                    z = can.create_line(focaliser(((-1-nor[1]*y1)/nor[0],y1)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.ide)
             self.tkinter[0] = z
             self.plan.tkinter_object[z] = self
             can.tag_lower(z, 'limite1')
@@ -937,13 +941,16 @@ def inter(A, B):
 
 def angle(A, B, C, U, V):
     '''Calcule l'angle entre (AB) et (BC)'''
-    return birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
+    a=birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
+    b=atan2(a.imag, a.real)*180/(2*pi)%(360)
+    print(b)
+    return b
 
 def symetrie(A, B):
     return symetrer(A, B)
-
+    
 def birapport(A, B, C, D):
-    return ((A-C)*(B-D))/((B-C)*(A-D))
+    return determinant([[0,0,1], list(A), list(C)])*determinant([[0,0,1], list(B), list(D)])/(determinant([[0,0,1], list(A), list(D)])*determinant([[0,0,1], list(B), list(C)]))
 
 def harmonique(A, B, C):
     liste = [A, B, (14,11,1), (3,4,1)]
@@ -991,10 +998,10 @@ def inter2(courbe1, courbe2, numero, z = 1):
         print(p1)
         stra = ""
         for i in list(p1.keys()):
-            stra+= "x**"+str(i[0])+"*y**"+str(i[1]) + "*" +str(Rational(p1[i][0]/p1[i][1]))+"+"
+            stra+= "x**"+str(i[0])+"*y**"+str(i[1]) + "*" +str((p1[i][0]/p1[i][1]).as_integer_ratio())+"+"
         strb=""
         for i in list(p2.keys()):
-            strb+= "x**"+str(i[0])+"*y**"+str(i[1])+ "*" +str(Rational(p2[i][0]/p2[i][1]))+"+"
+            strb+= "x**"+str(i[0])+"*y**"+str(i[1])+ "*" +str((p2[i][0]/p2[i][1]).as_integer_ratio())+"+"
         b=groebner([stra[:-1], strb[:-1]], sympy.abc.x, sympy.abc.y)
         c=Poly(b[1]).all_coeffs()
         root=resoudre(c)[0]
