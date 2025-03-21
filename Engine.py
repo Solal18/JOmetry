@@ -935,8 +935,15 @@ def inter(A, B):
             zA*xB-zB*xA,
             xA*yB-xB*yA)
 
+def angle(A, B, C, U, V):
+    '''Calcule l'angle entre (AB) et (BC)'''
+    return birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
+
 def symetrie(A, B):
     return symetrer(A, B)
+
+def birapport(A, B, C, D):
+    return ((A-C)*(B-D))/((B-C)*(A-D))
 
 def harmonique(A, B, C):
     liste = [A, B, (14,11,1), (3,4,1)]
@@ -1296,7 +1303,7 @@ class Plan:
             while fichier[-16:] != ' stop!stop!stop!' and i < 1000:
                 i += 1
                 fichier += client.recv(2048).decode('utf-8')
-        self.ouvrir(fichier)
+            self.ouvrir(fichier[8:-16])
         if reponse == 'JOmetry 0 non autorisé':
             return print('mauvais mdp')
         t = threading.Thread(target = self.ecoute_serveur, args = (client,))
@@ -1322,7 +1329,7 @@ class Plan:
     def nouveau_nom(self, u = 1, classe = 'Point'):
         lettre, chiffre = 0, 0
         nom = 'A'
-        dep = {'Point':65, 'Droite':92, 'Courbe':65}[classe]
+        dep = {'Point':65, 'Droite':97, 'Courbe':65, 'Angle':945}[classe]
         while nom in self.noms:
             lettre += 1
             chiffre += lettre//26
@@ -1428,6 +1435,7 @@ class Plan:
     def ouvrir(self, texte):
         while self.objets:
             list(self.objets.values())[0].supprimer()
+        print(val(texte))
         plan, objets = val(texte)
         self.nom, self.notes, self.offset_x, self.offset_y = plan[0], plan[1], plan[2], plan[3]
         ides, parents = [o[0] for o in objets], [o[4] for o in objets]
