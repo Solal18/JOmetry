@@ -2,7 +2,7 @@ import numpy
 from math import floor, sqrt, exp, cos, sin, pi, atan2
 import time
 from random import random
-from sympy import Rational, groebner, Poly
+from sympy import groebner, Poly
 import sympy.abc
 import socket
 from groebner import grob
@@ -996,13 +996,9 @@ def inter2(courbe1, courbe2, numero, z = 1):
         #        if courbe2(r2)(r) < 1e-14:
         #            rooot.append((r2, r, 1))
         print(p1)
-        stra = ""
-        for i in list(p1.keys()):
-            stra+= "x**"+str(i[0])+"*y**"+str(i[1]) + "*" +str((p1[i][0]/p1[i][1]).as_integer_ratio())+"+"
-        strb=""
-        for i in list(p2.keys()):
-            strb+= "x**"+str(i[0])+"*y**"+str(i[1])+ "*" +str((p2[i][0]/p2[i][1]).as_integer_ratio())+"+"
-        b=groebner([stra[:-1], strb[:-1]], sympy.abc.x, sympy.abc.y)
+        stra = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p1.items())
+        strb = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p2.items())
+        b=groebner([stra, strb], sympy.abc.x, sympy.abc.y)
         c=Poly(b[1]).all_coeffs()
         root=resoudre(c)[0]
         for r in root:
