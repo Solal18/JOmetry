@@ -905,6 +905,29 @@ class Creature:
             can.tag_raise(k, 'limite2')
             can.tag_raise(z, 'limite2')
 
+        if self.classe_actuelle == 'Angle':
+            #C'est peut etre pas tres beau comme ça mais ça marche
+            a, b, c = [norm(x.coords()) for x in self.args[:3]]
+            v1, v2 = (a[0]-b[0], a[1]-b[1]), (c[0]-b[0], c[1]-b[1])
+            a1, a2 = atan2( *v1)*180/pi, atan2( *v2)*180/pi
+            b = focaliser(b)
+            z = can.create_arc(b[0]-15, b[1]-15, b[0]+15, b[1]+15, fill = self.color, tag = self.ide, start = a1 - 90, extent = (a2 - a1)%360)
+            a, b, c = focaliser(a), b, focaliser(c)
+            a, b, c = [(x[0], x[1], 1) for x in (a,b,c)]
+            biss = bissectrice(a, b, c)
+            per = perp(biss, b)
+            cer = cercle(2, b, (b[0], b[1]+30, 1), self.plan.U.coords(), self.plan.V.coords())
+            p1, p2 = inter2(biss, cer, -1)
+            if sum([x*y for x,y in zip(per,p1)])*sum([x*y for x,y in zip(per,focaliser(a))]) >= 0:
+                p = p1
+            else: p = p2
+            x, y = norm(p)[:2]
+            k = can.create_text(x, y, text = f'{self.nom}={round(coords, 1)}°', font = "Helvetica4", tag = self.ide)
+            self.tkinter[0] = z
+            self.tkinter[1] = k
+            self.plan.tkinter_object[k] = self
+            self.plan.tkinter_object[z] = self
+            
  
 ################################################################################
 ###                        Méthodes de calcul                                ###
@@ -945,6 +968,9 @@ def angle(A, B, C, U, V):
     b=atan2(a.imag, a.real)*180/(2*pi)%(360)
     print(b)
     return b
+
+def bissectrice(a, b, c):
+    return inter(b, centreInscrit(a, b, c))
 
 def symetrie(A, B):
     return symetrer(A, B)
