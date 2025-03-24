@@ -408,7 +408,7 @@ class Main:
     def action_bouton(self, nom, bout):
         self.dernier_bouton = nom
         for bouton in self.boutons:
-            bout.state(('!pressed',))
+            bouton.state(('!pressed',))
         if self.actions[nom][1]:
             self.attendus = self.actions[nom][2]
             bout.state(('pressed',))
