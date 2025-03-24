@@ -33,13 +33,11 @@ def txt(x):
 #txt({Philemon : 34})
 
 def crea_id(x, sens = 0, plan = None):
-    print(x, type(x))
     if isinstance(x, (tuple, list)):
         return [crea_id(e, sens, plan) for e in x]
     if isinstance(x, dict):
         return {crea_id(c, sens, plan):crea_id(v, sens, plan) for c, v in x.items()}
     if isinstance(x, Creature) and sens == 1:
-        print(x.ide, type(x.ide))
         return x.ide
     if isinstance(x, ID) and sens == -1:
         return plan.objets[x]
@@ -48,7 +46,6 @@ def crea_id(x, sens = 0, plan = None):
 
 
 def val(x, objets = None):
-    print(x)
     if (x[0], x[-1]) in (('(',')'), ('[',']'), ('{','}')):
         l, t, ec, n, v = [], x[1:-1], '', 0, 0
         while t:
@@ -155,10 +152,8 @@ def translation(p, v):
 
 def translater(args, v):
     nouv_args = []
-    print("translater")
     for i in args:
         if i[0] == 'Point':
-            print(i[0])
             nouv_args.append(('Point', translation(i[1], v)))
         elif i[0] == 'Droite':
             nouv_args.append(i)
@@ -246,7 +241,6 @@ def inversion(p, centre, r, UV = None):
     if centre == p:
         return (1, 1, 0)
     d = inter(p, centre)
-    print(p, r, centre, d)
     A, B = inter2(d, r, -1)
     return harmonique(A, B, p)
 
@@ -630,10 +624,14 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = 'green', vis = 1, u = 0, complexe = False, ide = None):
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = None, vis = 1, u = 0, complexe = False, ide = None):
         self.plan = plan
+        if color is None:
+            if classe == 'Point':
+                color = params['ColP']
+            else:
+                color = params['ColC']
         if args is None: args = []
-        print('C', deg, args)
         if nom in (0, 1):
             nom = plan.nouveau_nom(nom, classe)
         if classe == 'Courbe':
@@ -648,7 +646,6 @@ class Creature:
             else:
                 deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
                 args = args[:(deg**2+3*deg)//2]
-        print('C',deg, args)
         self.nom = nom
         self.coord = None
         self.method = method
@@ -667,7 +664,6 @@ class Creature:
         elif ide not in plan.objets:
             self.ide = ide
         else: raise ValueError('Ide déjà utilisé')
-        print(self.ide, type(self.ide))
         plan.objets[self.ide] = self
         plan.noms.append(nom)
         plan.modifs = (True, True)
@@ -676,18 +672,13 @@ class Creature:
             listes[classe][nom] = (self)
         if self.nom != '':
             self.arbre = Arbre(args, self)
-        print('C',deg, args)
-        print(33)
         if self.plan.main is not None and plan.main.editeur_objets is not None:
-            print(34)
             plan.main.editeur_objets.ajouter(self)
         else:
             pass
-        print('C',deg, args)
         self.dessin()
         xrint(self.coord)
         print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')
-        print('C',deg, args)
         
 
     def __str__(self):
@@ -800,9 +791,6 @@ class Creature:
         h, w = can.winfo_height(), can.winfo_width()
         defocaliser = self.plan.main.coord_canvas
         (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
-        print("defocaliser")
-        print(defocaliser(0,0))
-        print(defocaliser(w,h))
         w,h = x2-x1, y2-y1
         self.tkinter=[None, None]
         
@@ -829,12 +817,8 @@ class Creature:
                 dessin_entre(p1, p2, g2, inf, bo, a, p, i+1, infi)
                 dessin_entre(p1, p2, g2, bo, sup, p, b, i+1, infi)
         
-        xrint(f"on dessine l'objet {self}")
+        
         if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
-            print(f'{self.nom}: {self.method}')
-            print(self.coords())
-            print(self.args_actu)
-            xrint("Calcul des points.")
             zzzz=time.time()
             coords = coords.change_variables32()(1)
             if self.deg_actu == 2:
@@ -842,7 +826,6 @@ class Creature:
                 coo = [(p1(i)/g2(i), p2(i)/g2(i)) for i in range(-50, 50)]
                 pol = lambda x: focaliser((p1(x)/g2(x), p2(x)/g2(x)))
                 racines = sorted(g2.resoudre()[0])
-                print('racines du polynome dans la par parametrisation :', racines)
                 if len(racines) == 2:
                     r0, r1, r2, r3, r4, r5 = racines[0]-10, racines[0]-1e-2, racines[0]+1e-2, racines[1]-1e-2, racines[1]+1e-2, racines[1]+10
                     dessin_entre(p1, p2, g2, r0, r5, pol(r0), pol(r5), infi = 1)
@@ -869,7 +852,6 @@ class Creature:
                     self.plan.CAst[self.ide].append(l_y)
                     i += 1
                 print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
-                xrint("Début affichage des points")
                 zzzz = time.time()
                 points = self.plan.CAst[self.ide]
                 for x, l_p in enumerate(points[1:-1]):
@@ -888,7 +870,6 @@ class Creature:
                             self.tkinter.append(z)
                             self.plan.tkinter_object[z]=self
             can.tag_lower(self.ide, 'limite2')
-            print(can.find_withtag(self.ide))
             print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
@@ -898,9 +879,7 @@ class Creature:
                 z = can.create_line(focaliser(A)[:2], focaliser(B)[:2], width=self.plan.bold, fill=self.color, tag = self.ide)
             else:
                 if isinstance(coords, Polynome):
-                    print("salut")
                     coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
-                    print(coords)
                 nor = norm(coords)
                 if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
                     z = can.create_line(focaliser((x1, (-1-x1*nor[0])/nor[1])),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
@@ -986,9 +965,8 @@ def inter(A, B):
 
 def angle(A, B, C, U, V):
     '''Calcule l'angle entre (AB) et (BC)'''
-    a=birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
-    b=atan2(a.imag, a.real)*180/(2*pi)%(360)
-    print(b)
+    a = birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
+    b = atan2(a.imag, a.real)*180 / (2*pi)%(360)
     return b
 
 def bissectrice(a, b, c):
@@ -1043,7 +1021,6 @@ def inter2(courbe1, courbe2, numero, z = 1):
         #        xrint(courbe2(r2)(r))
         #        if courbe2(r2)(r) < 1e-14:
         #            rooot.append((r2, r, 1))
-        print(p1)
         stra = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p1.items())
         strb = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p2.items())
         b=groebner([stra, strb], sympy.abc.x, sympy.abc.y)
@@ -1051,7 +1028,6 @@ def inter2(courbe1, courbe2, numero, z = 1):
         root=resoudre(c)[0]
         for r in root:
             k = str(b[0]).replace("y","("+ str(r)+")")
-            print(k)
             autre_roots = resoudre(Poly(k).all_coeffs())[0]
             for ax in autre_roots:
                 rooot.append((ax,r,1))
@@ -1119,13 +1095,9 @@ def tangente(C, p):
     if isinstance(C, (tuple, list)):
         return C
     a, b,c = p
-    print(p)
-    print(C)
     polynomex = C.change_variables()
     polynomey = C
     polynomez = C.change_variables32()
-    print('polynomezzzzz')
-    print(f'{polynomez}')
     coef1 = polynomex(b).derivee()(a)(c)
     coef2 = polynomey(a).derivee()(b)(c)
     coef3 = polynomez.derivee()(c)(a)(b)
@@ -1329,12 +1301,10 @@ class Plan:
             r = self.move(*args)
         if cat == 'Undo':
             act = crea_id(self.ctrl_z.pop(), -1, self)
-            print(act)
             self.ctrl_y.append(self.action( *act, x = 1))
             return
         if cat == 'Redo':
             act = crea_id(self.ctrl_y.pop(), -1, self)
-            print(act)
             self.ctrl_z.append(self.action( *act, x = 1))
             return
         if x:
@@ -1391,9 +1361,7 @@ class Plan:
         
     def decode_action(self, msg):
         a = val(msg, self.objets)
-        print('serv :', a, type(a))
         cat, args, kwargs = a
-        print('decode_action a trouvé :',cat, args, kwargs)
         self.action(cat, *args, **kwargs)
     
     def nouveau_nom(self, u = 1, classe = 'Point'):
@@ -1412,55 +1380,6 @@ class Plan:
         while 1:
             if ide not in self.objets: return ID(ide)
             ide += 1
-
-    def contre_action(self, fonc, args):
-        return 1
-        xrint(fonc, args)
-        if self.annulation:
-            self.ctrl_y[-1].append((fonc, args))
-        else:
-            self.ctrl_z[-1].append((fonc, args))
-        if self.main is not None: self.main.maj_bouton()
-
-    def action_utilisateur(self, act):
-        return 1
-        if (self.derniere_action == act and act is not None) or act in ('ctrlz', 'ctrly'): return
-        if not self.en_y:
-            self.ctrl_y = []
-        if len(self.ctrl_z) == 0 or self.ctrl_z[-1] != []:
-            self.ctrl_z.append([])
-        if self.main is not None: self.main.maj_bouton()
-        xrint('action utilisateur', act, self.ctrl_z, self.ctrl_y)
-        self.derniere_action = act
-            
-    def ctrlz(self):
-        return 1
-        liste = []
-        while liste == []:
-            liste = self.ctrl_z.pop(-1)
-        self.annulation = 1
-        self.ctrl_y.append([])
-        for fonc, args in liste[::-1]:
-            fonc(*args)
-        self.annulation = 0
-        if self.main is not None: self.main.maj_bouton()
-        print('Y :',self.ctrl_y, '\nZ :',self.ctrl_z)
-        
-    def ctrly(self):
-        return 1
-        self.ctrl_z.append([])
-        liste = []
-        print('Y :',self.ctrl_y)
-        while liste == []:
-            liste = self.ctrl_y.pop(-1)
-        print('Y :',self.ctrl_y)
-        self.en_y = 1
-        for fonc, args in liste[::-1]:
-            fonc(*args)
-        self.en_y = 0
-        print('Y :',self.ctrl_y)
-        if self.main is not None: self.main.maj_bouton()
-        print('Y :',self.ctrl_y)
 
     def closest_point(self, point):
         distances = []
@@ -1509,7 +1428,6 @@ class Plan:
     def ouvrir(self, texte):
         while self.objets:
             list(self.objets.values())[0].supprimer()
-        print(val(texte))
         plan, objets = val(texte)
         self.nom, self.notes, self.offset_x, self.offset_y = plan[0], plan[1], plan[2], plan[3]
         ides, parents = [o[0] for o in objets], [o[4] for o in objets]
@@ -1541,9 +1459,7 @@ class Plan:
     
     def move(self, point, coords, dessin = 0):
         objets = set()
-        print(point, coords)
         if point.bougeable():
-            print(f'On bouge {point}')
             self.contre_action(self.move, (point, point.coords()))
             if point.arbre.parents == set(): point.args=[coords]
             elif point.method == 'PsurCA': point.args[2] = coords[:2]
