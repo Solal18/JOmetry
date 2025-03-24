@@ -1,6 +1,6 @@
 boutons|actions
-boutons
-texte d'aide sur les commandes
+Boutons
+Les différentes actions à votre disponibilité sont dans la barre d'outil en haut de votre écran. Ces boutons sont séparés dans les différentes catégories suivantes :\n[Editeur|Editeur], [Etude|Etude],\n[Poubelle|Poubelle], \nLes 4 boutons en haut à droite sont :\n[Ctrl + Z|Ctrl + Z], [Crtl + Y|Ctrl + Y], [Plus|Plus], [Moins|Moins]
 
 bonjour|fermer
 salut
@@ -8,4 +8,188 @@ au revoir
 
 actions|geometrie
 commandes geometriques
-Avec le [bouton droite|boutons], vous pouvez faire une droite.
+Avec le [bouton "droite"|Boutons], vous pouvez faire une droite.
+
+interface
+Interface
+Les différents éléments de la fenêtre sont :\nEn haut à gauche :\n  Sélection du plan\n  Objet à sélectionner\nEn haut :\n  Les différentes catégories et [boutons|Boutons]\nEn haut à droite:\n  [Ctrl + Z|Ctrl + Z], [Crtl + Y|Ctrl + Y], [Plus|Plus], [Moins|Moins]\nAu centre:\n  La zone de dessin
+
+ctrl
+Controle
+Catégorie qui regroupe tous les boutons permettant de contrôler. Les différents boutons de cette catégorie sont :\n[Enregistrer|Enregistrer], [Enregistrer Sous|Enregistrer Sous], [Ouvrir|Ouvrir], [Nouveau Plan|Nouveau plan], [Supprimer plan|Supprimer plan], [Paramètres|Paramètres]
+
+classiques
+Classiques
+Catégorie qui regroupe tous les boutons usuels. Les différents boutons de cette catégorie sont : \n[Main|Main], [Point|Point], [Droite|Droite], [Cercle Circonscrit|Cercle Circonscrit], [Courbe|Courbe], [Soumettre|Soumettre]
+
+points
+Points
+Catégorie qui regroupe tous les boutons en rapport avec les points. Les différents boutons de cette catégorie sont : \n[Point|Point], [Surcourbe|Surcourbe], [Intersection|Intersection], [Milieu|Milieu], [Harmonique|Harmonique], [Centre|Centre], [Angle|Angle]
+
+droites
+Droites
+Catégorie qui regroupe tous les boutons en rapport avec les droites. Les différents boutons de cette catégorie sont : \n[Droite|Droite], [Segment|Segment], [Bissectrice|Bissectrice], [Perpendiculaire|Perpendiculaire], [Parallèle|Parallèle], [Médiatrice|Médiatrice], [Tangente|Tangente], [Tangente Commune|Tangente Commune]
+
+courbes
+Courbes
+Catégorie qui regroupe tous les boutons en rapport avec les courbes. Les différents boutons de cette catégorie sont : \n[Courbe|Courbe], [Soumettre|Soumettre], [Courbe Aléatoire|Courbe Aléatoire], [Cercle Circonscrit|Cercle Circonscrit], [Cercle Inscrit|Cercle Inscrit], [Cercle Centre|Cercle Centre], {cercle_ex} [Tangente|Tangente], [Tangente Commune|Tangente Commune]
+
+transformations
+Transformations
+Catégorie qui regroupe tous les boutons en rapport avec les transformations. Les différents boutons de cette catégorie sont : \n[Rotation|Rotation], [Homothétie|Homothétie], [Translation|Translation], [Symétrie|Symétrie], [Inverse|Inverse]
+
+frames
+Frames
+Catégorie
+
+plans
+Plans
+Il est possible de travailler sur différents plans. Pour cela, il faut d'abord [créer un nouveau plan|Nouveau plan]. Le menu déroulant en haut à gauche permet ensuite de changer de plan à volonté. Il est aussi possible de [supprimer un plan|Supprimer plan] en appuyant sur le bouton dédié en étant sur le plan qui doit être supprimé.
+
+enregistrer|sauvgarder|sauver|exporter
+Enregistrer
+Enregistre le travail à un emplacement spécifique sous forme d'un fichier texte. L'emplacement ne doit être précisé par l'utilisateur que lors du premier enregistrement, les enregistrements suivants écraseront les données. Il est possible d'[importer|Ouvrir] un travail précédemment enregistré lorsque le programme est relancé.
+
+enregistrer sous|sauvegarder sous|sauver sous|exporter sous
+Enregistrer Sous
+Enregistre le travail à un emplacement spécifique qui sera demandé à l'utilisateur à chaque fois enregistrement. Après avoir choisi l'emplacement du fichier une fois, il est possible de simplement [enregistrer|Enregistrer] sans repréciser l'emplacement du fichier afin d'écraser les données enregistrés précédemment.
+
+ouvrir|importer|charger
+Ouvrir
+Importe un travail précédemment [enregistré|Enregistrer].
+
+plan|nouveau plan
+Nouveau plan
+Créé un nouveau [plan|Plans] sur lequel travailler.
+
+plan|supprimer plan
+Supprimer plan
+Supprime un [plan|Plan] créé grâce au [bouton dédié|Nouveau plan]. Il est impossible de supprimer le premier plan.
+
+paramètres|options
+Paramètres
+Ouvre une fenêtre de paramètres.
+
+main|déplacer|deplacer|bouger
+Main
+La main permet de déplacer des [points|Point] ou autres objets.
+
+point
+Point
+Créé un nouveau point ou une intersection. Il suffit de cliquer dans la zone de dessin après avoir sélectionné le bouton 'point' dans la barre d'outils afin d'en créer un.
+
+surcourbe
+Surcourbe
+En sélectonnant une [courbe|Courbe], puis quelque part sur cette courbe, vous pouvez créer un [point|Point] sur cette courbe.
+
+intersection
+Intersection
+Sélectionnez 2 [courbes|Courbe] et un nouveau [point|Point] qui est l'intersection de ces 2 courbes sera créé.
+
+milieu
+Milieu
+x
+
+harmonique
+Harmonique
+x
+
+centre
+Centre
+x
+
+angle
+Angle
+x
+
+droite|perpendiculaire|tangente|tangentes communes
+Droite
+Trace une droite entre 2 [points|Point] sélectionnés.
+
+segment
+Segment
+x
+
+bissectrice
+Bissectrice
+x
+
+perpendiculaire
+Perpendiculaire
+x
+
+parallèle|parallele
+Parallèle
+x
+
+mediatrice|médiatrice
+Médiatrice
+x
+
+tangente
+Tangente
+x
+
+tangente commune
+Tangente Commune
+x
+
+courbe|courbe algébrique|courbe algebrique
+Courbe
+Une courbe est créée passant par les différents [points|Point] sélectionnés. Il ne reste plus qu'à appuyer sur le bouton [soumettre|Soumettre] afin de tracer la courbe.
+
+soumettre|tracer|courbe
+Soumettre
+Nécessite d'avoir sélectionné le bouton [Courbe|Courbe] ainsi que sélectionné les différents [points|Point] au préalable. Trace un courbe passant par tous les points sélectionnés. Le degré de la courbe dépend du nombre de points sélectionnés.
+
+caa|courbe algébrique aléatoire|courbe algebrique aleatoire|courbe aléatoire|courbe aleatoire
+Courbe aléatoire
+Génère une courbe algébrique de manière totalement aléatoire.
+
+cercle circonscrit
+Cercle Circonscrit
+Bouton permettant de faire un magnifique cercle. Il suffit de sélectionner 3 [points|Point] pour le tracer le cercle passant par ces 3 points.
+
+cercle inscrit
+Cercle Inscrit
+En sélectionnant 3 [points|Points], le cercle inscrit au triangle formé par ces 3 points sera tracé.
+
+cercle centre
+Cercle Centre
+Sélectionner un premier [point|Point] qui sera le centre de votre cercle puis un deuxième pour fixer le rayon du cercle permet de faire apparaître un cercle.
+
+editeur objet|modifier|nom|couleur|affichage
+Editeur
+Ouvre une fenêtre permettant de modifier le nom, la couleurs et l'affichage des différents éléments tels que les [points|Point], [courbes|Courbe]...
+
+etude
+Etude
+Permet d'étudier
+
+poubelle|supprimer
+Poubelle
+Une simple poubelle ayant une capacitée infinie. Sélectionnez l'élément à supprimer pour le supprimer.
+
+plus|zoom
+Plus
+Permet de zoomer pour être plus précis.
+
+moins|dezoom|dézoom
+Moins
+Dézoome, action réversible en [zoomant|Plus].
+
+ctrlz|retour arrière|undo
+Ctrl + Z
+Retourner en arrière en cas d'erreur, une fonctionnalité très utile.
+
+ctrly|retour avant|redo
+Ctrl + Y
+Retourner en arrière un [retour en arrière|Ctrl + Z]
+
+serveur|connect
+Connect
+Permet de se connecter à un serveur afin de collaborer avec un autre utilisateur.
+
+aide
+Aide
+Avez-vous vraiment besoin d'aide pour utiliser la fenêtre d'aide ?\nAffiche simplement cette magnifique fenêtre.
