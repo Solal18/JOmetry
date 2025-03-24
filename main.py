@@ -402,13 +402,13 @@ class Main:
         x, y = self.coord_canvas(ev.x, ev.y)
         if isinstance(self.point_move, tuple):
             mov1, mov2 = x - self.point_move[0], y -self.point_move[1]
-            self.decaler((mov1/20, mov2/20))
+            return self.decaler((mov1/20, mov2/20))
+        if self.point_move.arbre.parents == set():
+            l = self.action('Move', self.point_move.plan, self.point_move, ((x, y, 1),))
         else:
-            self.plans[0].action_utilisateur('bouger_point')
-            l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
-            for obj in l:
-                obj.dessin(1)
-            
+            l = self.action('Move', self.point_move.plan, self.point_move, (self.point_move.args[0], (x, y, 1)))
+        for obj in l:
+            obj.dessin(1)
             
     def nouv_plan(self):
         i = 1
@@ -498,15 +498,12 @@ class Main:
     def action_bouton(self, nom, bout):
         self.dernier_bouton = nom
         for bouton in self.boutons:
-            s = style.theme_use()
             bout.state(('!pressed',))
         if self.actions[nom][1]:
             self.attendus = self.actions[nom][2]
-            s = style.theme_use()
             bout.state(('pressed',))
             self.action_canvas = self.actions[nom][0]
         else:
-            self.plans[0].action_utilisateur(nom)
             self.attendus = None
             self.actions[nom][0]()
         self.deselectionner()
@@ -532,7 +529,7 @@ class Main:
         obj, pos = self.liste_derniers_clics
         if obj.classe == 'Droite':
             return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'ProjOrtho', args = [obj, (pos[0], pos[1], 1)], u = 1)
-        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, obj.deg, pos, self], u = 1)
+        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, pos], u = 1)
 
     def harmonique(self):
         A,B,C = self.liste_derniers_clics
@@ -767,7 +764,6 @@ class Main:
             distances.sort()
             if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
                 #clic éloigné d'un point
-                self.plans[0].action_utilisateur(None)
                 if self.dernier_bouton !="main":
                     point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
                     if self.plans[0].serveur is not None:
@@ -816,7 +812,6 @@ class Main:
             fenetre.after(50, self.fin_clic_canvas)
             print('on attend pour un fantome')
             return
-        self.plans[0].action_utilisateur(None)
         self.deselectionner()
         self.action_canvas()
         self.liste_derniers_clics = []
@@ -832,7 +827,6 @@ class Main:
                 
     def decaler(self, mouvement):
         if self.dernier_bouton != 'courbe':
-            self.plans[0].action_utilisateur('decaler')
             self.plans[0].contre_action(self.decaler, ((-mouvement[0], -mouvement[1]),))
             a,b = [i*20 for i in mouvement]
             self.plans[0].offset_x = [self.plans[0].offset_x[0],
@@ -873,6 +867,11 @@ class Main:
         self.Texte.config(textvariable = self.texte_att_aff)
         
     def action(self, cat, plan, *args, **kwargs):
+        if cat == 'Creature' and 'color' not in kwargs:
+            if args[0] == 'Point':
+                kwargs['color'] = params['ColP']
+            else:
+                kwargs['color'] = params['ColC']
         if plan.serveur is None:
             p = plan.action(cat, *args, **kwargs)
             self.maj_bouton()
