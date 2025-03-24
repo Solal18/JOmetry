@@ -17,7 +17,6 @@ def animate():
     print('\rC\'est bon !')
 t = threading.Thread(target=animate)
 t.start()
-import weakref
 import tkinter as tk
 from tkinter import filedialog as fd, messagebox as tk_mb, simpledialog as tk_sd
 from tkinter import ttk
@@ -25,7 +24,7 @@ import Engine as Geo
 from PIL import Image, ImageDraw, ImageTk
 from math import sqrt, pi
 import os.path as op
-import Frames as Fenetres
+from Frames import *
 from time import time
 from Engine import txt, val
 from random import random, randint
@@ -36,95 +35,6 @@ style.theme_use('default')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
-
-def traduction():
-    f = open(f'{op.dirname(__file__)}\\traduction.txt', encoding = 'utf-8')
-    texte = f.read().split('\n\n')
-    f.close()
-    langues = []
-    dicos = []
-    for p in texte:
-        lignes = p.split('\n')
-        langues.append(lignes[0])
-        lignes = [l[2:] for l in lignes[1:]]
-        dic = {}
-        for l in lignes:
-            guill = [i for i,c in enumerate(l) if c == '"']
-            doubp = [i for i,c in enumerate(l) if c == ':' and not guill[0]<i<guill[1]][0]
-            cle, val = l[:doubp], l[doubp+1:]
-            if not (cle[0] == cle[-1] == '"'):
-                cle = int(cle)
-            else: cle = cle[1:-1]
-            if not (val[0] == val[-1] == '"'):
-                val = int(val)
-            else: val = val[1:-1]
-            dic[cle] = val
-        dicos.append(dic)
-    langue = langues[0]
-    def trad(lang, mot):
-        if lang not in langues or mot not in dicos[0]:
-            return mot
-        if dicos[0][mot] not in dicos[langues.index(lang)]:
-            return mot
-        return dicos[langues.index(lang)][dicos[0][mot]]
-    return langue, langues, trad
-
-try:
-    langue, langues, trad = traduction()
-except Exception as e:
-    print('Impossible de charger les traductions')
-    langue = 'Français'
-    langues = ['Français']
-    trad = lambda x: x
-
-params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', 'TempsTooltip':300}
-try:
-    f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8')
-    charges = val(f.read())
-    params = params|charges 
-    f.close()
-except Exception as e:
-    print('Impossible de charger les parametres')
-
-langue_def = langue
-
-class Trad(tk.StringVar):
-    variables = set()
-    variables_weak = weakref.WeakSet()
-    
-    def __init__(self, mot, langue = None, noteb = None, weak = 0):
-        super().__init__()
-        if weak:
-            self.variables_weak.add(self)
-        else:
-            self.variables.add(self)
-        self._lang = None
-        self.noteb = noteb
-        self.mot = mot
-        if langue is None: langue = params['Langue']
-        self.langue = langue
-    
-    def __hash__(self):
-        return id(self)
-    
-    @property
-    def langue(self):
-        return self._lang
-    
-    @langue.setter
-    def langue(self, lang):
-        self._lang = lang
-        if self.noteb is not None:
-            self.noteb[0].tab(self.noteb[1], text = trad(lang, self.mot))
-        else:
-            self.set(trad(lang, self.mot))
-    
-    @classmethod
-    def set_lang(cls, lang):
-        for variable in cls.variables|set(cls.variables_weak):
-            variable.langue = lang
-        
-
 
 
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
@@ -362,7 +272,7 @@ class Main:
         
     def etude(self):
         if self.fen_etude is None:
-            self.fen_etude = Fenetres.EtudieurObjets(fenetre, self, 1)
+            self.fen_etude = EtudieurObjets(fenetre, self, 1)
     
     def enregistrer(self):
         if not self.plans[0].dossier_default:
@@ -395,7 +305,7 @@ class Main:
     def edit_objets(self):
         print('??')
         if self.editeur_objets is None:
-            self.editeur_objets = Fenetres.EditeurObjets(fenetre, self, 0)
+            self.editeur_objets = EditeurObjets(fenetre, self, 0)
             
     def bouger_point(self, ev):
         if self.point_move is None: return
@@ -458,16 +368,16 @@ class Main:
     
     def serveur(self):
         if self.lanceurserveur is not None or self.plans[0].serveur is not None: return
-        self.lanceurserveur = Fenetres.LanceServeur(self)
+        self.lanceurserveur = LanceServeur(self)
         
     def parametres(self):
         if self.parametres is not None: return
-        self.parametres = Fenetres.Parametres(fenetre, self, Trad, style, params)        
+        self.parametres = Parametres(fenetre, self, Trad, style, params)        
     
     def connect(self):
         if self.plans[0].serveur is not None: return
         if self.connecteur_serv is not None: return
-        self.connecteur_serv = Fenetres.ConnectServeur(self)
+        self.connecteur_serv = ConnectServeur(self)
         
     def echange(self, ind, nom):
         self.detruire_menu()
@@ -686,7 +596,7 @@ class Main:
         for i in texte:
             a = i.split('\n')
             doc.append((a[0].split('|'), a[1], a[2]))
-        fen = Fenetres.AideFenetre(fenetre, doc)
+        fen = AideFenetre(fenetre, doc)
     
     def moins(self):
         self.plans[0].contre_action(self.plus, [])
