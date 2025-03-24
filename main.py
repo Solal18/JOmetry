@@ -36,7 +36,6 @@ style.theme_use('default')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
-print('')
 
 def traduction():
     f = open(f'{op.dirname(__file__)}\\traduction.txt', encoding = 'utf-8')
@@ -61,7 +60,6 @@ def traduction():
             else: val = val[1:-1]
             dic[cle] = val
         dicos.append(dic)
-    print(langues, dicos)
     langue = langues[0]
     def trad(lang, mot):
         if lang not in langues or mot not in dicos[0]:
@@ -116,10 +114,8 @@ class Trad(tk.StringVar):
     @langue.setter
     def langue(self, lang):
         self._lang = lang
-        print(f"On assigne la langue {lang} à l'objet {self.mot} qui devient {trad(lang, self.mot)}")
         if self.noteb is not None:
             self.noteb[0].tab(self.noteb[1], text = trad(lang, self.mot))
-            print('On a essayé de configurer un widget')
         else:
             self.set(trad(lang, self.mot))
     
@@ -129,11 +125,7 @@ class Trad(tk.StringVar):
             variable.langue = lang
         
 
-print(trad('English', 'Courbes'))
 
-def pprint(*args):
-    #print(*args)
-    return 
 
 def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
     return (coord[0]/coord[2], coord[1]/coord[2])
@@ -340,9 +332,7 @@ class Main:
         liste.append((plan.bold, plan.boldP, plan.boldC, txt(plan.focal),
                             txt(plan.offset_x), txt(plan.offset_y), f'<{plan.nom}>'))
         liste.append([])
-        pprint(plan.objets)
         for objet in plan.objets.values():
-            pprint(objet)
             liste[1].append((objet.classe, objet.nom, objet.method,
                                     objet.args,
                                     objet.deg, objet.color, objet.vis, objet.u))
@@ -416,7 +406,6 @@ class Main:
         else:
             self.plans[0].action_utilisateur('bouger_point')
             l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
-            print(l)
             for obj in l:
                 obj.dessin(1)
             
@@ -431,14 +420,12 @@ class Main:
         self.dessin_canvas()
     
     def suppr_plan(self):
-        result="wesh"
+        result = "wesh"
         if self.plans[0].modifs[1]:
             result = tk_mb.askyesnocancel(f'fermeture de {self.plans[0].nom}', 'Voulez-vous enregistrer avant de fermer ?', icon = tk_mb.WARNING)
             if result == 'yes':
                 self.enregistrer()
-        print(result)
         if result is not None:
-            print(2)
             if len(self.plans) == 1:
                 self.plans[0] = Geo.Plan(self)
                 Geo.plan_default = self.plans[0]
@@ -453,11 +440,9 @@ class Main:
         self.men_time = time()
         liste.remove(self.nom_boutons[ind])
         posb, posf = bouton.winfo_geometry(), fenetre.geometry()
-        print(posb, posf)
         p, x, y = posb.split('+')
         fx, fy = posf.split('+')[1:]
         dx, dy = p.split('x')
-        print(int(x), int(dx), int(fx), int(y), int(dy), int(fy))
         x, y = int(x) + int(fx) + 10, int(y) + int(dy) + int(fy) + 34
         self.men = tk.Toplevel(borderwidth = 1, relief = 'solid',
                    background = 'white')
@@ -485,13 +470,10 @@ class Main:
         self.connecteur_serv = Fenetres.ConnectServeur(self)
         
     def echange(self, ind, nom):
-        pprint('echange')
         self.detruire_menu()
-        pprint(self.menu[ind])
         self.menu[ind].remove(nom)
         self.menu[ind].insert(0, nom)
         self.nom_boutons[ind] = nom
-        pprint(self.menu[ind])
         self.boutons[ind].destroy()
         image = image_tk(f'{op.dirname(__file__)}\\images\{nom}.jpg')
         bout = ttk.Button(self.barre_haut, image = image)
@@ -519,13 +501,11 @@ class Main:
             s = style.theme_use()
             bout.state(('!pressed',))
         if self.actions[nom][1]:
-            print(nom)
             self.attendus = self.actions[nom][2]
             s = style.theme_use()
             bout.state(('pressed',))
             self.action_canvas = self.actions[nom][0]
         else:
-            print(nom)
             self.plans[0].action_utilisateur(nom)
             self.attendus = None
             self.actions[nom][0]()
@@ -736,7 +716,6 @@ class Main:
     def intersection(self):
         courbe_1, courbe_2 = self.liste_derniers_clics
         if courbe_1.classe == 'Droite' and courbe_2.classe == 'Droite':
-            pprint('intersection de droites')
             return self.action('Creature', self.plans[0], 'Point', nom = 1,
                                method = 'inter', args = [courbe_1, courbe_2], u = 1)
         for i in range(courbe_1.deg * courbe_2.deg):
@@ -744,7 +723,6 @@ class Main:
         return None
             
     def supprimer(self):
-        pprint('\n\n\nsuppr\n\n\n')
         obj = self.liste_derniers_clics[0]
         self.action('Supprimer', obj.plan, obj)
         
@@ -774,7 +752,6 @@ class Main:
         if self.attendus is None:
             return
         x, y = self.coord_canvas(evenement.x, evenement.y)
-        print(self.attendus, self.liste_derniers_clics)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
             self.liste_derniers_clics.append((x, y))
@@ -809,22 +786,16 @@ class Main:
             if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1}:
                 self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
         if attendu in ['droite', 'courbe'] and self.plans[0].tkinter_object != {}:
-            #print([self.canvas.gettags(identif) for identif in self.canvas.find_all()])
             objet = self.canvas.find_closest(evenement.x, evenement.y,
                                              {'droite':self.limite2, 'courbe':self.limite1}[attendu])
-            #print(self.canvas.gettags({'droite':self.limite2, 'courbe':self.limite1}[attendu]))
             if len(objet) == 0: return
-            #print(self.canvas.gettags(objet[0]))
             courbe = self.plans[0].tkinter_object[objet[0]]
-            #print(courbe)
             if courbe not in self.liste_derniers_clics:
                 self.liste_derniers_clics.append(courbe)
         if attendu == 'objet' and self.plans[0].tkinter_object != {}:
             objet = self.canvas.find_closest(evenement.x, evenement.y)
             if len(objet) == 0: return
-            print('clic_canvas :', objet)
             objet = self.plans[0].tkinter_object[objet[0]]
-            print('clic_canvas :', objet)
             if objet not in self.liste_derniers_clics and objet.classe != 'Angle':
                 self.liste_derniers_clics.append(objet)
         nombres = True
@@ -898,10 +869,8 @@ class Main:
     
     def afficher_attendu(self):
         if self.attendus is None: return self.Texte.config(text = '')
-        print(self.attendus, self.liste_derniers_clics)
         self.texte_att_aff = Trad(self.attendus[len(self.liste_derniers_clics)], weak = 1)
         self.Texte.config(textvariable = self.texte_att_aff)
-        print(Trad.variables, Trad.variables_weak)
         
     def action(self, cat, plan, *args, **kwargs):
         if plan.serveur is None:
