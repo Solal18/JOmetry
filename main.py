@@ -33,9 +33,6 @@ from random import random, randint
 fenetre = tk.Tk()
 style = ttk.Style()
 style.theme_use('default')
-for s in ('Tbutton',):#style.theme_names():
-    s2 = ttk.Style()
-    s2.map(f'BoutonVert.{s}', 'alternate', background = 'green', foreground = 'green')
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
@@ -82,7 +79,7 @@ except Exception as e:
     langues = ['Français']
     trad = lambda x: x
 
-params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', }
+params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', 'TempsTooltip':300}
 try:
     f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8')
     charges = val(f.read())
@@ -106,7 +103,7 @@ class Trad(tk.StringVar):
         self._lang = None
         self.noteb = noteb
         self.mot = mot
-        if langue is None: langue = main.langue
+        if langue is None: langue = params['Langue']
         self.langue = langue
     
     def __hash__(self):
@@ -155,13 +152,13 @@ class Tooltip:
         bout.bind('<Leave>', self.fin)
         self.bout = bout
         self.top = None
-        self.texte = texte
+        self.texte = Trad(texte, weak = 1)
         self.timer = None
         self.main = main
         
     def deb(self, ev = None):
         self.fin()
-        self.timer = fenetre.after(self.main.delai_tooltip, self.aff)
+        self.timer = fenetre.after(params['TempsTooltip'], self.aff)
     
     def fin(self, ev = None):
         if self.top is not None: self.top.destroy()
@@ -169,11 +166,11 @@ class Tooltip:
     
     def aff(self):
         self.top = tk.Toplevel(borderwidth = 1, relief = 'solid',
-                   background = 'white')
+                   background = params['ColTooltip'])
         dx, dy = fenetre.winfo_pointerxy()
         self.top.overrideredirect(True)
         self.top.geometry(f'+{dx+15}+{dy+20}')
-        ttk.Label(self.top, text = self.texte).grid(row = 0, column = 0)
+        ttk.Label(self.top, textvariable = self.texte).grid(row = 0, column = 0)
         
 
 class Main:
@@ -184,7 +181,7 @@ class Main:
         self.delai_tooltip = 300
         self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
         self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
-                         ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre'],
+                         ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre', 'angle'],
                          ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre', 'angle'], #Il faudra mettre angle dans une autre categorie
                          ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangentes_communes'],
                          ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
@@ -240,7 +237,7 @@ class Main:
         
         def bouton(f, nom):
             image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
-            bout = ttk.Button(f, image = image, style = 'BoutonVert.TButton')
+            bout = ttk.Button(f, image = image)
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
             self.image_boutons.append(image)
@@ -333,8 +330,10 @@ class Main:
                         'connect' : (self.connect, 0),
                         }
         
-    def act_ctrly(self): self.plans[0].ctrly()    
-    def act_ctrlz(self): self.plans[0].ctrlz()    
+    def act_ctrly(self):
+        self.action('Redo', self.plans[0])
+    def act_ctrlz(self):
+        self.action('Undo', self.plans[0])
     
     def liste_objet(self):
         liste, plan = [], self.plans[0]
@@ -417,6 +416,7 @@ class Main:
         else:
             self.plans[0].action_utilisateur('bouger_point')
             l = self.action('Move', self.point_move.plan, self.point_move, (x, y, 1))
+            print(l)
             for obj in l:
                 obj.dessin(1)
             
@@ -477,16 +477,12 @@ class Main:
         
     def parametres(self):
         if self.parametres is not None: return
-        self.parametres = Fenetres.Parametres(fenetre, self, Trad, style)        
+        self.parametres = Fenetres.Parametres(fenetre, self, Trad, style, params)        
     
     def connect(self):
         if self.plans[0].serveur is not None: return
         if self.connecteur_serv is not None: return
         self.connecteur_serv = Fenetres.ConnectServeur(self)
-        #ip = tk_sd.askstring(Trad("Choix d'une adresse"), '')
-        #port = tk_sd.askinteger("Choix d'un port", '')
-        #mdp = tk_sd.askstring("Choix d'un mot de passe", '')
-        #self.plans[0].connecter_serveur(ip, port, mdp)
         
     def echange(self, ind, nom):
         pprint('echange')
@@ -518,17 +514,15 @@ class Main:
                 bout['state'] = 'normal'
     
     def action_bouton(self, nom, bout):
-        print(nom)
-        print("action_bouton")
         self.dernier_bouton = nom
         for bouton in self.boutons:
             s = style.theme_use()
-            bout.state(('!alternate',))
+            bout.state(('!pressed',))
         if self.actions[nom][1]:
             print(nom)
             self.attendus = self.actions[nom][2]
             s = style.theme_use()
-            bout.state(('alternate',))
+            bout.state(('pressed',))
             self.action_canvas = self.actions[nom][0]
         else:
             print(nom)
@@ -619,8 +613,8 @@ class Main:
     def point(self):
         x, y = self.liste_derniers_clics[0]
         return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'coord', args = [(x, y, 1)], u = 1)
-                    
-        
+
+
     def cercle(self):
         points = self.liste_derniers_clics + [self.plans[0].U, self.plans[0].V]
         return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', args = points, u = 1)
@@ -780,6 +774,7 @@ class Main:
         if self.attendus is None:
             return
         x, y = self.coord_canvas(evenement.x, evenement.y)
+        print(self.attendus, self.liste_derniers_clics)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
             self.liste_derniers_clics.append((x, y))
@@ -827,8 +822,10 @@ class Main:
         if attendu == 'objet' and self.plans[0].tkinter_object != {}:
             objet = self.canvas.find_closest(evenement.x, evenement.y)
             if len(objet) == 0: return
+            print('clic_canvas :', objet)
             objet = self.plans[0].tkinter_object[objet[0]]
-            if objet not in self.liste_derniers_clics:
+            print('clic_canvas :', objet)
+            if objet not in self.liste_derniers_clics and objet.classe != 'Angle':
                 self.liste_derniers_clics.append(objet)
         nombres = True
         while len(self.liste_derniers_clics) < len(self.attendus) and isinstance(self.attendus[len(self.liste_derniers_clics)], tuple) and self.attendus[len(self.liste_derniers_clics)][0] == 'nombre' and nombres:
@@ -856,7 +853,7 @@ class Main:
     
     def deselectionner(self):
         for objet in self.liste_derniers_clics:
-            if isinstance(objet, Geo.Creature):
+            if isinstance(objet, Geo.Creature) and objet.classe != 'Angle':
                 self.canvas.itemconfigure(objet.tkinter[0], fill = objet.color)
                 self.canvas.itemconfigure(objet.tkinter[1], text = objet.nom)
         self.point_move = None
@@ -901,15 +898,28 @@ class Main:
     
     def afficher_attendu(self):
         if self.attendus is None: return self.Texte.config(text = '')
+        print(self.attendus, self.liste_derniers_clics)
         self.texte_att_aff = Trad(self.attendus[len(self.liste_derniers_clics)], weak = 1)
         self.Texte.config(textvariable = self.texte_att_aff)
         print(Trad.variables, Trad.variables_weak)
         
     def action(self, cat, plan, *args, **kwargs):
         if plan.serveur is None:
-            return plan.action(cat, *args, **kwargs)
+            p = plan.action(cat, *args, **kwargs)
+            self.maj_bouton()
+            return p
         else:
-            return plan.envoi(cat, *args, **kwargs)
+            p = plan.envoi(cat, *args, **kwargs)
+            self.maj_bouton()
+            return p
+    
+    def fin(self):
+        for i in range(len(self.plans)):
+            self.suppr_plan()
+        f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8', mode = 'w')
+        f.write(txt(params))
+        f.close()
+        fenetre.destroy()
     
     
 def ouvrir_erreur():
@@ -921,4 +931,5 @@ chargement = False
 
 if __name__ == '__main__':
     main = Main()
+    fenetre.protocol('WM_DELETE_WINDOW', main.fin)
     fenetre.mainloop()
