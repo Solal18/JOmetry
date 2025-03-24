@@ -626,11 +626,6 @@ class Creature:
 
     def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = None, vis = 1, u = 0, complexe = False, ide = None):
         self.plan = plan
-        if color is None:
-            if classe == 'Point':
-                color = params['ColP']
-            else:
-                color = params['ColC']
         if args is None: args = []
         if nom in (0, 1):
             nom = plan.nouveau_nom(nom, classe)
@@ -700,7 +695,6 @@ class Creature:
         '''fonction recursive pour supprimer des elements
         un peu bizarre pour selectionner un element d'un ensemble,
         mais le plus rapide, j'ai vérifié'''
-        #self.plan.contre_action(Creature, (self.plan, self.classe, self.nom, self.method, self.args, self.deg, self.color, self.u, self.vis))
         if self.plan.main is not None:
             if self.plan.main.editeur_objets:
                 self.plan.main.editeur_objets.supprimer_element(self)
@@ -760,7 +754,6 @@ class Creature:
         if nom is None: nom = self.nom
         if col is None: col = self.color
         if vis is None: vis = self.vis
-        self.plan.contre_action(self.set_param, (self.nom, self.color, self.vis))
         self.plan.noms.remove(self.nom)
         self.plan.noms.append(nom)
         if self.plan.main is None: return
@@ -1217,8 +1210,9 @@ def ProjOrtho(d, p):
     d1 = inter(p, p2)
     return inter(d, d1)
 
-def PsurCA(C, n, coo, main):
-    x,y = coo
+def PsurCA(C, coo):
+    x, y = coo[:2]
+    print(coo)
     done = False
     C = C.change_variables32()(1)
     deriveex = C.derivee()
@@ -1231,7 +1225,7 @@ def PsurCA(C, n, coo, main):
         if abs(a-x) + abs(b-y) < 1e-10 or i > 100:
             done = True
         x, y = a, b
-    return (x,y,1)
+    return (x, y, 1)
 
 def cercle(d, O, A, U, V):
     d1, d2 = inter(O, U), inter(O, V)
@@ -1297,7 +1291,7 @@ class Plan:
             ca = ('Modif', args[0], args[0].infos_user)
             r = args[0].set_param(**kwargs)
         if cat == 'Move':
-            ca = ('Move', args[0], *crea_id(args[0].args), 1)
+            ca = ('Move', args[0], crea_id(args[0].args), 1)
             r = self.move(*args)
         if cat == 'Undo':
             act = crea_id(self.ctrl_z.pop(), -1, self)
@@ -1460,10 +1454,7 @@ class Plan:
     def move(self, point, coords, dessin = 0):
         objets = set()
         if point.bougeable():
-            self.contre_action(self.move, (point, point.coords()))
-            if point.arbre.parents == set(): point.args=[coords]
-            elif point.method == 'PsurCA': point.args[2] = coords[:2]
-            else: point.args[1] = coords
+            point.args = coords
             for i in sorted(list(point.arbre.descente()), key=lambda x: x[1]):
                 i[0].valeur.coords(1)
                 objets.add(i[0].valeur)
