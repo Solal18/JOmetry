@@ -32,7 +32,20 @@ def txt(x):
 #à executer avant toute modification :
 #txt({Philemon : 34})
 
-texte = "[!TCreature!,[!TPoint!!!],{!Tnom!:!N1!,!Tmethod!:!Tcoord!,!Targs!:[[!N306.0!,!N104.0!,!N1!]],!Tu!:!N1!}]"
+def crea_id(x, sens = 0, plan = None):
+    print(x, type(x))
+    if isinstance(x, (tuple, list)):
+        return [crea_id(e, sens, plan) for e in x]
+    if isinstance(x, dict):
+        return {crea_id(c, sens, plan):crea_id(v, sens, plan) for c, v in x.items()}
+    if isinstance(x, Creature) and sens == 1:
+        print(x.ide, type(x.ide))
+        return x.ide
+    if isinstance(x, ID) and sens == -1:
+        return plan.objets[x]
+    return x
+
+
 
 def val(x, objets = None):
     print(x)
@@ -617,7 +630,7 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = 'green', vis = 1, u = 0, complexe =False):
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = 'green', vis = 1, u = 0, complexe = False, ide = None):
         self.plan = plan
         if args is None: args = []
         print('C', deg, args)
@@ -649,7 +662,12 @@ class Creature:
         self.u = u
         self.complexe = complexe
         self.tkinter = [None, None] #[cercle, texte] pour les points
-        self.ide = self.plan.nouv_ide()
+        if ide is None:
+            self.ide = plan.nouv_ide()
+        elif ide not in plan.objets:
+            self.ide = ide
+        else: raise ValueError('Ide déjà utilisé')
+        print(self.ide, type(self.ide))
         plan.objets[self.ide] = self
         plan.noms.append(nom)
         plan.modifs = (True, True)
@@ -659,12 +677,10 @@ class Creature:
         if self.nom != '':
             self.arbre = Arbre(args, self)
         print('C',deg, args)
-        if self.plan.main is not None:
-            if plan.main.editeur_objets:
-                plan.main.editeur_objets.ajouter(self)
-            if nom not in ('U', 'V', 'Inf'):
-                plan.action_utilisateur(f'creation de {nom}')
-                #plan.contre_action(self.supprimer, (self.plan.main.canvas,))
+        print(33)
+        if self.plan.main is not None and plan.main.editeur_objets is not None:
+            print(34)
+            plan.main.editeur_objets.ajouter(self)
         else:
             pass
         print('C',deg, args)
@@ -684,6 +700,10 @@ class Creature:
     
     def bougeable(self):
         return (self.ide > 2 and (self.arbre.parents == set() or self.method in ('PsurCA', 'ProjOrtho')))
+    
+    @property
+    def infos_user(self):
+        return {'nom':self.nom, 'col':self.color, 'vis':self.vis}
 
     def supprimer(self, canvas = None):
         '''fonction recursive pour supprimer des elements
@@ -927,6 +947,8 @@ class Creature:
             self.tkinter[1] = k
             self.plan.tkinter_object[k] = self
             self.plan.tkinter_object[z] = self
+            can.tag_raise(k, 'limite2')
+            can.tag_raise(z, 'limite2')
             
  
 ################################################################################
@@ -1282,26 +1304,45 @@ class Plan:
         self.notes = ''
         self.en_y = 0
 
-    def action(self, cat, *args, **kwargs):
+    def action(self, cat, *args, x = 0, **kwargs):
         '''Creature, Supprimer, Modif'''
         print(f'action : de type {cat}, args : {args}, kwargs : {kwargs}')
         if cat == 'Creature':
-            c = Creature(self, *args, **kwargs)
+            r = Creature(self, *args, **kwargs)
+            ca = ('Supprimer', r)
             if self.main is not None and 'fantome' in self.main.liste_derniers_clics:
                 self.main.liste_derniers_clics[self.main.liste_derniers_clics.index('fantome')] = c
                 if c.classe == 'Point':
-                    self.main.canvas.itemconfigure(c.tkinter[0], fill = 'orange')
-            return c
+                    self.main.canvas.itemconfigure(c.tkinter[0], fill = 'orange')  
         if cat == 'Supprimer':
+            c = args[0]
+            ca = ('Creature', c.classe, c.nom, c.method, c.args, c.deg, c.color, c.vis, c.u, c.complexe, int(c.ide))
             if self.main is None:
-                return args[0].supprimer()
+                r = c.supprimer()
             else:
-                return args[0].supprimer(self.main.canvas)
+                r = c.supprimer(self.main.canvas)
         if cat == 'Modif':
-            return args[0].set_param(**kwargs)
+            ca = ('Modif', args[0], args[0].infos_user)
+            r = args[0].set_param(**kwargs)
         if cat == 'Move':
-            return self.move(*args)
-        return None 
+            ca = ('Move', args[0], *crea_id(args[0].args), 1)
+            r = self.move(*args)
+        if cat == 'Undo':
+            act = crea_id(self.ctrl_z.pop(), -1, self)
+            print(act)
+            self.ctrl_y.append(self.action( *act, x = 1))
+            return
+        if cat == 'Redo':
+            act = crea_id(self.ctrl_y.pop(), -1, self)
+            print(act)
+            self.ctrl_z.append(self.action( *act, x = 1))
+            return
+        if x:
+            return ca
+        else:
+            self.ctrl_y = []
+            self.ctrl_z.append(crea_id(ca, 1))
+            return r 
     
     def envoi(self, cat, *args, **kwargs):
         print('envoi')
@@ -1369,10 +1410,11 @@ class Plan:
     def nouv_ide(self):
         ide = 0
         while 1:
-            if ide not in self.objets: return ide
+            if ide not in self.objets: return ID(ide)
             ide += 1
 
     def contre_action(self, fonc, args):
+        return 1
         xrint(fonc, args)
         if self.annulation:
             self.ctrl_y[-1].append((fonc, args))
@@ -1381,6 +1423,7 @@ class Plan:
         if self.main is not None: self.main.maj_bouton()
 
     def action_utilisateur(self, act):
+        return 1
         if (self.derniere_action == act and act is not None) or act in ('ctrlz', 'ctrly'): return
         if not self.en_y:
             self.ctrl_y = []
@@ -1391,6 +1434,7 @@ class Plan:
         self.derniere_action = act
             
     def ctrlz(self):
+        return 1
         liste = []
         while liste == []:
             liste = self.ctrl_z.pop(-1)
@@ -1403,6 +1447,7 @@ class Plan:
         print('Y :',self.ctrl_y, '\nZ :',self.ctrl_z)
         
     def ctrly(self):
+        return 1
         self.ctrl_z.append([])
         liste = []
         print('Y :',self.ctrl_y)
@@ -1494,8 +1539,9 @@ class Plan:
             c = Creature(self, *l)
             objets[ide][-1] = c
     
-    def move(self, point, coords):
+    def move(self, point, coords, dessin = 0):
         objets = set()
+        print(point, coords)
         if point.bougeable():
             print(f'On bouge {point}')
             self.contre_action(self.move, (point, point.coords()))
@@ -1506,6 +1552,9 @@ class Plan:
                 i[0].valeur.coords(1)
                 objets.add(i[0].valeur)
             self.modifs = (True, True)
+        if dessin:
+            for obj in objets:
+                obj.dessin(1)
         return objets
     
     def new_harmonique(self, nom, A,B,C, u = 1):
