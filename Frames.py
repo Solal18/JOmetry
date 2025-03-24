@@ -156,7 +156,6 @@ class EditeurObjets:
             self.frame.grid(row = 0, column = 0, sticky = 'nsew')
             tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
-        print(self.grande_frame.winfo_manager())
         self.imgs = (tk.BitmapImage(data = \
           '#define colorpicker_width 10\n\#define colorpicker_height 10\n\
            static unsigned char colorpicker_bits[] = {\
@@ -223,11 +222,9 @@ class EditeurObjets:
         else:main.panedwindow.forget(self.grande_frame)
 
     def ajouter(self, obj):
-        print(35)
         if obj.u:
             l = [obj.nom, obj.classe, self.nom_methodes[obj.method], list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]]
             self.objets[obj.ide] = l
-            print('On ajoute au treeview')
             self.tableau.insert('', 'end', iid = str(obj.ide), values = l)
 
     def maj(self):
@@ -323,13 +320,11 @@ class EtudieurObjets:
             bouge = [self.main.plans[0].points[self.liste.get(0, 'end')[nombre]] for nombre in self.liste.curselection()]
             positions = [point.args for p in bouge]
             l = []
-            print(point, bouge, positions)
             for i in range(20):
                 for p in bouge:
                     x, y = randrange(0, 500), randrange(0, 500)
                     p.plan.move(p, (x, y, 1))
                 z = tuple([float(t) if isinstance(t, float64) else t for t in point.coords()])
-                print(z)
                 l.append(z)
             l = [(p[0]/p[2], p[1]/p[2], 1)for p in l]
             n = 2
