@@ -109,29 +109,42 @@ class AideFenetre:
 
 class ColorChooser(ttk.Frame):
     
-    def __init__(parent, textvariable):
-        super().__init__()
+    def __init__(self, parent, fenetre, textvariable):
+        super().__init__(parent)
+        self.fenetre = fenetre
         self.textvariable = textvariable
         self.entree = tk.Entry(self, textvariable = textvariable)
-        self.columnconfigure(0, weight = 0)
+        self.columnconfigure(0, weight = 1)
+        self.dernier_correct = textvariable.get()
         self.entree.grid(row = 0, column = 0, sticky = 'nsew')
-        img = tk.BitmapImage(data = \
+        self.img = tk.BitmapImage(data = \
           '#define colorpicker_width 10\n\#define colorpicker_height 10\n\
            static unsigned char colorpicker_bits[] = {\
              0xc0, 0x01, 0xe0, 0x03, 0xe0, 0x03, 0xd8, 0x03, 0xb0, 0x01,\
              0x78, 0x00, 0x5c, 0x00, 0x0e, 0x00, 0x07, 0x00, 0x03, 0x00 };')
-        self.bouton = tk.Button(self.couleur, image = self.imgs[0], state = 'disabled', command = self.tk_couleur)
-        self.bouton.grid(row = 0, column = 1)
+        self.bouton = ttk.Button(self, image = self.img, command = self.tk_couleur)
+        self.bouton.grid(row = 0, column = 1, sticky = 'nsew')
+        self.entree.bind('<KeyRelease>', self.verifier)
         
     def tk_couleur(self):
-        couleur = tk_cc.askcolor()
+        couleur = tk_cc.askcolor(parent = self)
         if couleur[1] is not None:
             self.textvariable.set(couleur[1])
+            
+    def verifier(self, ev = None):
+        try: self.fenetre.winfo_rgb(self.textvariable.get())
+        except tk.TclError:
+            self.entree['bg'] = 'red'
+            return
+        self.entree['bg'] = 'white'
+        self.dernier_correct = self.textvariable.get()
+        return 
 
 class EditeurObjets:
     
     def __init__(self, fenetre, main, separe):
         self.fenetre = fenetre
+        self.separe = separe
         if separe:
             self.grande_frame = tk.Toplevel()
             self.frame = self.grande_frame
@@ -140,7 +153,7 @@ class EditeurObjets:
             self.grande_frame = tk.Frame(main.panedwindow, bg = '#ddd')
             main.panedwindow.insert('end', self.grande_frame)
             self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
-            self.frame.grid(row = 0, column = 0)
+            self.frame.grid(row = 0, column = 0, sticky = 'nsew')
             tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
         print(self.grande_frame.winfo_manager())
@@ -151,27 +164,29 @@ class EditeurObjets:
              0x78, 0x00, 0x5c, 0x00, 0x0e, 0x00, 0x07, 0x00, 0x03, 0x00 };'),
                      ImageTk.PhotoImage(file = f'{op.dirname(__file__)}\images\poubelle2.bmp'))
         self.main = main
-        self.tableau = Treeview(self.frame, columns = ('nom', 'type', 'fonction', 'args', 'couleur', 'vis'), selectmode = 'browse')
-        self.tableau.grid(row = 0, column = 0, columnspan = 4)
+        self.frame_t = ttk.Frame(self.frame)
+        self.frame_t.grid(row = 0, column = 0, columnspan = 4, sticky = 'nsew')
+        self.frame_t.columnconfigure(0, weight = 1)
+        self.tableau = Treeview(self.frame_t, columns = ('nom', 'type', 'fonction', 'args', 'couleur', 'vis'), selectmode = 'browse')
+        self.tableau.grid(row = 0, column = 0, sticky = 'nsew')
+        bar = ttk.Scrollbar(self.frame_t, orient = 'vertical', command = self.tableau.yview)
+        bar.grid(row = 0, column = 1, sticky = 'ns')
+        self.tableau['yscrollcommand'] = bar.set
         self.tableau.column('#0', width = 0, stretch = False)
         for i, t in (('nom', 'objet'), ('type', 'type'), ('fonction', 'définition'), ('args', 'dépend de'), ('couleur', 'couleur'), ('vis', 'affichage')):
             self.tableau.column(i, width=40)
             self.tableau.heading(i, text = t)
         self.nom_methodes = {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
-                        'cercle' : 'conique tangente à deux droites', 'segment':'segment', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion'}
+                        'cercle' : 'conique tangente à deux droites', 'segment':'segment', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion', 'inversion':'inversion'}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
         self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
-        self.couleur = tk.Frame(self.frame)
-        self.couleur_choix = tk.Entry(self.couleur, width = 8, state = 'disabled', textvariable = self.var2)
-        self.bouton_col = tk.Button(self.couleur, image = self.imgs[0], state = 'disabled', command = self.tk_couleur)
+        self.couleur = ColorChooser(self.frame, self.fenetre, self.var2)
         self.aff = tk.Checkbutton(self.frame, bg = '#ddd', state = 'disabled', variable = self.var3, text = 'affichage')
         self.suppr = tk.Button(self.frame, bg = '#ddd', state = 'disabled', image = self.imgs[1], command = None)
         self.label = tk.Label(self.frame, text = 'Selectionnez un objet\npour modifier ses proprietes', bg = '#ddd')
         self.entree.grid(row = 1, column = 0)
         self.couleur.grid(row = 1, column = 1, padx = 4)
-        self.couleur_choix.grid(row = 0, column = 0)
-        self.bouton_col.grid(row = 0, column = 1)
         self.aff.grid(row = 1, column = 2)
         self.suppr.grid(row = 1, column = 3)
         self.label.grid(row = 2, column = 0, columnspan = 4)
@@ -180,10 +195,9 @@ class EditeurObjets:
         self.maj()
 
     def supprimer_element(self, i, b = 0):
-        nom = i.nom
+        ide = i.ide
         for item in self.tableau.get_children():
-            ligne = self.tableau.item(item)['values']
-            if ligne and ligne[0] == nom:
+            if item and item == str(ide):
                 self.tableau.delete(item)
         if self.selectionne == i:
             self.deselectionner()
@@ -193,7 +207,7 @@ class EditeurObjets:
         self.var1.set('')
         self.var2.set('')
         self.var3.set(0)
-        for widget in (self.entree, self.couleur_choix, self.bouton_col,
+        for widget in (self.entree, self.couleur.bouton, self.couleur.entree,
                        self.aff, self.suppr):
             widget['state'] = 'disabled'
         self.selectionne = None
@@ -205,30 +219,32 @@ class EditeurObjets:
 
     def fermer_fenetre(self):
         self.main.editeur_objets = None
-        self.grande_frame.destroy()
+        if self.separe:self.grande_frame.destroy()
+        else:main.panedwindow.forget(self.grande_frame)
 
     def ajouter(self, obj):
+        print(35)
         if obj.u:
-            self.tableau.insert('', 'end', values = [obj.nom, obj.classe, self.nom_methodes[obj.method], list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]])
+            l = [obj.nom, obj.classe, self.nom_methodes[obj.method], list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]]
+            self.objets[obj.ide] = l
+            print('On ajoute au treeview')
+            self.tableau.insert('', 'end', iid = str(obj.ide), values = l)
 
     def maj(self):
         for item in self.tableau.get_children():
             self.tableau.delete(item)
-        self.ides = {}
-        self.objets = []
+        self.objets = {}
         for objet in self.main.plans[0].objets.values():
             if objet.u:
-                self.ides[objet.nom] = objet.ide
-                self.objets.append((objet.nom, objet.classe, self.nom_methodes[objet.method],
-                                    objet.args, objet.color, ('non', 'oui')[objet.vis]))
-        for l in self.objets:
-            self.tableau.insert('', 'end', values = l)
+                self.objets[objet.ide] = (objet.nom, objet.classe, self.nom_methodes[objet.method],
+                                    objet.args, objet.color, ('non', 'oui')[objet.vis])
+        for ide, l in self.objets.items():
+            self.tableau.insert('', 'end', iid = str(ide),values = l)
         self.deselectionner()
 
     def clic_entree(self, event):
-        self.main.plans[0].action_utilisateur(f'proprietes{self.selectionne}')
         if self.selectionne is None: return
-        nom, couleur, aff = self.var1.get(), self.var2.get(), self.var3.get()
+        nom, couleur, aff = self.var1.get(), self.couleur.dernier_correct, self.var3.get()
         if nom in ('U', 'V'):
             self.label['text'] = 'Nom déjà utilisé\n'
             return
@@ -237,34 +253,29 @@ class EditeurObjets:
             self.label['text'] = 'Couleur invalide\n'
             return
         self.label['text'] = '\n'
-        anc_nom = self.selectionne.nom
+        ide = self.selectionne.ide
         self.main.action('Modif', self.selectionne.plan, self.selectionne, nom = nom, col = couleur, vis = aff)
         for item in self.tableau.get_children():
-            ligne = self.tableau.item(item)['values']
-            if ligne and ligne[0] == anc_nom:
-                ligne[0] = nom
-                ligne[4] = couleur
-                ligne[5] = ['non', 'oui'][aff]
-                self.tableau.item(item, values = ligne)
+            val = self.tableau.item(item)['values']
+            if item and item == str(ide):
+                val[0] = nom
+                val[4] = couleur
+                val[5] = ['non', 'oui'][aff]
+                self.tableau.item(item, values = val)
 
     def clic_ligne(self, event):
         if self.tableau.selection() == tuple(): return
-        ligne = self.tableau.item(self.tableau.selection()[0])['values']
+        ide = int(self.tableau.selection()[0])
         self.ligne_select = self.tableau.selection()[0]
-        ide = self.ides[ligne[0]]
+        ligne = self.tableau.item(str(ide))['values']
         self.selectionne = self.main.plans[0].objets[ide]
-        for widget in (self.entree, self.couleur_choix, self.bouton_col,
+        for widget in (self.entree, self.couleur.bouton, self.couleur.entree,
                        self.aff, self.suppr):
             widget['state'] = 'normal'
         self.suppr['command'] = lambda: self.supprimer_element(self.selectionne, b = 1)
         self.var1.set(ligne[0])
         self.var2.set(ligne[4])
         self.var3.set(['non', 'oui'].index(ligne[5]))
-        
-    def tk_couleur(self):
-        couleur = tk_cc.askcolor()
-        if couleur[1] is not None:
-            self.var2.set(couleur[1])
 
 
 class EtudieurObjets:
@@ -437,7 +448,7 @@ class Parametres:
                 w = tk.Entry(self.frame, textvariable = v)
             if e[0] == 'couleur':
                 v = tk.StringVar()
-                w = ColorChooser(self.frame, textvariable = v)
+                w = ColorChooser(self.frame, self.fenetre, textvariable = v)
             w.grid(row = i+1, column = 0, sticky = 'nsew')
             self.valeurs.append(v)
             self.widgets.append(w)
@@ -449,7 +460,7 @@ class Parametres:
         tk.Button(f, text = 'Reinitialiser', command = lambda: self.assigner_valeurs([e[3] for e in self.p])).grid(row = 0, column = 0, sticky = 'nsew')
         tk.Button(f, text = '   Annuler   ', command = self.fermer_fenetre).grid(row = 0, column = 1, sticky = 'nsew')
         tk.Button(f, text = '     OK     ', command = self.changer_param).grid(row = 0, column = 2, sticky = 'nsew')
-        self.assigner_valeurs([e[2] for e in self.p])
+        self.assigner_valeurs([params[e[2]] for e in self.p[:-1]]+[plan.nom])
             
     def fermer_fenetre(self):
         self.main.parametres = None
@@ -459,16 +470,18 @@ class Parametres:
         pass
     
     def assigner_valeurs(self, liste):
-        for v, w in zip(self.p, self.valeurs):
-            w.set(v[2])
+        for v, w in zip(liste, self.valeurs):
+            w.set(v)
     
     def changer_param(self):
         l = [w.get() for w in self.valeurs]
+        for i, e in enumerate(self.p[:-1]):
+            params[e[2]] = l[i]
         plan = self.main.plans[0]
+        self.main.menub.configure(text = f'{l[3]}')
         plan.boldP, plan.boldC, plan.nom = l[0], l[1], l[3]
         self.style.theme_use(l[2])
         self.fermer_fenetre()
-        self.main.menub.configure(text = f'{l[3]}')
         self.classeTrad.set_lang(l[4])
         self.main.langue = l[4]
         
