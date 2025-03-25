@@ -959,7 +959,7 @@ def inter(A, B):
 def angle(A, B, C, U, V):
     '''Calcule l'angle entre (AB) et (BC)'''
     a = birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
-    b = atan2(a.imag, a.real)*180 / (2*pi)%(360)
+    b = (atan2(a.imag, a.real)*180/(2*pi))%360
     return b
 
 def bissectrice(a, b, c):
