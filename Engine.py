@@ -107,8 +107,9 @@ def xrint(*args):
 plan_default = 0
 
 def dist(a, b):
-    return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
-
+    if a[0].imag==a[1].imag== b[0].imag==b[1].imag ==0:
+        return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+    return float("inf")
 '''def scale_m(k, m1):
     for i in range(len(m1[0])):
         m1[0][1] *= k
@@ -642,7 +643,6 @@ class Arbre:
         for i in self.parents:
             i.arbre.descendants.remove(self)
 
-
 ################################################################################
 ###                        classe Créature                                   ###
 ################################################################################   
@@ -650,7 +650,7 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = "black", vis = 1, u = 0, complexe = False, ide = None):
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = "red", vis = 1, u = 0, complexe = False, ide = None):
         self.plan = plan
         if args is None: args = []
         if nom in (0, 1):
@@ -699,13 +699,12 @@ class Creature:
             pass
         self.dessin()
         xrint(self.coord)
-        try:
+        if classe in {'Droite', 'Courbe'}:
             self.copain = {i for i in args if i.classe =="Point"}
-        except:
-            self.copain = {}
+        else:
+            self.copain =set()
         print(self.copain)
-        print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')
-        
+        print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')        
 
     def __str__(self):
         return f'Creature classe : {self.classe}|{self.classe_actuelle} nom : {self.nom}'
@@ -771,7 +770,12 @@ class Creature:
             self.deg_actu = deg
             args = [i[1] for i in args]
             self.args_actu = args
-            if self.classe_actuelle == 'Courbe':
+            if self.classe == "Point" and method =="inter2":
+                print("vuieizeiaj")
+                args+= [self.args[0].copain, self.args[1].copain]
+                print(args)
+                self.coord= inter2(*args)
+            elif self.classe_actuelle == 'Courbe':
                 self.coord = globals()[method](deg, *args)
             elif self.classe_actuelle == 'Droite' and method == 'inter':
                 self.coord = inter(*args)
@@ -958,7 +962,6 @@ class Creature:
 ###                        Méthodes de calcul                                ###
 ################################################################################        
 
-
 def rien(c): return c
 
 def lignes(liste):
@@ -1005,7 +1008,7 @@ def harmonique(A, B, C):
     x,y,z = norm(projective(C, liste, liste2))
     return projective((1/x, 0, 1), liste2, liste)
     
-def inter2(courbe1, courbe2, numero, z = 1):
+def inter2(courbe1, courbe2, numero, copains1=set(), copains2=set(), z = 1):
     coooords = (0,0,0)
     rooot = []
     droite = None
@@ -1058,8 +1061,17 @@ def inter2(courbe1, courbe2, numero, z = 1):
         P = courbe(droite)
         for y in P.resoudre()[0]:
             rooot.append((droite(y), y, 1))
+    print(rooot)
+    root2 = list(copains1 & copains2)
+    print(root2)
+    for i in copains1 & copains2:
+        if i.coords()[0].imag==i.coords()[1].imag==0:
+            if rooot != []:
+                rooot.remove(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))
+    print(rooot)
+    print("the end")
     if numero == -1:
-        return rooot
+        return rooot+root2
     if numero < len(rooot):
         return rooot[numero]
     return (0, 0, 0)
