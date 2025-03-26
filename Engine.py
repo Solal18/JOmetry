@@ -702,7 +702,11 @@ class Creature:
         if classe in {'Droite', 'Courbe'}:
             self.copain = {i for i in args if i.classe =="Point"}
         else:
-            self.copain =set()
+            self.copain=set()
+            if self.method in {"inter", "inter2"}:
+                for i in self.args:
+                    if isinstance(i,Creature):
+                        i.copain.add(self)
         print(self.copain)
         print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')        
 
