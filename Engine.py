@@ -181,6 +181,18 @@ def homotheter(args, p, rapport):
             nouv_args.append(i)
     return nouv_args
 
+def circonscrit(a,b,c):
+    return inter(media(a,b), media(b,c))
+
+def orthocentre(a,b,c):
+    return inter(perp(inter(b,c),a), perp(inter(a,c),b))
+
+def inscrit(a,b,c):
+    return centreInscrit(a,b,c)
+
+def gravite(a,b,c):
+    return inter(inter(a, milieu(b,c)), inter(b, milieu(a,c)))
+    
 def rotation(p, c, theta):
     a, b, c = c
     k = [[cos(theta), sin(theta), 0], [sin(-theta), cos(-theta), 0], [0, 0, 1]]
