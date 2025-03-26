@@ -81,13 +81,14 @@ class Main:
         self.liste_derniers_clics = []
         self.plans = [None]
         self.delai_tooltip = 300
-        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
+        self.onglets = ['Ctrl', 'Classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Centres', 'Frames']
         self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
                          ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre', 'angle'],
                          ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre', 'angle'], #Il faudra mettre angle dans une autre categorie
                          ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangente_p', 'tangentes_communes'],
                          ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
                          ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
+                         ['circonscrit', 'inscrit', 'orthocentre', 'gravite'],
                          ['editeur_objets', 'etude', 'poubelle', 'connect', 'serveur', 'aide'],
                          ]
         self.creer_canvas()
@@ -231,6 +232,10 @@ class Main:
                         'projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
                         'polyregul' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
                         'connect' : (self.connect, 0),
+                        'circonscrit' : (self.circonscrit, 1, ('point', 'point', 'point')),
+                        'inscrit' : (self.inscrit, 1, ('point', 'point', 'point')),
+                        'gravite' : (self.gravite, 1, ('point', 'point', 'point')),
+                        'orthocentre' : (self.orthocentre, 1, ('point', 'point', 'point')),
                         }
         
     def act_ctrly(self):
@@ -472,6 +477,22 @@ class Main:
         for i in range(nombre - 2):
             p1, p2 = self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'rotation', args = (p2, p1, (nombre-2)/nombre*pi), u = 1), p1
 
+    def circonscrit(self):
+        a,b,c = self.liste_derniers_clics
+        self.action('Creature', self.plans[0], 'Point', nom = 'O', method = 'circonscrit', args = (a,b,c), u = 1)
+
+    def inscrit(self):
+        a,b,c = self.liste_derniers_clics
+        self.action('Creature', self.plans[0], 'Point', nom = 'I', method = 'inscrit', args = (a,b,c), u = 1)
+
+    def orthocentre(self):
+        a,b,c = self.liste_derniers_clics
+        self.action('Creature', self.plans[0], 'Point', nom = 'H', method = 'orthocentre', args = (a,b,c), u = 1)
+
+    def gravite(self):
+        a,b,c = self.liste_derniers_clics
+        self.action('Creature', self.plans[0], 'Point', nom = 'G', method = 'gravite', args = (a,b,c), u = 1)
+        
     def invers(self):
         obj, centre, rayon = self.liste_derniers_clics
         if obj.classe == 'Point':
