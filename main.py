@@ -526,6 +526,13 @@ class Main:
             
     def point(self):
         x, y = self.liste_derniers_clics[0]
+        if x=='s':
+            if y=='s':
+                return      
+            pos, obj = y   
+            if obj.classe == 'Droite':
+                return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'ProjOrtho', args = [obj, (pos[0], pos[1], 1)], u = 1)
+            return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, pos], u = 1)
         return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'coord', args = [(x, y, 1)], u = 1)
 
 
@@ -691,7 +698,15 @@ class Main:
         x, y = self.coord_canvas(evenement.x, evenement.y)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
-            self.liste_derniers_clics.append((x, y))
+            objet = self.canvas.find_closest(evenement.x, evenement.y)[0]
+            point=(x,y)
+            if dist((x,y), (self.canvas.coords(objet)[0], self.canvas.coords(objet)[1]))<20 * self.plans[0].offset_x[0]:
+                a=self.plans[0].tkinter_object[objet]
+                if a.classe == "Point":
+                    point=("s","s")
+                if a.classe=="Courbe" or a.classe=="Droite":
+                    point=("s", ((x,y), a))
+            self.liste_derniers_clics.append(point)
         if attendu == 'point':    
             distances = []
             for i, p in enumerate(self.plans[0].points.values()):
@@ -763,7 +778,6 @@ class Main:
                 self.canvas.itemconfigure(objet.tkinter[0], fill = objet.color)
                 self.canvas.itemconfigure(objet.tkinter[1], text = objet.nom)
         self.point_move = None
-        
                 
     def decaler(self, mouvement):
         if self.dernier_bouton != 'courbe':
