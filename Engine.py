@@ -964,9 +964,6 @@ def angle(A, B, C, U, V):
 
 def bissectrice(a, b, c):
     return inter(b, centreInscrit(a, b, c))
-
-def symetrie(A, B):
-    return symetrer(A, B)
     
 def birapport(A, B, C, D):
     return determinant([[0,0,1], list(A), list(C)])*determinant([[0,0,1], list(B), list(D)])/(determinant([[0,0,1], list(A), list(D)])*determinant([[0,0,1], list(B), list(C)]))
