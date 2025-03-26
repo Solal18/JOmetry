@@ -88,7 +88,7 @@ class Main:
                          ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangente_p', 'tangentes_communes'],
                          ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
                          ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
-                         ['circonscrit', 'inscrit', 'orthocentre', 'gravite'],
+                         ['circonscrit', 'inscrit', 'orthocentre', 'gravite', 'fermat'],
                          ['editeur_objets', 'etude', 'poubelle', 'connect', 'serveur', 'aide'],
                          ]
         self.creer_canvas()
@@ -236,6 +236,7 @@ class Main:
                         'inscrit' : (self.inscrit, 1, ('point', 'point', 'point')),
                         'gravite' : (self.gravite, 1, ('point', 'point', 'point')),
                         'orthocentre' : (self.orthocentre, 1, ('point', 'point', 'point')),
+                        'fermat' : (self.fermat, 1, ('point', 'point', 'point')),
                         }
         
     def act_ctrly(self):
@@ -492,7 +493,11 @@ class Main:
     def gravite(self):
         a,b,c = self.liste_derniers_clics
         self.action('Creature', self.plans[0], 'Point', nom = 'G', method = 'gravite', args = (a,b,c), u = 1)
-        
+
+    def fermat(self):
+        a,b,c = self.liste_derniers_clics
+        self.action('Creature', self.plans[0], 'Point', nom = 'F', method = 'fermat', args = (a,b,c), u = 1)
+
     def invers(self):
         obj, centre, rayon = self.liste_derniers_clics
         if obj.classe == 'Point':
