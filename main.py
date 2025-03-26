@@ -85,7 +85,7 @@ class Main:
         self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
                          ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre', 'angle'],
                          ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre', 'angle'], #Il faudra mettre angle dans une autre categorie
-                         ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangentes_communes'],
+                         ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangente_p', 'tangentes_communes'],
                          ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
                          ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
                          ['editeur_objets', 'etude', 'poubelle', 'connect', 'serveur', 'aide'],
@@ -212,6 +212,7 @@ class Main:
                         'cercle_ex' : (self.cercle_ex, 1, ('point', 'point', 'point')),
                         'bissec' : (self.bissec, 1, ('point', 'point', 'point')),
                         'tangente' : (self.tangente, 1, ('courbe', 'point')),
+                        'tangente_p' : (self.tangente_p, 1, ('courbe', 'point')),
                         'tangentes_communes' : (self.tangentes_communes, 1, ('courbe', 'courbe')),
                         'nouv_plan' : (self.nouv_plan, 0),
                         'suppr_plan' : (self.suppr_plan, 0),
@@ -518,6 +519,11 @@ class Main:
         C, p = self.liste_derniers_clics
         return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'tangente', args = (C, p), u = 1)
         
+    def tangente_p(self):
+        C, p = self.liste_derniers_clics
+        for i in range(C.deg):
+            self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'tangente2', args = (C, p,i), u = 1)
+
     def cercle_cent(self):
         centre, point =  self.liste_derniers_clics[0], self.liste_derniers_clics[1]
         U, V = self.plans[0].U, self.plans[0].V
