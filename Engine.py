@@ -193,6 +193,17 @@ def inscrit(a,b,c):
 def gravite(a,b,c):
     return inter(inter(a, milieu(b,c)), inter(b, milieu(a,c)))
     
+def fermat(a,b,c):
+    A=inter(inter(a, rotation(b,c, pi/3)), inter(b, rotation(c,a, pi/3)))
+    B=inter(inter(a, rotation(b,c, -pi/3)), inter(b, rotation(c,a, -pi/3)))
+    x1,y1,z1 = inter(b,c)
+    x2,y2,z2=inter(c,a)
+    x3,y3,z3=inter(a,b)
+    if (A[0]*x1+A[1]*y1+A[2]*z1)*(a[0]*x1+a[1]*y1+a[2]*z1)<=  0 and (A[0]*x2+A[1]*y2+A[2]*z2)*(b[0]*x2+b[1]*y2+b[2]*z2)<=0 and (A[0]*x3+A[1]*y3+A[2]*z3)*(c[0]*x3+c[1]*y3+c[2]*z3)<= 0:
+        print("ui")
+        return A
+    return B
+
 def rotation(p, c, theta):
     a, b, c = c
     k = [[cos(theta), sin(theta), 0], [sin(-theta), cos(-theta), 0], [0, 0, 1]]
@@ -688,6 +699,11 @@ class Creature:
             pass
         self.dessin()
         xrint(self.coord)
+        try:
+            self.copain = {i for i in args if i.classe =="Point"}
+        except:
+            self.copain = {}
+        print(self.copain)
         print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')
         
 
@@ -974,7 +990,8 @@ def inter(A, B):
 def angle(A, B, C, U, V):
     '''Calcule l'angle entre (AB) et (BC)'''
     a = birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
-    return (atan2(a.imag, a.real)*180/(2*pi))%360
+    print("angleee")
+    return (atan2(a.imag, a.real)*180/(2*pi))%180
 
 def bissectrice(a, b, c):
     return inter(b, centreInscrit(a, b, c))
