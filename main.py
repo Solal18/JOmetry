@@ -599,7 +599,6 @@ class Main:
         fen = AideFenetre(fenetre, doc)
     
     def moins(self):
-        self.plans[0].contre_action(self.plus, [])
         f = 3/4
         a, b = self.canvas.winfo_width()/2, self.canvas.winfo_height()/2
         self.plans[0].offset_x = [self.plans[0].offset_x[0] * f,
@@ -610,7 +609,6 @@ class Main:
         self.plans[0].modifs = (True, True)
 
     def plus(self):
-        self.plans[0].contre_action(self.moins, [])
         f = 4/3
         a, b = self.canvas.winfo_width()/2, self.canvas.winfo_height()/2
         self.plans[0].offset_x = [self.plans[0].offset_x[0] * f,
@@ -737,7 +735,6 @@ class Main:
                 
     def decaler(self, mouvement):
         if self.dernier_bouton != 'courbe':
-            self.plans[0].contre_action(self.decaler, ((-mouvement[0], -mouvement[1]),))
             a,b = [i*20 for i in mouvement]
             self.plans[0].offset_x = [self.plans[0].offset_x[0],
                                     (self.plans[0].offset_x[1] + a)]
