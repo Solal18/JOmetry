@@ -650,7 +650,7 @@ class Arbre:
     
 class Creature:
 
-    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = None, vis = 1, u = 0, complexe = False, ide = None):
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = "black", vis = 1, u = 0, complexe = False, ide = None):
         self.plan = plan
         if args is None: args = []
         if nom in (0, 1):
