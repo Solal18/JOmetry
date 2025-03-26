@@ -1393,7 +1393,7 @@ class Plan:
     def nouveau_nom(self, u = 1, classe = 'Point'):
         lettre, chiffre = 0, 0
         nom = 'A'
-        dep = {'Point':65, 'Droite':97, 'Courbe':65, 'Angle':945}[classe]
+        dep = {'Point':65, 'Droite':97, 'Courbe':97, 'Angle':945}[classe]
         while nom in self.noms:
             lettre += 1
             chiffre += lettre//26
