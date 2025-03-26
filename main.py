@@ -733,8 +733,9 @@ class Main:
                     self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
                     self.canvas.tag_raise(point.tkinter[0], self.canvas.find_all()[-1])
                     self.canvas.tag_raise(point.tkinter[1], self.canvas.find_all()[-1])
-            self.liste_derniers_clics.append(point)
-            if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1}:
+            if point not in self.liste_derniers_clics or self.dernier_bouton == "courbe":
+                self.liste_derniers_clics.append(point)
+            if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1} and self.dernier_bouton=="courbe":
                 self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
         if attendu in ['droite', 'courbe'] and self.plans[0].tkinter_object != {}:
             objet = self.canvas.find_closest(evenement.x, evenement.y,
