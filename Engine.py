@@ -204,6 +204,9 @@ def symetrie(A,B):
 
 def symetrer(args, B):
     nouv_args =[]
+    print("symettre")
+    print("symetreeer")
+    print(args)
     if type(B) is not tuple:
         B = B.coords()
     a,b, c = B
@@ -959,8 +962,7 @@ def inter(A, B):
 def angle(A, B, C, U, V):
     '''Calcule l'angle entre (AB) et (BC)'''
     a = birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
-    b = (atan2(a.imag, a.real)*180/(2*pi))%360
-    return b
+    return (atan2(a.imag, a.real)*180/(2*pi))%360
 
 def bissectrice(a, b, c):
     return inter(b, centreInscrit(a, b, c))
@@ -973,7 +975,7 @@ def harmonique(A, B, C):
     liste2 =[(-1, 0, 1), (1, 0,1), (14,11,1), (3,4,1)]
     x,y,z = norm(projective(C, liste, liste2))
     return projective((1/x, 0, 1), liste2, liste)
-
+    
 def inter2(courbe1, courbe2, numero, z = 1):
     coooords = (0,0,0)
     rooot = []
@@ -1077,11 +1079,6 @@ def media(A, B):
     return perp(d, p)
 
 def tangente(C, p):
-    '''C -> CA
-    a -> complexe
-    b -> complexe
-    Construit la tangente à C en le point (a,b)
-    '''
     if isinstance(C, (tuple, list)):
         return C
     a, b,c = p
@@ -1093,6 +1090,15 @@ def tangente(C, p):
     coef3 = polynomez.derivee()(c)(a)(b)
     coords_droite = (coef1, coef2, -coef1*a -coef2*b+coef3*(1-c))
     return coords_droite
+
+def tangente2(C, p, numero):
+    if isinstance(C, (tuple, list)):
+        return C
+    a, b,c = p
+    coef1 = C.derivee().change_variables32()(1)
+    coef2 = C.change_variables().derivee().change_variables().change_variables32()(1)
+    Solal = coef1*a+coef2*b+((-1)*coef1*Polynome((0,1))+(-1)*(coef2.change_variables()*Polynome((0,1))).change_variables())*c
+    return tangente(C, inter2(Solal, C,numero))
 
 def interpol(deg, *args):#INTERpolation
     xrint('Début interpolation')
