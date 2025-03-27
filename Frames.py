@@ -7,6 +7,70 @@ import os.path as op
 import weakref
 from threading import Thread
 from serveur import Serveur
+from random import randrange
+from numpy import float64
+import re
+import Engine as Geo
+        
+def polonaise_inverse(formule, dictionnaire):
+    ordre = {'+':1, '-':1, '*':2, '/':2, 'd':3, 'angle':3}
+    
+    def mettre_operateur(operateurs, sortie):
+        op = operateurs.pop()
+        if op == 'd' or op == 'angle':
+            num_args = 2 if op == 'd' else 3
+            args = [sortie.pop() for _ in range(num_args)][::-1]
+            sortie.extend(args + [op])
+        else:
+            droite, gauche = sortie.pop(), sortie.pop()
+            sortie.append(gauche)
+            sortie.append(droite)
+            sortie.append(op)
+
+    formule = re.sub(r'\s+', '', formule)
+    elems = re.findall(r'd\([^)]*\)|angle\([^)]*\)|[A-Za-z_][A-Za-z_0-9]*|\d+\.?\d*|[+\-*/()]', formule)
+    sortie = []
+    operateurs = []
+
+    for elem in elems:
+        if elem in dictionnaire:
+            sortie.append(dictionnaire[elem])
+        elif re.match(r'\d+\.?\d*', elem):
+            sortie.append(float(elem))
+        elif elem in {'+', '-', '*', '/'}:
+            while (operateurs and operateurs[-1] != '(' and
+                   ordre[operateurs[-1]] >= ordre[elem]):
+                mettre_operateur(operateurs, sortie)
+            operateurs.append(elem)
+        elif elem == '(':
+            operateurs.append(elem)
+        elif elem == ')':
+            while operateurs and operateurs[-1] != '(':
+                mettre_operateur(operateurs, sortie)
+            if not operateurs or operateurs[-1] != '(':
+                raise ValueError("Parenthèse incorrecte.")
+            operateurs.pop()
+        elif elem.startswith('d(') or elem.startswith('angle('):
+            deb = elem.find('(') + 1
+            fin = elem.rfind(')')
+            if fin == -1:
+                raise ValueError("Parenthèse incorrecte.")
+            args = elem[deb:fin].split(',')
+            if (elem.startswith('d(') and len(args) != 2) or (elem.startswith('angle(') and len(args) != 3):
+                raise ValueError("Nombre d'arguments incorrect.")
+            for arg in args:
+                if arg not in dictionnaire:
+                    raise ValueError(f"Clé inconnue : {arg}")
+                sortie.append(dictionnaire[arg])
+            operateurs.append('d' if elem.startswith('d(') else 'angle')
+        else:
+            raise ValueError(f"Objet non reconnu : {elem}")
+
+    while operateurs:
+        mettre_operateur(operateurs, sortie)
+
+    return sortie
+
 
 def traduction():
     f = open(f'{op.dirname(__file__)}\\traduction.txt', encoding = 'utf-8')
@@ -87,7 +151,10 @@ class Trad(tk.StringVar):
     def langue(self, lang):
         self._lang = lang
         if self.noteb is not None:
-            self.noteb[0].tab(self.noteb[1], text = trad(lang, self.mot))
+            if isinstance(self.noteb[0], ttk.Notebook):
+                self.noteb[0].tab(self.noteb[1], text = trad(lang, self.mot))
+            elif isinstance(self.noteb[0], ttk.Treeview):
+                self.noteb[0].heading(self.noteb[1], text = trad(lang, self.mot))
         else:
             self.set(trad(lang, self.mot))
     
@@ -241,12 +308,15 @@ class EditeurObjets:
             self.frame = self.grande_frame
             self.grande_frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
         else:
-            self.grande_frame = tk.Frame(main.panedwindow, bg = '#ddd')
+            self.grande_frame = ttk.Frame(main.panedwindow)
             main.panedwindow.insert('end', self.grande_frame)
-            self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
+            self.frame = ttk.Frame(self.grande_frame)
+            self.grande_frame.columnconfigure(0, weight = 1)
             self.frame.grid(row = 0, column = 0, sticky = 'nsew')
             tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
+        for i in range(3):
+            self.frame.columnconfigure(i, weight = 1)
         self.imgs = (tk.BitmapImage(data = \
           '#define colorpicker_width 10\n\#define colorpicker_height 10\n\
            static unsigned char colorpicker_bits[] = {\
@@ -263,9 +333,10 @@ class EditeurObjets:
         bar.grid(row = 0, column = 1, sticky = 'ns')
         self.tableau['yscrollcommand'] = bar.set
         self.tableau.column('#0', width = 0, stretch = False)
-        for i, t in (('nom', Trad('objet')), ('type', Trad('type')), ('fonction', Trad('définition')), ('args', Trad('dépend de')), ('couleur', Trad('couleur')), ('vis', Trad('affichage'))):
-            self.tableau.column(i, width=40)
-            self.tableau.heading(i, textvariable = t)
+        for i, t in (('nom', 'objet'), ('type', 'type'), ('fonction', 'définition'), ('args', 'dépend de'), ('couleur', 'couleur'), ('vis', 'affichage')):
+            self.tableau.column(i, width = 40)
+            self.tableau.heading(i, text = t)
+            Trad(t, params['Langue'], (self.tableau, i))
         self.nom_methodes = {c:Trad(v) for c, v in {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
                         'cercle' : 'conique tangente à deux droites', 'segment':'segment', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion', 'inversion':'inversion'}.items()}
@@ -274,11 +345,11 @@ class EditeurObjets:
         self.couleur = ColorChooser(self.frame, self.fenetre, self.var2)
         self.aff = tk.Checkbutton(self.frame, bg = '#ddd', state = 'disabled', variable = self.var3, textvariable = Trad('affichage'))
         self.suppr = tk.Button(self.frame, bg = '#ddd', state = 'disabled', image = self.imgs[1], command = None)
-        self.label = tk.Label(self.frame, text = Trad('Selectionnez un objet\npour modifier ses proprietes'), bg = '#ddd')
-        self.entree.grid(row = 1, column = 0)
-        self.couleur.grid(row = 1, column = 1, padx = 4)
-        self.aff.grid(row = 1, column = 2)
-        self.suppr.grid(row = 1, column = 3)
+        self.label = tk.Label(self.frame, textvariable = Trad('Selectionnez un objet\npour modifier ses proprietes'), bg = '#ddd')
+        self.entree.grid(row = 1, column = 0, sticky = 'nsew')
+        self.couleur.grid(row = 1, column = 1, padx = 4, sticky = 'nsew')
+        self.aff.grid(row = 1, column = 2, sticky = 'nsew')
+        self.suppr.grid(row = 1, column = 3, sticky = 'nsew')
         self.label.grid(row = 2, column = 0, columnspan = 4)
         self.tableau.bind("<<TreeviewSelect>>", self.clic_ligne)
         self.frame.bind('<Return>', self.clic_entree)
@@ -365,6 +436,50 @@ class EditeurObjets:
         self.var2.set(ligne[4])
         self.var3.set(['non', 'oui'].index(ligne[5]))
 
+def dist_point(a, b):
+    a, b = a.coords(), b.coords()
+    d,e,f, g,h,i = *a, *b
+    if f*i == 0:
+        p.append(float('inf'))
+    else:
+        d,e, g,h = d/f,e/f, g/i,h/i
+        p.append(Geo.dist((d,e), (g,h)))
+    
+
+def calcul(pile, U, V):
+    p = []
+    for i in pile:
+        if i not in ('+', '-', '*', '/', 'd', 'angle'):
+            p.append(i)
+        elif i == '+':
+            a, b = p.pop(), p.pop()
+            p.append(a+b)
+        elif i == '*':
+            a, b = p.pop(), p.pop()
+            p.append(a*b)
+        elif i == '/':
+            a, b = p.pop(), p.pop()
+            p.append(b/a)
+        elif i == '-':
+            a, b = p.pop(), p.pop()
+            p.append(b-a)
+        elif i == 'angle':
+            a, b, c = [p.pop().coords() for _ in range(3)]
+            p.append(Geo.angle(a, b, c, U, V))
+        elif i == 'd':
+            a, b = p.pop(), p.pop()
+            if a.classe == 'Point':
+                p, o = a, b
+            else:
+                p, o = b, a
+            if o.classe == 'Point':
+                p.append(dist_point(p, o))
+            elif o.classe == 'Droite':
+                p.append(dist_point(p, Geo.ProjOrtho(o, p)))
+            elif o.classe == 'Courbe':
+                p.append(dist_point(p, Geo.PsurCA(o, p)))
+    return p[0]
+        
 
 class EtudieurObjets:
     
@@ -402,13 +517,10 @@ class EtudieurObjets:
                 
         
     def etude(self):
-        from numpy import float64
-        from random import randrange
-        import Engine as Geo
-        formule = self.valeur.get()
+        formule = self.valeur.get().strip(' ')
+        bouge = [self.main.plans[0].points[self.liste.get(0, 'end')[nombre]] for nombre in self.liste.curselection()]
         if formule in self.main.plans[0].points:
             point = self.main.plans[0].points[formule]
-            bouge = [self.main.plans[0].points[self.liste.get(0, 'end')[nombre]] for nombre in self.liste.curselection()]
             positions = [point.args for p in bouge]
             l = []
             for i in range(20):
@@ -430,12 +542,23 @@ class EtudieurObjets:
                 if bon:
                     break
                 n += 1
-            self.main.plans[0].newCA(1, l[:deg])
+            self.main.action('Creature', self.main.plans[0], 'Courbe', nom = 1, method = 'interpol', args = l[:deg], u = 1)
             for p, pos in zip(bouge, positions):
                 if isinstance(pos[0], Geo.Creature):
                     pos = pos[1]
                 p.plan.move(p, pos)
+            return
+        if formule.count('=') != 1 or formule.count('(') != formule.count(')'): return
+        formule = formule .replace('=', '-')
+        dic = {}
+        for obj in self.main.plans[0].objets.values():
+            dic[obj.nom] = obj
+        pile = polonaise_inverse(formule, dic)
+        U, V = self.main.plans[0].U, self.main.plans[0].V
+        
+        
             
+        
         
     def supprimer(self):
         self.grande_frame.grid_forget()
@@ -575,7 +698,7 @@ class Parametres:
                 
 class Notes:
     
-    def __init__(self, fenetre, main, separe):
+    def __init__(self, fenetre, main, separe = 1):
         self.fenetre = fenetre
         if separe:
             self.grande_frame = tk.Toplevel()
@@ -588,6 +711,8 @@ class Notes:
             self.frame.grid(row = 0, column = 0)
             tk.Button(self.grande_frame, textvariable = Trad('fermer'), command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
+        self.texte = tk.Text(self.frame)
+        self.texte.grid(row = 0, column = 0, sticky = 'nsew')
     
     def fermer_fenetre(self):
         pass
