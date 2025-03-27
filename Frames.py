@@ -97,9 +97,12 @@ def traduction():
         dicos.append(dic)
     langue = langues[0]
     def trad(lang, mot):
+        if lang == 'Français': return mot
         if lang not in langues or mot not in dicos[0]:
+            print(f'{mot} non traduit en {lang}')
             return mot
         if dicos[0][mot] not in dicos[langues.index(lang)]:
+            print(f'{mot} non traduit en {lang}')
             return mot
         return dicos[langues.index(lang)][dicos[0][mot]]
     return langue, langues, trad
@@ -115,7 +118,7 @@ except Exception as e:
 params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', 'TempsTooltip':300}
 try:
     f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8')
-    charges = val(f.read())
+    charges = Geo.val(f.read())
     params = params|charges 
     f.close()
 except Exception as e:
@@ -686,13 +689,14 @@ class Parametres:
     def changer_param(self):
         l = [w.get() for w in self.valeurs]
         for i, e in enumerate(self.p[:-1]):
+            print(i, e, e[2], l[i])
             self.params[e[2]] = l[i]
         plan = self.main.plans[0]
         self.main.menub.configure(text = f'{l[3]}')
         plan.boldP, plan.boldC, plan.nom = l[0], l[1], l[3]
         self.style.theme_use(l[2])
         self.fermer_fenetre()
-        self.classeTrad.set_lang(l[4])
+        self.classeTrad.set_lang(self.params['Langue'])
         self.main.langue = l[4]
         
                 
