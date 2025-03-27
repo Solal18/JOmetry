@@ -700,11 +700,15 @@ class Main:
         if attendu == 'non':
             objet = self.canvas.find_closest(evenement.x, evenement.y)[0]
             point=(x,y)
-            if dist((x,y), (self.canvas.coords(objet)[0], self.canvas.coords(objet)[1]))<20 * self.plans[0].offset_x[0]:
+            a=self.plans[0].tkinter_object[objet]
+            if a.classe=="Droite":
+                if dist((x,y), norm(Geo.ProjOrtho(a.coords(), (x,y,1)))) < 20*self.plans[0].offset_x[0]:
+                    point=("s", ((x,y), a))
+            elif dist((x,y), (self.canvas.coords(objet)[0], self.canvas.coords(objet)[1]))<20 * self.plans[0].offset_x[0]:
                 a=self.plans[0].tkinter_object[objet]
                 if a.classe == "Point":
                     point=("s","s")
-                if a.classe=="Courbe" or a.classe=="Droite":
+                if a.classe=="Courbe":
                     point=("s", ((x,y), a))
             self.liste_derniers_clics.append(point)
         if attendu == 'point':    
