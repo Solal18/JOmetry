@@ -81,12 +81,13 @@ class Main:
         self.liste_derniers_clics = []
         self.plans = [None]
         self.delai_tooltip = 300
-        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
+        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Centres', 'Transformations', 'Frames']
         self.boutons2 = [['Enregistrer', 'Enregistrer sous', 'Ouvrir', 'Nouveau plan', 'Supprimer le plan', 'Parametres'],
                          ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe', 'Soumettre', 'Angle', 'Poubelle'],
                          ['Point', 'Point sur courbe', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
-                         ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangentes communes'],
+                         ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangente passant par un point', 'Tangentes communes'],
                          ['Courbe', 'Soumettre', 'Caa', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Tangente', 'Tangentes communes'],
+                         ['Centre du cercle circonscrit', 'Orthocentre', 'Centre de gravité', 'Centre du cercle inscrit', 'Point de fermat'],
                          ['Rotation', 'Homothetie', 'Translation', 'Symetrie', 'Inversion', 'Projective', 'Polygone regulier', 'Inversion du plan'],
                          ['Editeur d\'objets', 'Etude', 'Notes', 'Connection à un serveur', 'Lancer un Serveur', 'Aide'],
                          ]
@@ -210,10 +211,16 @@ class Main:
                         'Quatrième harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
                         'Inversion' : (self.invers, 1, ('objet', 'point', 'point')),
                         'Inversion du plan' : (self.inv_plan, 1, ('point', 'point')),
+                        'Centre du cercle circonscrit' : (self.circonscrit, 1, ('point', 'point', 'point')),
+                        'Orthocentre' : (self.orthocentre, 1, ('point', 'point', 'point')),
+                        'Centre de gravité' : (self.gravite, 1, ('point', 'point', 'point')),
+                        'Centre du cercle inscrit' : (self.inscrit, 1, ('point', 'point', 'point')),
                         'Cercle inscrit' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
                         'Cercle exinscrit' : (self.cercle_ex, 1, ('point', 'point', 'point')),
+                        'Point de fermat' : (self.fermat, 1, ('point', 'point', 'point')),
                         'Bissectrice' : (self.bissec, 1, ('point', 'point', 'point')),
                         'Tangente' : (self.tangente, 1, ('courbe', 'point')),
+                        'Tangente passant par un point' : (self.tangente_p, 1, ('courbe', 'point')),
                         'Tangentes communes' : (self.tangentes_communes, 1, ('courbe', 'courbe')),
                         'Nouveau plan' : (self.nouv_plan, 0),
                         'Supprimer le plan' : (self.suppr_plan, 0),
@@ -238,6 +245,10 @@ class Main:
         self.action('Redo', self.plans[0])
     def act_ctrlz(self):
         self.action('Undo', self.plans[0])
+    
+    def notes(self):
+        if self.notes is not None: return
+        self.notes = Notes(self)
     
     def liste_objet(self):
         liste, plan = [], self.plans[0]
