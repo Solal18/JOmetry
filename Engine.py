@@ -27,6 +27,8 @@ def txt(x):
         return '[' + ','.join(map(txt, x)) + ']'
     if isinstance(x, dict):
         return '{' + ','.join([f'{txt(a)}:{txt(x[a])}' for a in x]) + '}'
+    if x is None:
+        return '!R!'
     raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
 
 #à executer avant toute modification :
@@ -99,6 +101,7 @@ def val(x, objets = None):
                  return t.replace('!!','!')
             case 'B':
                 return bool(int(t))
+            case 'R': return None
     return ValueError
 
 def xrint(*args):
