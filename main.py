@@ -118,6 +118,7 @@ class Main:
         fenetre.columnconfigure(0, weight = 1)
         fenetre.rowconfigure(1, weight = 1)
         fenetre.title(f'JOmetry - {self.plans[0].nom}')
+        Trad.set_lang(params['Langue'])
         
         
         
