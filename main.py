@@ -141,7 +141,7 @@ class Main:
         self.Texte.grid(row = 1, column = 0)
         
         def bouton(f, nom):
-            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
+            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.png')
             bout = ttk.Button(f, image = image)
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
@@ -372,7 +372,7 @@ class Main:
         self.men.overrideredirect(True)
         self.men.geometry(f'+{x}+{y}')
         for i, nom in enumerate(liste):
-            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.jpg')
+            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.png')
             bout = ttk.Button(self.men, image = image)
             bout.config(command = lambda n = nom: self.echange(ind, n))
             self.image_boutons.append(image)
@@ -398,7 +398,7 @@ class Main:
         self.menu[ind].insert(0, nom)
         self.nom_boutons[ind] = nom
         self.boutons[ind].destroy()
-        image = image_tk(f'{op.dirname(__file__)}\\images\{nom}.jpg')
+        image = image_tk(f'{op.dirname(__file__)}\\images\{nom}.png')
         bout = ttk.Button(self.barre_haut, image = image)
         self.boutons[ind] = bout
         bout.config(command = (lambda n = nom, bout = bout: self.action_bouton(n, bout)))
@@ -675,7 +675,7 @@ class Main:
             courbe = self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', deg = '', args = [i for i in self.liste_derniers_clics], u = 1)
             self.deselectionner()
             courbe.dessin()
-            self.action_bouton('courbe', self.boutons[7])
+            self.action_bouton('Courbe', self.boutons[7])
         
     courbe = soumettre
         
