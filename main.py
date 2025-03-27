@@ -186,7 +186,6 @@ class Main:
 
     def creer_actions(self):
         self.actions = {'Point' : (self.point, 1, ('non',)),
-                        'Point sur courbe' : (self.surcourbe, 1, ('courbe', 'non')),
                         'Cercle circonscrit' : (self.cercle, 1, ('point', 'point', 'point')),
                         'Courbe' : (self.courbe, 1, ('point',)*90),
                         'Droite' : (self.droite, 1, ('point', 'point')),
@@ -448,12 +447,6 @@ class Main:
         A, B, C = self.liste_derniers_clics
         return self.action('Creature', self.plans[0], 'Angle', nom = 1, method = 'angle', args = [A, B, C, self.plans[0].U, self.plans[0].V], u = 1)
         
-    def surcourbe(self):
-        obj, pos = self.liste_derniers_clics
-        if obj.classe == 'Droite':
-            return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'ProjOrtho', args = [obj, (pos[0], pos[1], 1)], u = 1)
-        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, pos], u = 1)
-
     def harmonique(self):
         A,B,C = self.liste_derniers_clics
         return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'harmonique', args = (A, B, C), u = 1)
