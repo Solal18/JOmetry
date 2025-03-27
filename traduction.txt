@@ -4,6 +4,50 @@ Français
   "Courbes":2
   "Transformations":3
   "Choix d'une adresse":4
+  "Polygone regulier":5
+  "Notes":6
+  "Aide":7
+  "Zoom":8
+  "Dézoom":9
+  "Inversion":10
+  "Cercle circonscrit":11
+  "Cercle inscrit":12
+  "Cercle exinscrit":13
+  "Taille des points":14
+  "Couleur des points":15
+  "Tangentes communes":16
+  "Tangente":17
+  "Bissectrice":18
+  "Translation":19
+  "Rotation":20
+  "Editeur d'objets":21
+  "Lancer un Serveur":22
+  "Connection à un serveur":23
+  "Annuler":24
+  "Retablir":25
+  "Symetrie":26
+  "Projective":27
+  "Centres":28
+  "Parametres":29
+  "Homothetie":30
+  "Angle":31
+  "Intersection":32
+  "Tangente passant par un point":33
+  "Nouveau plan":34
+  "Inversion du plan":35
+  "Paralleles":36
+  "Segment":37
+  "Perpendiculaire":38
+  "Milieu":39
+  "Centre du cercle inscrit":40
+  "Centre du cercle circonscrit":41
+  "Centre de gravité":42
+  "Supprimer":43
+  "Ouvrir":44
+  "Mediatrice":45
+  "Orthocentre":46
+  "Enregistrer sous":47
+  "Quatrième harmonique":48
 
 English
   0:"Points"
@@ -11,6 +55,39 @@ English
   2:"Curves"
   3:"Transformations"
   4:"Please enter an adress"
+  5:"Regular Polygon"
+  6:"Notes"
+  7:"Help"
+  8:"Zoom"
+  9:"Zoom Out"
+  10:"Invert"
+  11:"Circumscribed Circle"
+  12:"Inscribed Circle"
+  13:"Exinscribed Circle"
+  14:"Point Size"
+  15:"Point Color"
+  16:"Common Tangents"
+  17:"Tangent"
+  18:"Bisector"
+  19:"Translation"
+  20:"Rotation"
+  21:"Object Editor"
+  22:"Start a Server"
+  23:"Connect to a Server"
+  24:"Undo"
+  25:"Redo"
+  26:"Symmetry"
+  27:"Projective"
+  28:"Centers"
+  29:"Parameters"
+  30:"Dilation"
+  31:"Angle"
+  32:"Intersection"
+  33:"Tangent through a point"
+  34:"New plane"
+  35:"Plane inversion"
+  36:"Parallels"
+  37:"Segment"
 
 Deutsch
   0:"Punkts"
