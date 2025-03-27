@@ -81,15 +81,14 @@ class Main:
         self.liste_derniers_clics = []
         self.plans = [None]
         self.delai_tooltip = 300
-        self.onglets = ['Ctrl', 'Classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Centres', 'Frames']
-        self.boutons2 = [['enregistrer', 'enregistrer_sous', 'ouvrir', 'nouv_plan', 'suppr_plan', 'parametres'],
-                         ['main', 'point', 'droite', 'cercle_circ', 'courbe', 'soumettre', 'angle'],
-                         ['point', 'surcourbe', 'intersection', 'milieu', 'harmonique', 'centre', 'angle'], #Il faudra mettre angle dans une autre categorie
-                         ['droite', 'segment', 'bissec', 'perp', 'para', 'media', 'tangente', 'tangente_p', 'tangentes_communes'],
-                         ['courbe', 'soumettre', 'caa', 'cercle_circ', 'cercle_inscr', 'cercle_cent', 'cercle_ex', 'tangente', 'tangentes_communes'],
-                         ['rotation', 'homothetie', 'translation', 'symetrie', 'invers', 'projective', 'polyregul', 'inv_plan'],
-                         ['circonscrit', 'inscrit', 'orthocentre', 'gravite', 'fermat'],
-                         ['editeur_objets', 'etude', 'poubelle', 'connect', 'serveur', 'aide'],
+        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Transformations', 'Frames']
+        self.boutons2 = [['Enregistrer', 'Enregistrer sous', 'Ouvrir', 'Nouveau plan', 'Supprimer le plan', 'Parametres'],
+                         ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe', 'Soumettre', 'Angle', 'Poubelle'],
+                         ['Point', 'Point sur courbe', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
+                         ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangentes communes'],
+                         ['Courbe', 'Soumettre', 'Caa', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Tangente', 'Tangentes communes'],
+                         ['Rotation', 'Homothetie', 'Translation', 'Symetrie', 'Inversion', 'Projective', 'Polygone regulier', 'Inversion du plan'],
+                         ['Editeur d\'objets', 'Etude', 'Notes', 'Connection à un serveur', 'Lancer un Serveur', 'Aide'],
                          ]
         self.creer_canvas()
         self.plans[0] = Geo.Plan(self)
@@ -107,6 +106,7 @@ class Main:
         self.point_move = None
         self.lanceurserveur = None
         self.parametres = None
+        self.notes = None
         self.fenetre_taille = '1x1'
         self.connecteur_serv = None
         fenetre.bind('<Configure>', self.configure_fenetre)
@@ -161,7 +161,7 @@ class Main:
         #entree = ttk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
         #entree.grid(row = 0, column = 2, padx = 20)
         
-        for nom, x, y in (('ctrlz', 0, 0), ('ctrly', 0, 1), ('plus', 1, 0), ('moins', 1, 1)):
+        for nom, x, y in (('Annuler', 0, 0), ('Retablir', 0, 1), ('Zoom', 1, 0), ('Dezoom', 1, 1)):
             bout = bouton(self.framed, nom)
             bout.grid(row = x, column = y)
             
@@ -184,59 +184,54 @@ class Main:
         self.canvas.bind('<ButtonRelease>', self.bouger_point)
 
     def creer_actions(self):
-        self.actions = {'point' : (self.point, 1, ('non',)),
-                        'surcourbe' : (self.surcourbe, 1, ('courbe', 'non')),
-                        'cercle_circ' : (self.cercle, 1, ('point', 'point', 'point')),
-                        'courbe' : (self.courbe, 1, ('point',)*90),
-                        'droite' : (self.droite, 1, ('point', 'point')),
-                        'segment' : (self.segment, 1, ('point', 'point')),
-                        'plus' : (self.plus, 0),
-                        'moins' : (self.moins, 0),
-                        'main' : (self.move, 1, ('point',)),
-                        'angle' : (self.angle, 1, ('point', 'point', 'point')),
-                        'intersection' : (self.intersection, 1, ('courbe', 'courbe')),
-                        'milieu' : (self.milieu, 1, ('point', 'point')),
-                        'centre' : (self.centre, 1, ('courbe',)),
-                        'poubelle' : (self.supprimer, 1, ('objet',)),
-                        'soumettre' : (self.soumettre, 0),
-                        'enregistrer' : (self.enregistrer, 0),
-                        'enregistrer_sous' : (self.enregistrer_sous, 0),
-                        'ouvrir' : (self.ouvrir, 0),
-                        'etude' : (self.etude, 0),
-                        'serveur' : (self.serveur, 0),
-                        'caa' : (self.caa, 0),
-                        'cercle_cent' : (self.cercle_cent, 1, ('point', 'point')),
-                        'harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
-                        'invers' : (self.invers, 1, ('objet', 'point', 'point')),
-                        'inv_plan' : (self.inv_plan, 1, ('point', 'point')),
-                        'cercle_inscr' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
-                        'cercle_ex' : (self.cercle_ex, 1, ('point', 'point', 'point')),
-                        'bissec' : (self.bissec, 1, ('point', 'point', 'point')),
-                        'tangente' : (self.tangente, 1, ('courbe', 'point')),
-                        'tangente_p' : (self.tangente_p, 1, ('courbe', 'point')),
-                        'tangentes_communes' : (self.tangentes_communes, 1, ('courbe', 'courbe')),
-                        'nouv_plan' : (self.nouv_plan, 0),
-                        'suppr_plan' : (self.suppr_plan, 0),
-                        'editeur_objets' : (self.edit_objets, 0),
-                        'parametres' : (self.parametres, 0),
-                        'aide' : (self.aide, 0),
-                        'perp' : (self.perp, 1, ('droite', 'point')),
-                        'media' : (self.media, 1, ('point', 'point')),
-                        'para' : (self.para, 1, ('droite', 'point')),
-                        'ctrlz' : (self.act_ctrlz, 0),
-                        'ctrly' : (self.act_ctrly, 0),
-                        'rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
-                        'homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
-                        'translation' : (self.translation, 1, ('objet', 'point', 'point')), 
-                        'symetrie' : (self.symetrie, 1, ('objet', 'droite')),
-                        'projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
-                        'polyregul' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
-                        'connect' : (self.connect, 0),
-                        'circonscrit' : (self.circonscrit, 1, ('point', 'point', 'point')),
-                        'inscrit' : (self.inscrit, 1, ('point', 'point', 'point')),
-                        'gravite' : (self.gravite, 1, ('point', 'point', 'point')),
-                        'orthocentre' : (self.orthocentre, 1, ('point', 'point', 'point')),
-                        'fermat' : (self.fermat, 1, ('point', 'point', 'point')),
+        self.actions = {'Point' : (self.point, 1, ('non',)),
+                        'Point sur courbe' : (self.surcourbe, 1, ('courbe', 'non')),
+                        'Cercle circonscrit' : (self.cercle, 1, ('point', 'point', 'point')),
+                        'Courbe' : (self.courbe, 1, ('point',)*90),
+                        'Droite' : (self.droite, 1, ('point', 'point')),
+                        'Segment' : (self.segment, 1, ('point', 'point')),
+                        'Zoom' : (self.plus, 0),
+                        'Dezoom' : (self.moins, 0),
+                        'Main' : (self.move, 1, ('point',)),
+                        'Angle' : (self.angle, 1, ('point', 'point', 'point')),
+                        'Intersection' : (self.intersection, 1, ('courbe', 'courbe')),
+                        'Milieu' : (self.milieu, 1, ('point', 'point')),
+                        'Centre' : (self.centre, 1, ('courbe',)),
+                        'Poubelle' : (self.supprimer, 1, ('objet',)),
+                        'Soumettre' : (self.soumettre, 0),
+                        'Enregistrer' : (self.enregistrer, 0),
+                        'Enregistrer sous' : (self.enregistrer_sous, 0),
+                        'Ouvrir' : (self.ouvrir, 0),
+                        'Etude' : (self.etude, 0),
+                        'Lancer un serveur' : (self.serveur, 0),
+                        'Caa' : (self.caa, 0),
+                        'Notes' : (self.notes, 0),
+                        'Cercle avec centre' : (self.cercle_cent, 1, ('point', 'point')),
+                        'Quatrième harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
+                        'Inversion' : (self.invers, 1, ('objet', 'point', 'point')),
+                        'Inversion du plan' : (self.inv_plan, 1, ('point', 'point')),
+                        'Cercle inscrit' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
+                        'Cercle exinscrit' : (self.cercle_ex, 1, ('point', 'point', 'point')),
+                        'Bissectrice' : (self.bissec, 1, ('point', 'point', 'point')),
+                        'Tangente' : (self.tangente, 1, ('courbe', 'point')),
+                        'Tangentes communes' : (self.tangentes_communes, 1, ('courbe', 'courbe')),
+                        'Nouveau plan' : (self.nouv_plan, 0),
+                        'Supprimer le plan' : (self.suppr_plan, 0),
+                        'Editeur d\'objets' : (self.edit_objets, 0),
+                        'Parametres' : (self.parametres, 0),
+                        'Aide' : (self.aide, 0),
+                        'Perpendiculaire' : (self.perp, 1, ('droite', 'point')),
+                        'Mediatrice' : (self.media, 1, ('point', 'point')),
+                        'Paralleles' : (self.para, 1, ('droite', 'point')),
+                        'Annuler' : (self.act_ctrlz, 0),
+                        'Retablir' : (self.act_ctrly, 0),
+                        'Rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
+                        'Homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
+                        'Translation' : (self.translation, 1, ('objet', 'point', 'point')), 
+                        'Symetrie' : (self.symetrie, 1, ('objet', 'droite')),
+                        'Projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
+                        'Polygone regulier' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
+                        'Connection à un serveur' : (self.connect, 0),
                         }
         
     def act_ctrly(self):
