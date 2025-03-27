@@ -237,7 +237,7 @@ class Main:
                         'Translation' : (self.translation, 1, ('objet', 'point', 'point')), 
                         'Symetrie' : (self.symetrie, 1, ('objet', 'droite')),
                         'Projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
-                        'Polygone regulier' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez taille'))), 
+                        'Polygone regulier' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez le nombre de côtés'))), 
                         'Connection à un serveur' : (self.connect, 0),
                         }
         
@@ -758,7 +758,8 @@ class Main:
                 self.liste_derniers_clics.append(objet)
         nombres = True
         while len(self.liste_derniers_clics) < len(self.attendus) and isinstance(self.attendus[len(self.liste_derniers_clics)], tuple) and self.attendus[len(self.liste_derniers_clics)][0] == 'nombre' and nombres:
-            entier = tk_sd.askfloat("Choix d'un nombre", self.attendus[len(self.liste_derniers_clics)][0][1])
+            texte = Trad(self.attendus[len(self.liste_derniers_clics)][1], weak = 1).get()
+            entier = tk_sd.askfloat("Choix d'un nombre", texte)
             if entier is None:
                 self.deselectionner()
                 nombres = False
