@@ -1163,16 +1163,17 @@ def inter2(courbe1, courbe2, numero, copains1=set(), copains2=set(), z = 1):
         for y in P.resoudre()[0]:
             rooot.append((droite(y), y, 1))
     print(rooot)
-    root2 = list(copains1 & copains2)
+    root2 = {}
     print(root2)
     for i in copains1 & copains2:
-        if i.coords()[0].imag==i.coords()[1].imag==0:
+        if i.coord[0].imag==i.coord[1].imag==0:
             if rooot != []:
-                rooot.remove(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))
+                root2[rooot.index(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))] = i
+                rooot[rooot.index(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))]=(0,0,0)
     print(rooot)
     print("the end")
     if numero == -1:
-        return rooot+root2
+        return rooot+list(root2.values())
     if numero < len(rooot):
         return rooot[numero]
     return (0, 0, 0)
