@@ -647,6 +647,20 @@ class Arbre:
             i.arbre.descendants.remove(self)
 
 ################################################################################
+###                        classe Relation                                   ###
+################################################################################   
+
+class Relation:
+
+    def __init__(self, parent=set(), enfants=set(), deg=2):
+        self.parent = parent
+        self.enfant=enfants
+        self.deg=deg
+
+    def __str__(self):
+        return f'{[i.nom for i in self.parent]} : {[i.nom for i in self.enfant]}'
+
+################################################################################
 ###                        classe Créature                                   ###
 ################################################################################   
 
@@ -681,6 +695,8 @@ class Creature:
         self.color = color
         self.vis = vis
         self.u = u
+        self.relation_parent=set()
+        self.relation_enfant = set()
         self.complexe = complexe
         self.tkinter = [None, None] #[cercle, texte] pour les points
         if ide is None:
@@ -702,15 +718,27 @@ class Creature:
             pass
         self.dessin()
         xrint(self.coord)
-        if classe in {'Droite', 'Courbe'}:
-            self.copain = {i for i in args if i.classe =="Point"}
-        else:
-            self.copain=set()
-            if self.method in {"inter", "inter2"}:
-                for i in self.args:
-                    if isinstance(i,Creature):
-                        i.copain.add(self)
-        print(self.copain)
+        print("go")
+        if nom not in {'U', 'V', 'Inf'}:
+            self.coords()
+        self.relation()
+        print([i for i in self.relation_parent])
+        print([i for i in self.relation_enfant])
+        try:
+            for j in [self]+list(self.args):
+                try:
+                    print(j.nom)
+                    for i in j.relation_parent:
+                        print(i)
+                    for i in j.relation_enfant:
+                        print(i)
+                except:
+                    pass
+        except:
+            for i in self.relation_parent:
+                print(i)
+            for i in self.relation_enfant:
+                print(i)
         print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')        
 
     def __str__(self):
@@ -728,6 +756,9 @@ class Creature:
     def infos_user(self):
         return {'nom':self.nom, 'col':self.color, 'vis':self.vis}
 
+    def copain(self):
+        return {i for i in list(self.relation_parent)[0].enfant}
+    
     def supprimer(self, canvas = None):
         '''fonction recursive pour supprimer des elements
         un peu bizarre pour selectionner un element d'un ensemble,
@@ -749,7 +780,70 @@ class Creature:
                 del dic[self.ide]
         self.plan.noms.remove(self.nom)
         del self
-                
+      
+    def relation(self):
+        '''relation_parent : un objet défini une relation'''
+        '''relation_enfant : ensemble des relations auxquelles j'appartiens'''
+        '''au début j'ai 0 relation'''
+        method=self.method
+        args=self.args
+        deg=self.deg
+        if method in {"inter","interpol", "harmonique", "milieu"}:
+            s=args[0].relation_enfant
+            for i in args[1:]:
+                s&= i.relation_enfant
+            done=False
+            for i in list(s):
+                if i.deg==deg:
+                    if method=="inter":
+                        i.parent.add(self)
+                        self.relation_parent |={i}
+                    else:
+                        i.enfant.add(self)
+                        self.relation_enfant |= {i}
+                        try:
+                            self.relation_parent = {Relation(parent = {self}, enfants={list(i.parent)[0]}, deg=deg)}
+                        except:
+                            pass
+                    done=True
+            if not done:
+                if method in {"inter", "interpol"}:
+                    a=Relation(parent ={self}, enfants={i for i in args}, deg=deg)
+                    print("cest fait")
+                    print(a)
+                    print(self.nom)
+                    self.relation_parent |= {a}
+                    for i in args:
+                        if isinstance(i, Creature):
+                            i.relation_enfant |= {a}
+                            if i.classe=="Point" and self.classe in {'Droite', 'Courbe'}:
+                                list(i.relation_parent)[0].enfant.add(self)
+                            if i.classe=="Droite" and self.classe=="Point":
+                                list(i.relation_parent)[0].enfant.add(self)
+                else:
+                    b= Relation(enfants={i for i in args}, deg=deg)
+                    self.relation_enfant |= {b}
+                    for i in args:
+                        i.relation_enfant |={b}
+            if method in {"inter", "interpol"}:
+                for i in args:
+                    if isinstance(i, Creature):
+                        self.relation_enfant |= {list(i.relation_parent)[0]}
+        elif method == "inter2":
+            self.relation_parent= {Relation(parent={self}, enfants={args[0], args[1]}, deg=deg)}
+            self.relation_enfant = {Relation(parent=set(), enfants=set(), deg=0)}
+            list(args[0].relation_parent)[0].enfant.add(self)
+            list(args[1].relation_parent)[0].enfant.add(self)
+        elif method in {"tangente", "tangente2"}:
+            list(args[1].relation_parent)[0].enfant.add(self)
+            self.relation_enfant |=  {list(args[1].relation_parent)[0]}
+        elif method in {"ProjOrtho", "PsurCA"}:
+            list(args[0].relation_parent)[0].enfant.add(self)
+            self.relation_enfant |= {list(args[0].relation_parent)[0]}
+            self.relation_parent = {Relation(parent={self}, enfants={args[0]}, deg=deg)}
+        if self.classe in {"Point", "Droite"} and self.relation_parent==set():
+            self.relation_parent = {Relation(parent={self}, enfants=set(), deg=deg)}
+
     def coords(self, calcul = 0):
         if self.coord is None or calcul:
             method = self.method
@@ -779,7 +873,7 @@ class Creature:
             self.args_actu = args
             if self.classe == "Point" and method =="inter2":
                 print("vuieizeiaj")
-                args+= [self.args[0].copain, self.args[1].copain]
+                args+= [self.args[0].copain(), self.args[1].copain()]
                 print(args)
                 self.coord= inter2(*args)
             elif self.classe_actuelle == 'Courbe':
@@ -791,7 +885,7 @@ class Creature:
         if self.complexe and self.coord[2] != 0:
             self.coord = ((self.coord[0]/self.coord[2]).real, (self.coord[1]/self.coord[2]).real, 1) 
         return self.coord
-            
+        
     def set_param(self, nom = None, col = None, vis = None):
         if nom is None: nom = self.nom
         if col is None: col = self.color
