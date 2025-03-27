@@ -111,9 +111,10 @@ try:
     langue, langues, trad = traduction()
 except Exception as e:
     print('Impossible de charger les traductions')
+    print(f'Erreur rencontrée : {e}')
     langue = 'Français'
     langues = ['Français']
-    trad = lambda x: x
+    trad = lambda l, x: x
 
 params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', 'TempsTooltip':300}
 try:
@@ -692,12 +693,12 @@ class Parametres:
             print(i, e, e[2], l[i])
             self.params[e[2]] = l[i]
         plan = self.main.plans[0]
-        self.main.menub.configure(text = f'{l[3]}')
-        plan.boldP, plan.boldC, plan.nom = l[0], l[1], l[3]
+        self.main.menub.configure(text = f'{l[-1]}')
+        plan.boldP, plan.boldC, plan.nom = l[0], l[1], l[-1]
         self.style.theme_use(l[2])
         self.fermer_fenetre()
         self.classeTrad.set_lang(self.params['Langue'])
-        self.main.langue = l[4]
+        self.main.langue = self.params['Langue']
         
                 
 class Notes:
