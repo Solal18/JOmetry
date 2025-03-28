@@ -158,7 +158,12 @@ class Trad(tk.StringVar):
             if isinstance(self.noteb[0], ttk.Notebook):
                 self.noteb[0].tab(self.noteb[1], text = trad(lang, self.mot))
             elif isinstance(self.noteb[0], ttk.Treeview):
-                self.noteb[0].heading(self.noteb[1], text = trad(lang, self.mot))
+                if isinstance(self.noteb[1], int):
+                    self.noteb[0].heading(self.noteb[1], text = trad(lang, self.mot))
+                elif isinstance(self.noteb[1], tuple):
+                    ligne = self.noteb[0].item(self.noteb[1][0])
+                    ligne[self.noteb[1][1]] = trad(lang, self.mot)
+                    self.noteb[0].configure(self.noteb[1][0], values = ligne
         else:
             self.set(trad(lang, self.mot))
     
