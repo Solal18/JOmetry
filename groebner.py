@@ -1,3 +1,5 @@
+import numpy
+
 def norm(coord):
     '''renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)'''
     if coord[2]==0:
