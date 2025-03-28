@@ -297,11 +297,7 @@ class ColorChooser(ttk.Frame):
         couleur = tk_cc.askcolor(parent = self)
         if couleur[1] is not None:
             self.textvariable.set(couleur[1])
-
-    def set(self, valeur):
-        super().set(valeur)
-        self.verifier()
-        
+            
     def verifier(self, ev = None):
         try: self.fenetre.winfo_rgb(self.textvariable.get())
         except tk.TclError:
@@ -326,7 +322,7 @@ class EditeurObjets:
             self.frame = ttk.Frame(self.grande_frame)
             self.grande_frame.columnconfigure(0, weight = 1)
             self.frame.grid(row = 0, column = 0, sticky = 'nsew')
-            tk.Button(self.grande_frame, text = 'fermer', command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
+            tk.Button(self.grande_frame, text = 'fermer', command = self.fermer_fenetre, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
         for i in range(3):
             self.frame.columnconfigure(i, weight = 1)
@@ -386,15 +382,13 @@ class EditeurObjets:
             widget['state'] = 'disabled'
         self.selectionne = None
 
-    def supprimer(self):
-        self.grande_frame.grid_forget()
-        self.grande_frame.forget()
-        self.main.editeur_objets = None
-
     def fermer_fenetre(self):
         self.main.editeur_objets = None
         if self.separe:self.grande_frame.destroy()
-        else:main.panedwindow.forget(self.grande_frame)
+        else:
+            print('forget ?')
+            main.panedwindow.forget(self.grande_frame)
+            self.frame.destroy()
 
     def ajouter(self, obj):
         if obj.u:
