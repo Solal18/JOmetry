@@ -758,6 +758,7 @@ class Creature:
                 z = can.create_line(focaliser(A)[:2], focaliser(B)[:2], width=self.plan.bold, fill=self.color, tag = self.ide)
             else:
                 if isinstance(coords, Polynome):
+                    coords = coords.change_variables32()(1)
                     coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
                 nor = norm(coords)
                 if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
