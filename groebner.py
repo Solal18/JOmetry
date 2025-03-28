@@ -1,4 +1,5 @@
 import numpy
+from math import sqrt
 
 def norm(coord):
     '''renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)'''
@@ -253,6 +254,7 @@ class Polynome:
                 return [-b/(2*a)], [-b/(2*a)]
             if det > 0:
                 return [-(b+sqrt(det))/(2*a), -(b-sqrt(det))/(2*a)], [-b/(2*a)]
+        return [x.real for x in numpy.roots(self.coefs[::-1]) if abs(x.imag)<1e-16], []
         derivee = self.derivee()
         maximas, max_derivee = derivee.resoudre()
         maximas = [-float('inf')] + maximas + [float('inf')]
@@ -281,6 +283,7 @@ class Polynome:
                     break
                 x -= d
                 if not inter[0] <= x <= inter[1]:
+                    print('aie')
                     x = deb
                     inf, sup = inter[0], inter[1]
                     if inf != -float('inf') and sup != float('inf'):
@@ -329,7 +332,9 @@ class Polynome:
     
 def resoudre_systeme(P, Q):
     p, q = P.expr_dict_monomes(), Q.expr_dict_monomes()
+    print('gröbner en cours')
     base = grob([p, q])
+    print('fin')
     p1 = Polynome([base[0][(0, e)][0]/base[0][(0, e)][1] if (0,e) in base[0] else 0 for e in range(len(base[0]))])
     racines = p1.resoudre()[0]
     l = []
@@ -339,4 +344,5 @@ def resoudre_systeme(P, Q):
             l.append((x, y, 1))
     l.sort(key = lambda v: abs(P(v[0])(v[1]))+abs(Q(v[0])(v[1])))
     return l[:len(l)//2]
+
 
