@@ -409,7 +409,7 @@ class EditeurObjets:
                                     objet.args, objet.color, ('non', 'oui')[objet.vis])
         for ide, l in self.objets.items():
             self.tableau.insert('', 'end', iid = str(ide),values = l)
-            self.trads.add(Trad(t, params['Langue'], (self.tableau, (str(ide), i), weak = 1)))
+            self.trads.add(Trad(l[2], params['Langue'], (self.tableau, (str(ide), 2), weak = 1)))
         self.deselectionner()
 
     def clic_entree(self, event):
