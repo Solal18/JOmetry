@@ -437,21 +437,6 @@ class Creature:
         if nom not in {'U', 'V', 'Inf'}:
             self.coords()
         self.relation()
-        try:
-            for j in [self]+list(self.args):
-                try:
-                    print(j.nom)
-                    for i in j.relation_parent:
-                        print(i)
-                    for i in j.relation_enfant:
-                        print(i)
-                except:
-                    pass
-        except:
-            for i in self.relation_parent:
-                print(i)
-            for i in self.relation_enfant:
-                print(i)
         print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')        
 
     def __str__(self):
