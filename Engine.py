@@ -8,6 +8,7 @@ import socket
 from groebner import Polynome, resoudre_systeme
 from time import perf_counter_ns as perf
 import threading
+from dataclasses import dataclass
 
 class ID(int): pass
 
@@ -400,12 +401,11 @@ class Arbre:
 ###                        classe Relation                                   ###
 ################################################################################   
 
+@dataclass
 class Relation:
-
-    def __init__(self, parent=set(), enfants=set(), deg=2):
-        self.parent = parent
-        self.enfant=enfants
-        self.deg=deg
+    parent: set
+    enfant: set
+    deg: int = 2
 
     def __str__(self):
         return f'{[i.nom for i in self.parent]} : {[i.nom for i in self.enfant]}'
