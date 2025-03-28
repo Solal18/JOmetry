@@ -86,7 +86,7 @@ class Main:
         self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Centres', 'Transformations', 'Frames']
         self.boutons2 = [['Enregistrer', 'Enregistrer sous', 'Ouvrir', 'Nouveau plan', 'Supprimer le plan', 'Parametres'],
                          ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe','Cubique', 'Soumettre', 'Angle', 'Poubelle'],
-                         ['Point', 'Point sur courbe', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
+                         ['Point', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
                          ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangente passant par un point', 'Tangentes communes'],
                          ['Courbe', 'Soumettre', 'Caa', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Tangente', 'Tangentes communes'],
                          ['Centre du cercle circonscrit', 'Orthocentre', 'Centre de gravité', 'Centre du cercle inscrit', 'Point de fermat'],
