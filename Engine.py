@@ -540,7 +540,7 @@ class Creature:
         method=self.method
         args=self.args
         deg=self.deg
-        if method in {"inter","interpol", "harmonique", "milieu"}:
+        if method in {"inter","interpol", "cubic", "harmonique", "milieu"}:
             s=args[0].relation_enfant
             for i in args[1:]:
                 s&= i.relation_enfant
@@ -577,7 +577,7 @@ class Creature:
                     self.relation_enfant |= {b}
                     for i in args:
                         i.relation_enfant |={b}
-            if method in {"inter", "interpol"}:
+            if method in {"inter", "interpol", "cubic"}:
                 for i in args:
                     if isinstance(i, Creature):
                         self.relation_enfant |= {list(i.relation_parent)[0]}
