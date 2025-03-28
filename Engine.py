@@ -757,7 +757,7 @@ class Creature:
             if self == self.plan.inf: return
             if self.method == 'segment':
                 A, B = self.args_actu
-                z = can.create_line(focaliser(A)[:2], focaliser(B)[:2], width=self.plan.bold, fill=self.color, tag = self.ide)
+                z = can.create_line(focaliser(norm(A))[:2], focaliser(norm(B))[:2], width=self.plan.bold, fill=self.color, tag = self.ide)
             else:
                 if isinstance(coords, Polynome):
                     coords = coords.change_variables32()(1)
