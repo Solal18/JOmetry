@@ -85,7 +85,7 @@ class Main:
         self.delai_tooltip = 300
         self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Centres', 'Transformations', 'Frames']
         self.boutons2 = [['Enregistrer', 'Enregistrer sous', 'Ouvrir', 'Nouveau plan', 'Supprimer le plan', 'Parametres'],
-                         ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe', 'Soumettre', 'Angle', 'Poubelle'],
+                         ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe','Cubique', 'Soumettre', 'Angle', 'Poubelle'],
                          ['Point', 'Point sur courbe', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
                          ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangente passant par un point', 'Tangentes communes'],
                          ['Courbe', 'Soumettre', 'Caa', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Tangente', 'Tangentes communes'],
@@ -191,6 +191,7 @@ class Main:
         self.actions = {'Point' : (self.point, 1, ('non',)),
                         'Cercle circonscrit' : (self.cercle, 1, ('point', 'point', 'point')),
                         'Courbe' : (self.courbe, 1, ('point',)*90),
+                        'Cubique' : (self.cubique, 1, ('point','point', 'point', 'point')), 
                         'Droite' : (self.droite, 1, ('point', 'point')),
                         'Segment' : (self.segment, 1, ('point', 'point')),
                         'Zoom' : (self.plus, 0),
@@ -680,7 +681,15 @@ class Main:
             self.action_bouton('Courbe', self.boutons[7])
         
     courbe = soumettre
-        
+    
+    def cubique(self):
+        A,B,C,D = self.liste_derniers_clics
+        P=Geo.inter(Geo.inter(A.coords(),C.coords()),Geo.inter(B.coords(),D.coords()))
+        droite = Geo.inter(A.coords(), Geo.symetrie(D.coords(),Geo.bissectrice(Geo.homothetie(B.coords(),A.coords(),-1), A.coords(), C.coords())))
+        droite2 = Geo.inter(B.coords(), Geo.symetrie(C.coords(),Geo.bissectrice(Geo.homothetie(A.coords(),B.coords(),-1), B.coords(), D.coords())))
+        courbe = self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'cubic', deg = 3, args = [droite,droite2, A,B,C,D,P,self.plans[0].U,self.plans[0].V], u = 1)
+        self.deselectionner()
+    
     def entree_commande(self, evenement):
         commande = self.entree_texte.get()
         self.entree_texte.set('')
