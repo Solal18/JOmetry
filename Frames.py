@@ -213,30 +213,27 @@ class Scrollable_Frame(tk.Frame):
         #self.canvas.itemconfig('frame', height = ev.height)
 
 
-
 class AideFenetre:
-    
     def __init__(self, fenetre, doc):
-        
         self.fen = tk.Toplevel(fenetre)
-        self.fen.title(Trad('Aide'))
-
+        self.fen.title('Aide')
         self.entree = tk.Entry(self.fen, width=30)
         self.entree.grid(row = 0, column = 0)
         self.entree.bind('<KeyRelease>', self.mettre_a_jour_resultats)
-
         self.possibles = tk.StringVar()
         self.liste = tk.Listbox(self.fen, listvariable = self.possibles, width = 30)
         self.liste.grid(row = 1, column = 0)
         self.liste.bind('<<ListboxSelect>>', self.clic_liste)
-
         self.texte = tk.Text(self.fen, width=50, height=10, padx = 5)
         self.texte.grid(row = 0, column = 1, rowspan = 2)
         self.texte.config(state = 'disabled')
-        
         self.doc = doc
         self.resultats = None
-
+        self.mettre_a_jour_resultats()
+        self.texte.config(state = 'normal')
+        self.texte.insert("end", "Bienvenue dans le menu d'aide.\nLes différents onglets d'aide sont disponible dans la partie gauche de la fenêtre.")
+        self.texte.config(state = 'disabled')
+    
     
     def recherche(self, texte):
         resultats = []
@@ -245,32 +242,57 @@ class AideFenetre:
                 resultats.append(i[1])
         return resultats
 
-    def texte_aide(self, texte):
-        texte, liens = self.doc[[i[1] for i in self.doc].index(texte)][2], {}
+    def texte_aide(self, texte:str):
+        texte, liens = texte+"\n"+self.doc[[i[1] for i in self.doc].index(texte)][2], {}
+        texte = texte.replace("\\n", "\n")
         while '[' in texte:
             idx1, idx2, idx3 = texte.index('['), texte.index('|'), texte.index(']')
             liens[(idx1, idx2 - 1)] = texte[idx2 + 1:idx3]
             texte = texte[:idx1]+texte[idx1+1:idx2]+texte[idx3+1:]
-        return texte, liens
+        return texte, lien
 
-    def mettre_a_jour_resultats(self, event):
+    def mettre_a_jour_resultats(self, event=None):
         texte_recherche = self.entree.get()
-        self.resultats = self.recherche(texte_recherche)
-        self.possibles.set(' '.join([x.replace(' ', '\ ') for x in self.resultats]))
+        self.resultats = self.recherche(texte_recherche.lower())
+        self.possibles.set(' '.join([x.replace(' ', '\ ') for x in self.resultats])
 
     def clic_liste(self, event = None, texte = ''):
         if self.resultats is None: return
         if texte == '': texte = self.resultats[self.liste.curselection()[0]]
         nouveau_texte, liens = self.texte_aide(texte)
+        titre, nouveau_texte = self.mettre_en_forme_texte(nouveau_texte)
         self.texte.config(state = 'normal')
         self.texte.delete('1.0', 'end')
+        self.texte.insert('end', titre+'\n')
         self.texte.insert('end', nouveau_texte)
         self.texte.config(state = 'disabled')
+        self.texte.tag_add('titre', '1.0+0c', f'1.0+{len(titre)}c')
+        self.texte.tag_config('titre', underline=True, justify='center')
         for (id1, id2), mot in liens.items():
             i1, i2 = f'1.0+{id1}c', f'1.0+{id2}c'
             self.texte.tag_add(mot, i1, i2)
             self.texte.tag_config(mot, foreground = 'blue', underline = True)
             self.texte.tag_bind(mot, '<Button-1>', lambda ev, mot = mot: self.clic_liste(texte = mot))
+    
+    def mettre_en_forme_texte(self, texte):
+        ltexte = texte.split('\n')
+        titre, texte = ltexte[0], ltexte[1:]
+        nouveau_texte = ''
+        for paragraphe in texte:
+            paragraphe = paragraphe.split(' ')
+            longueur = 0
+            for mot in paragraphe:
+                if longueur + len(mot) >= 50:
+                    longueur = len(mot)
+                    nouveau_texte = nouveau_texte[:-1] + '\n' + mot + ' '
+                else:
+                    longueur += len(mot) + 1
+                    nouveau_texte += mot + ' '
+            nouveau_texte = nouveau_texte[:-1] + '\n'
+        return titre, nouveau_texte
+
+
+
     
  
 
