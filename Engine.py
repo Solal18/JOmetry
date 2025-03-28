@@ -852,7 +852,7 @@ def inter2(courbe1, courbe2, numero, copains1 = None, copains2 = None, z = 1):
                 racines[racines.index(min(racines, key=lambda x : dist(norm(x), norm(i.coords()))))] = (0,0,0)
     if numero == -1:
         return racines + list(root2.values())
-    if numero < len(rooot):
+    if numero < len(racines):
         return racines[numero]
     return (0, 0, 0)
 
