@@ -113,18 +113,6 @@ def dist(a, b):
     if a[0].imag==a[1].imag== b[0].imag==b[1].imag ==0:
         return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
     return float("inf")
-'''def scale_m(k, m1):
-    for i in range(len(m1[0])):
-        m1[0][1] *= k
-    return m1
-
-def inverse_m(m):
-    x,y,z = m
-    a,b,c=x
-    d,e,f=y
-    g,h,i=z
-    return scale_m(1/(a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g)), [[e*i-f*h, c*h-b*i, b*f-c*e], [f*g-d*i, a*i-c*g, c*d-a*f], [d*h-e*g, b*g-a*h, a*e-b*d]])
-'''
 
 def inverse_m(m):
     return numpy.linalg.inv(m)
@@ -139,13 +127,11 @@ def multi_matrix2(m1, m2):
 
 def multi_matrix(m1, m2):
     '''matrice 3-3 fois matrice 1-1'''
-    xrint(m1)
-    xrint(m2)
     x,y,z = m1
     k,l,m = m2
-    a,b,c=k
-    d,e,f=l
-    g,h,i=m
+    a,b,c = k
+    d,e,f = l
+    g,h,i = m
     return [a*x+b*y+c*z, d*x+e*y+f*z, g*x+h*y+i*z]
 
 def translation(p, v):
@@ -167,7 +153,7 @@ def translater(args, v):
     return nouv_args
 
 def homothetie(p, c, rapport):
-    x,y,z = c
+    x, y, z = c
     k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
     return translation(multi_matrix(translation(p, (c, (0,0,z))), k), ((0,0,z), c))
 
@@ -236,12 +222,12 @@ def symetrer(args, B):
     print(args)
     if type(B) is not tuple:
         B = B.coords()
-    a,b, c = B
-    if b!=0:
+    a, b, c = B
+    if b != 0:
         for i in args:
             if i[0] == 'Point':
-                d1 = Creature(plan=plan_default,classe="Droite", method='coord', args = B, u= 0)
-                x,y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, ((0, -c/b, 1), (0, 0,1))), u = 0).coords()
+                d1 = Creature(plan=plan_default, classe="Droite", method='coord', args = B, u= 0)
+                x, y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, ((0, -c/b, 1), (0, 0,1))), u = 0).coords()
                 k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
                 nouv_args.append(('Point', translation(multi_matrix(translation(i[1], ((0, -c/b, 1), (0, 0, 1))), k),((0,0,1), (0, -c/b, 1)))))
     elif a!=0:
@@ -255,15 +241,15 @@ def symetrer(args, B):
 
 def transfo_p(liste):
     '''envoie liste sur [1,0,0] et les autres'''
-    p,q,r,s= liste
+    p,q,r,s = liste
     a,b,c = p
     d,e,f = q
     g,h,i = r
-    x,y,z = multi_matrix(s,inverse_m([[a,d,g],[b,e,h],[c,f,i]]))
+    x,y,z = multi_matrix(s, inverse_m([[a,d,g], [b,e,h], [c,f,i]]))
     return [[a*x, d*y, g*z], [b*x, e*y, h*z], [c*x, f*y, i*z]]
 
 def projective(A, liste1, liste2):
-    return multi_matrix(A,multi_matrix2(transfo_p(liste2),inverse_m(transfo_p(liste1))))
+    return multi_matrix(A, multi_matrix2(transfo_p(liste2), inverse_m(transfo_p(liste1))))
 
 def inversion(p, centre, r, UV = None):
     if isinstance(r, tuple):
@@ -300,9 +286,9 @@ def inverser(classe, method, deg, args, UV, c, r):
                 dico[i[1]] +=1
             else:
                 nouv_args.append(('Point', inversion(i[1], c, cercl)))
-        nouv_args+= [('Point', c)]*(deg-dico[UV[0]] - dico[UV[1]])
-        nouv_args+= [('Point', UV[0])]*(deg-dico[UV[0]] - dico[c])
-        nouv_args+= [('Point', UV[1])]*(deg-dico[UV[1]] - dico[c])
+        nouv_args.extend([('Point', c)]*(deg-dico[UV[0]] - dico[UV[1]]))
+        nouv_args.extend([('Point', UV[0])]*(deg-dico[UV[0]] - dico[c]))
+        nouv_args.extend([('Point', UV[1])]*(deg-dico[UV[1]] - dico[c]))
         return 'Courbe', 'interpol', floor(sqrt(2*lignes([tuple(i[1]) for i in nouv_args])+9/4)-3/2), nouv_args
     print("Sos il se passe un truc sus dans inversion")
     return classe, method,deg, nouv_args
@@ -311,23 +297,17 @@ transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie'
 
 dico_binom = {(0, 0): 1}
 def binom(n, k):
+    '''calcule en programmation dynamique k parmi n'''
     if (n, k) in dico_binom:
         return dico_binom[(n, k)]
     if n < k: return 0
     if k == 0: return 1
     return binom(n-1, k-1) + binom(n-1, k)
 
-def petit(arr):
-    n=len(arr)
-    smallest = (numpy.inf,0) 
-    for i in range(n):
-        if(arr[i] < smallest[0]):
-            smallest = (arr[i], i)
-    return smallest[1]
-
 permut2=[[2, 0, 0], [0, 2, 0], [0, 0, 2], [1, 1, 0], [0, 1, 1], [1, 0, 1]]
 
-def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
+def norm(coord):
+    '''renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)'''
     if coord[2]==0:
         return coord
     return (coord[0]/coord[2], coord[1]/coord[2], 1)
@@ -341,7 +321,6 @@ def find_eq_homogene(coords, deg):
     return stre
 
 def find_eq_courbe(coords, deg, mieux="x", passemuraille_mh=""):
-    xrint('cooooooooooooooordonées :',coords)
     coefs = ['']*(deg+1)
     permut = permutations(deg)
     if passemuraille_mh == "passemuraille":
