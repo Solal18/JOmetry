@@ -88,7 +88,7 @@ class Main:
                          ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe', 'Soumettre', 'Angle', 'Poubelle'],
                          ['Point', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
                          ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangente passant par un point', 'Tangentes communes'],
-                         ['Courbe', 'Soumettre', 'Caa', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Cubique isoptique', 'Tangente', 'Tangentes communes'],
+                         ['Courbe', 'Soumettre', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Cubique isoptique', 'Tangente', 'Tangentes communes'],
                          ['Centre du cercle circonscrit', 'Orthocentre', 'Centre de gravité', 'Centre du cercle inscrit', 'Point de fermat'],
                          ['Rotation', 'Homothetie', 'Translation', 'Symetrie', 'Inversion', 'Projective', 'Polygone regulier', 'Inversion du plan'],
                          ['Editeur d\'objets', 'Etude', 'Notes', 'Connection à un serveur', 'Lancer un Serveur', 'Aide'],
@@ -143,7 +143,7 @@ class Main:
         self.Texte.grid(row = 1, column = 0)
         
         def bouton(f, nom):
-            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.png')
+            image = image_tk(os.sep.join([op.dirname(__file__)}, 'images', f'{nom}.png'])
             bout = ttk.Button(f, image = image, style = 'Sans_bordure.TButton')
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
