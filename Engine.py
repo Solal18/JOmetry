@@ -969,7 +969,10 @@ def milieu(A, B):
     return (xA*zB+xB*zA, yA*zB+yB*zA, 2*zA*zB)
 
 def centreInscrit(A, B, C):
-    """Définition du centre du cercle inscrit de trois points"""
+    """Définition du centre du cercle inscrit de trois points"""    
+    A=(norm(A)[0], norm(A)[1], 1)
+    B=(norm(B)[0], norm(B)[1], 1)
+    C=(norm(C)[0], norm(C)[1], 1)
     xA, yA, zA = A
     xB, yB, zB = B
     xC, yC, zC = C
@@ -1014,6 +1017,56 @@ def tangente2(C, p, numero):
     coef2 = C.change_variables().derivee().change_variables().change_variables32()(1)
     Solal = coef1*a+coef2*b+((-1)*coef1*Polynome((0,1))+(-1)*(coef2.change_variables()*Polynome((0,1))).change_variables())*c
     return tangente(C, inter2(Solal, C,numero))
+
+def cubic(deg, *args):#INTERpolation
+    deg=3
+    detConi = []
+    args = [tuple(i) for i in args]
+    permut = permutations(deg)
+    print("ezaj")
+    for i in args[2:]:
+        detConibis=[]
+        a, b, c = i
+        for j in permut:
+            detConibis.append(a**j[0]*b**j[1]*c**j[2])
+        detConi.append(detConibis)
+    for i in range(2):
+        detConibis=[]
+        a,b,c=args[2+i]
+        x,y,z=args[0+i]
+        if c==0:
+            for j in permut:
+                if j[2]==0 and j[1]==0:
+                    detConibis.append(0)
+                elif j[2]==0:
+                    detConibis.append(-100*z*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+                elif j[1]==0:
+                    detConibis.append(100*y*j[2]*c**(j[2]-1)*b**j[1]*a**j[0])
+                else:
+                    detConibis.append(100*y*j[2]*c**(j[2]-1)*b**j[1]*a**j[0]-100*z*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+        else:
+            for j in permut:
+                if j[0]==0 and j[1]==0:
+                    detConibis.append(0)
+                elif j[0]==0:
+                    detConibis.append(10**10*(-x*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+                elif j[1]==0:
+                    detConibis.append(10**10*(y*j[0]*a**(j[0]-1)*b**j[1]*c**j[2]))
+                else:
+                    detConibis.append(10**10*(y*j[0]*a**(j[0]-1)*b**j[1]*c**j[2]-x*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+        detConi.append(detConibis)
+    print("eozake")
+    print(len(detConi))
+    print(detConi)
+    print(detConi[-5])
+    print(detConi[-3])
+    print(detConi[-2])
+    if deg <=7:
+        a = deg + 3
+    else:
+        a = 2*deg - 5
+    print(detConi)
+    return en_poly(detConi, deg)
 
 def interpol(deg, *args):#INTERpolation
     xrint('Début interpolation')
