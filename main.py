@@ -83,7 +83,7 @@ class Main:
         self.liste_derniers_clics = []
         self.plans = [None]
         self.delai_tooltip = 300
-        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Centres', 'Transformations', 'Frames']
+        self.onglets = ['Ctrl', 'Basique', 'Points', 'Droites', 'Courbes', 'Centres', 'Transformations', 'Frames']
         self.boutons2 = [['Enregistrer', 'Enregistrer sous', 'Ouvrir', 'Nouveau plan', 'Supprimer le plan', 'Parametres'],
                          ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe', 'Soumettre', 'Angle', 'Poubelle'],
                          ['Point', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
