@@ -254,7 +254,7 @@ class AideFenetre:
     def mettre_a_jour_resultats(self, event=None):
         texte_recherche = self.entree.get()
         self.resultats = self.recherche(texte_recherche.lower())
-        self.possibles.set(' '.join([x.replace(' ', '\ ') for x in self.resultats])
+        self.possibles.set(' '.join([x.replace(' ', '\ ') for x in self.resultats]))
 
     def clic_liste(self, event = None, texte = ''):
         if self.resultats is None: return
