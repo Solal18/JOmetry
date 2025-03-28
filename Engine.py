@@ -2,8 +2,6 @@ import numpy
 from math import floor, sqrt, exp, cos, sin, pi, atan2
 import time
 from random import random
-from sympy import groebner, Poly
-import sympy.abc
 import socket
 from groebner import Polynome, resoudre_systeme
 from time import perf_counter_ns as perf
@@ -185,13 +183,14 @@ def gravite(a,b,c):
     return inter(inter(a, milieu(b,c)), inter(b, milieu(a,c)))
     
 def fermat(a,b,c):
-    A=inter(inter(a, rotation(b,c, pi/3)), inter(b, rotation(c,a, pi/3)))
-    B=inter(inter(a, rotation(b,c, -pi/3)), inter(b, rotation(c,a, -pi/3)))
+    A = inter(inter(a, rotation(b,c, pi/3)), inter(b, rotation(c,a, pi/3)))
+    B = inter(inter(a, rotation(b,c, -pi/3)), inter(b, rotation(c,a, -pi/3)))
     x1,y1,z1 = inter(b,c)
-    x2,y2,z2=inter(c,a)
-    x3,y3,z3=inter(a,b)
-    if (A[0]*x1+A[1]*y1+A[2]*z1)*(a[0]*x1+a[1]*y1+a[2]*z1)<=  0 and (A[0]*x2+A[1]*y2+A[2]*z2)*(b[0]*x2+b[1]*y2+b[2]*z2)<=0 and (A[0]*x3+A[1]*y3+A[2]*z3)*(c[0]*x3+c[1]*y3+c[2]*z3)<= 0:
-        print("ui")
+    x2,y2,z2 = inter(c,a)
+    x3,y3,z3 = inter(a,b)
+    if ((A[0]*x1+A[1]*y1+A[2]*z1)*(a[0]*x1+a[1]*y1+a[2]*z1) <= 0 and
+        (A[0]*x2+A[1]*y2+A[2]*z2)*(b[0]*x2+b[1]*y2+b[2]*z2) <= 0 and 
+        (A[0]*x3+A[1]*y3+A[2]*z3)*(c[0]*x3+c[1]*y3+c[2]*z3) <= 0):
         return A
     return B
 
@@ -217,11 +216,8 @@ def symetrie(A,B):
     return symetrer([('Point', A)], B)[0][1]
 
 def symetrer(args, B):
-    nouv_args =[]
-    print("symettre")
-    print("symetreeer")
-    print(args)
-    if type(B) is not tuple:
+    nouv_args = []
+    if not isinstance(B, tuple):
         B = B.coords()
     a, b, c = B
     if b != 0:
@@ -468,12 +464,9 @@ class Creature:
         else:
             pass
         self.dessin()
-        print("go")
         if nom not in {'U', 'V', 'Inf'}:
             self.coords()
         self.relation()
-        print([i for i in self.relation_parent])
-        print([i for i in self.relation_enfant])
         try:
             for j in [self]+list(self.args):
                 try:
@@ -616,9 +609,7 @@ class Creature:
             args = [i[1] for i in args]
             self.args_actu = args
             if self.classe == "Point" and method =="inter2":
-                print("vuieizeiaj")
-                args+= [self.args[0].copain(), self.args[1].copain()]
-                print(args)
+                args += [self.args[0].copain(), self.args[1].copain()]
                 self.coord= inter2(*args)
             elif self.classe_actuelle == 'Courbe':
                 self.coord = globals()[method](deg, *args)
@@ -692,7 +683,6 @@ class Creature:
         
         
         if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
-            zzzz=time.time()
             coords = coords.change_variables32()(1)
             if self.deg_actu == 2:
                 p1, p2, g2 = coords.parametrisation(self.args_actu[1])
@@ -724,8 +714,6 @@ class Creature:
                             l_y.append((i, y))
                     self.plan.CAst[self.ide].append(l_y)
                     i += 1
-                print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
-                zzzz = time.time()
                 points = self.plan.CAst[self.ide]
                 for x, l_p in enumerate(points[1:-1]):
                     p_moins = points[x]
@@ -743,7 +731,6 @@ class Creature:
                             self.tkinter.append(z)
                             self.plan.tkinter_object[z]=self
             can.tag_lower(self.ide, 'limite2')
-            print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
 
         if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
             if self == self.plan.inf: return
@@ -839,7 +826,6 @@ def inter(A, B):
 def angle(A, B, C, U, V):
     '''Calcule l'angle entre (AB) et (BC)'''
     a = birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
-    print("angleee")
     return (atan2(a.imag, a.real)*180/(2*pi))%180
 
 def bissectrice(a, b, c):
@@ -854,9 +840,15 @@ def harmonique(A, B, C):
     x,y,z = norm(projective(C, liste, liste2))
     return projective((1/x, 0, 1), liste2, liste)
     
-def inter2(courbe1, courbe2, numero, copains1=set(), copains2=set(), z = 1):
-    coooords = (0,0,0)
-    rooot = []
+def inter2(courbe1, courbe2, numero, copains1 = None, copains2 = None, z = 1):
+    '''Calcul des points à l'intersection de courbe1 et courbe2, non compris dans
+    copains1 & copains2. Différents cas : si une des courbes est une droite,
+    substitue dans l'autre polynôme et résouds. Sinon, applique l'algorithme 
+    de buchberger (beaucoup plus long).'''
+    if copains1 is None: copains1 = set()
+    if copains2 is None: copains2 = set()
+    coordonnees = (0,0,0)
+    racines = []
     droite = None
     if isinstance(courbe1, (tuple, list)):
         a, b, c = courbe1
@@ -865,7 +857,7 @@ def inter2(courbe1, courbe2, numero, copains1=set(), copains2=set(), z = 1):
         else:
             y = -c/b
             courbe = courbe2.change_variables32()(z).change_variables()
-            rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
+            racines = [(x, y, 1) for x in courbe(y).resoudre()[0]]
     if isinstance(courbe2, (tuple, list)):
         a, b, c = courbe2
         if a != 0:
@@ -873,54 +865,25 @@ def inter2(courbe1, courbe2, numero, copains1=set(), copains2=set(), z = 1):
         else:
             y = -c/b
             courbe = courbe1.change_variables32()(z).change_variables()
-            rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
-    if droite is None and rooot == []:
+            racines = [(x, y, 1) for x in courbe(y).resoudre()[0]]
+    if droite is None and racines == []:
         courbe1 = courbe1.change_variables32()(z)
         courbe2 = courbe2.change_variables32()(z)
-        rooot = resoudre_systeme(courbe1, courbe2)
-        #p1, p2 = courbe1.expr_dict_monomes(), courbe2.expr_dict_monomes()
-        #c = grob([p1, p2])
-        #P2 = Polynome(c[1]).change_variables()
-        #l = {d[1]:e[0]/e[1] for d, e in c[0].items()}
-        #mat = []
-        #for i in range(max(l) + 1):
-        #    mat.append(l[i] if i in l else 0)
-        #racines = Polynome(mat).resoudre()[0]
-        #for r in racines:
-        #    P = P2(r)
-        #    for r2 in P.resoudre()[0]:
-        #        if courbe2(r2)(r) < 1e-14:
-        #            rooot.append((r2, r, 1))
-        #stra = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p1.items())
-        #strb = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p2.items())
-        #b=groebner([stra, strb], sympy.abc.x, sympy.abc.y)
-        #c=Poly(b[1]).all_coeffs()
-        #root=resoudre(c)[0]
-        #for r in root:
-        #    k = str(b[0]).replace("y","("+ str(r)+")")
-        #    autre_roots = resoudre(Poly(k).all_coeffs())[0]
-        #    for ax in autre_roots:
-        #        rooot.append((ax,r,1))
-        #        print("wesh")
-        #        print((ax,r,1))
-    elif rooot == []:
+        racines = resoudre_systeme(courbe1, courbe2)
+    elif racines == []:
         P = courbe(droite)
         for y in P.resoudre()[0]:
-            rooot.append((droite(y), y, 1))
-    print(rooot)
+            racines.append((droite(y), y, 1))
     root2 = {}
-    print(root2)
     for i in copains1 & copains2:
-        if i.coord[0].imag==i.coord[1].imag==0:
-            if rooot != []:
-                root2[rooot.index(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))] = i
-                rooot[rooot.index(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))]=(0,0,0)
-    print(rooot)
-    print("the end")
+        if i.coord[0].imag == i.coord[1].imag == 0:
+            if racines != []:
+                root2[racines.index(min(racines, key=lambda x : dist(norm(x), norm(i.coords()))))] = i
+                racines[racines.index(min(racines, key=lambda x : dist(norm(x), norm(i.coords()))))] = (0,0,0)
     if numero == -1:
-        return rooot+list(root2.values())
+        return racines + list(root2.values())
     if numero < len(rooot):
-        return rooot[numero]
+        return racines[numero]
     return (0, 0, 0)
 
 def ortho(A):
@@ -957,12 +920,14 @@ def centreInscrit(A, B, C):
             (a*zA+b*zB+c*zC)/(a+b+c))
 
 def biss(a, b, numero = 1): #numéro vaut 1 ou -1
+    '''calcule les coordonées de la bissectrice des droites a et b
+    numéro peut valoir 1 ou -1, et permet de calculer la bissectrice
+    interieure ou exterieure'''
     xa, ya, za = a
     xb, yb, zb = b
-    return (
-            xa*sqrt(xb**2+yb**2)-numero*xb*sqrt(xa**2+ya**2),
-            ya*sqrt(xb**2+yb**2)-numero*yb*sqrt(xa**2+ya**2),
-            za*sqrt(xb**2+yb**2)-numero*zb*sqrt(xa**2+ya**2))
+    return (xa*sqrt(xb**2+yb**2) - numero*xb*sqrt(xa**2+ya**2),
+            ya*sqrt(xb**2+yb**2) - numero*yb*sqrt(xa**2+ya**2),
+            za*sqrt(xb**2+yb**2) - numero*zb*sqrt(xa**2+ya**2))
 
 def media(A, B):
     '''retourne la médiatrice de A et B'''
@@ -970,28 +935,32 @@ def media(A, B):
     return perp(d, p)
 
 def tangente(C, p):
+    '''Calcule la tangente en p à la courbe C, 
+    et p n'est pas obligé de se trouver sur C'''
     if isinstance(C, (tuple, list)):
         return C
-    a, b,c = p
+    a, b, c = p
     polynomex = C.change_variables()
     polynomey = C
     polynomez = C.change_variables32()
     coef1 = polynomex(b).derivee()(a)(c)
     coef2 = polynomey(a).derivee()(b)(c)
     coef3 = polynomez.derivee()(c)(a)(b)
-    coords_droite = (coef1, coef2, -coef1*a -coef2*b+coef3*(1-c))
+    coords_droite = (coef1, coef2, - (coef1*a + coef2*b + coef3*(c - 1)))
     return coords_droite
 
 def tangente2(C, p, numero):
+    '''Calcule les tangentes à la courbe C passant par p'''
     if isinstance(C, (tuple, list)):
         return C
-    a, b,c = p
+    a, b, c = p
     coef1 = C.derivee().change_variables32()(1)
     coef2 = C.change_variables().derivee().change_variables().change_variables32()(1)
-    Solal = coef1*a+coef2*b+((-1)*coef1*Polynome((0,1))+(-1)*(coef2.change_variables()*Polynome((0,1))).change_variables())*c
-    return tangente(C, inter2(Solal, C,numero))
+    Poly2 = coef1*a+coef2*b+((-1)*coef1*Polynome((0,1))+(-1)*(coef2.change_variables()*Polynome((0,1))).change_variables())*c
+    return tangente(C, inter2(Poly2, C,numero))
 
-def cubic(deg, *args):#INTERpolation
+def cubic(deg, *args):
+    '''Interpolation'''
     deg=3
     detConi = []
     args = [tuple(i) for i in args]
@@ -1252,21 +1221,19 @@ class Plan:
             return r 
     
     def envoi(self, cat, *args, **kwargs):
-        print('envoi')
         self.serveur.send(('JOmetry ' + txt([cat, args, kwargs])).encode('utf-8'))
     
     def connecter_serveur(self, adresse, port, mdp, fich = 1):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         t = perf()
         connecte = 0
-        print((adresse, port))
         while perf() - t < 10000000000:
             try:
                 client.connect((adresse, port))
                 connecte = 1
                 break
             except ConnectionRefusedError:
-                print('raté')
+                print("echec durant l'etablissement de la connexion")
         if not connecte: return 
         print('connexion du client')
         client.send(f'JOmetry 0 {mdp} {fich}'.encode('utf-8'))
@@ -1282,7 +1249,7 @@ class Plan:
                 fichier += client.recv(2048).decode('utf-8')
             self.ouvrir(fichier[8:-16])
         if reponse == 'JOmetry 0 non autorisé':
-            return print('mauvais mdp')
+            return print('mauvais mot de passe')
         t = threading.Thread(target = self.ecoute_serveur, args = (client,))
         t.start()
         
