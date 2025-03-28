@@ -414,7 +414,7 @@ class EditeurObjets:
 
     def ajouter(self, obj):
         if obj.u:
-            l = [obj.nom, obj.classe, self.nom_methodes[obj.method], list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]]
+            l = [obj.nom, obj.classe, obj.method, list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]]
             self.objets[obj.ide] = l
             self.tableau.insert('', 'end', iid = str(obj.ide), values = l)
 
