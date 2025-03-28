@@ -1,6 +1,5 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter.ttk import Treeview, Combobox
 from tkinter import colorchooser as tk_cc
 from PIL import Image, ImageTk
 import os.path as op
@@ -174,19 +173,19 @@ class Trad(tk.StringVar):
 
 
 
-class Scrollable_Frame(tk.Frame):
+class Scrollable_Frame(ttk.Frame):
     
     def __init__(self, parent, orientation = 'vertical', **kwargs):
         super().__init__(parent)
         self.grid(**kwargs)
         self.canvas = tk.Canvas(self, bd = 0)
-        self.frame = tk.Frame(self.canvas)
+        self.frame = ttk.Frame(self.canvas)
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
         if orientation == 'vertical':
-            self.scrollbar = tk.Scrollbar(self, command = self.canvas.yview, orient = orientation)
+            self.scrollbar = ttk.Scrollbar(self, command = self.canvas.yview, orient = orientation)
         else:
-            self.scrollbar = tk.Scrollbar(self, command = self.canvas.xview, orient = orientation)
+            self.scrollbar = ttk.Scrollbar(self, command = self.canvas.xview, orient = orientation)
             
         
         if orientation == 'vertical':
@@ -217,7 +216,7 @@ class AideFenetre:
     def __init__(self, fenetre, doc):
         self.fen = tk.Toplevel(fenetre)
         self.fen.title('Aide')
-        self.entree = tk.Entry(self.fen, width=30)
+        self.entree = ttk.Entry(self.fen, width=30)
         self.entree.grid(row = 0, column = 0)
         self.entree.bind('<KeyRelease>', self.mettre_a_jour_resultats)
         self.possibles = tk.StringVar()
@@ -269,6 +268,8 @@ class AideFenetre:
         self.texte.tag_add('titre', '1.0+0c', f'1.0+{len(titre)}c')
         self.texte.tag_config('titre', underline=True, justify='center')
         for (id1, id2), mot in liens.items():
+            if mot not in (i[1] for i in self.doc):
+                continue
             i1, i2 = f'1.0+{id1}c', f'1.0+{id2}c'
             self.texte.tag_add(mot, i1, i2)
             self.texte.tag_config(mot, foreground = 'blue', underline = True)
@@ -314,12 +315,17 @@ class ColorChooser(ttk.Frame):
         self.bouton = ttk.Button(self, image = self.img, command = self.tk_couleur)
         self.bouton.grid(row = 0, column = 1, sticky = 'nsew')
         self.entree.bind('<KeyRelease>', self.verifier)
+        print('ccccccccccccc :',self.dernier_correct)
         
     def tk_couleur(self):
         couleur = tk_cc.askcolor(parent = self)
         if couleur[1] is not None:
             self.textvariable.set(couleur[1])
             
+    def get(self):
+        self.verifier()
+        return self.dernier_correct
+    
     def verifier(self, ev = None):
         try: self.fenetre.winfo_rgb(self.textvariable.get())
         except tk.TclError:
@@ -327,6 +333,7 @@ class ColorChooser(ttk.Frame):
             return
         self.entree['bg'] = 'white'
         self.dernier_correct = self.textvariable.get()
+        print('ccccccccccccc :',self.dernier_correct)
         return 
 
 class EditeurObjets:
@@ -358,7 +365,7 @@ class EditeurObjets:
         self.frame_t = ttk.Frame(self.frame)
         self.frame_t.grid(row = 0, column = 0, columnspan = 4, sticky = 'nsew')
         self.frame_t.columnconfigure(0, weight = 1)
-        self.tableau = Treeview(self.frame_t, columns = ('nom', 'type', 'fonction', 'args', 'couleur', 'vis'), selectmode = 'browse')
+        self.tableau = ttk.Treeview(self.frame_t, columns = ('nom', 'type', 'fonction', 'args', 'couleur', 'vis'), selectmode = 'browse')
         self.tableau.grid(row = 0, column = 0, sticky = 'nsew')
         bar = ttk.Scrollbar(self.frame_t, orient = 'vertical', command = self.tableau.yview)
         bar.grid(row = 0, column = 1, sticky = 'ns')
@@ -368,11 +375,11 @@ class EditeurObjets:
             self.tableau.column(i, width = 40)
             self.tableau.heading(i, text = t)
             Trad(t, params['Langue'], (self.tableau, i))
-        self.nom_methodes = {c:Trad(v) for c, v in {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
+        self.nom_methodes = {c:v for c, v in {'coord' : 'coordonées', 'inter' : 'intersection', 'inter2' : 'intersection', 'ortho' : 'ortho', 'inf' : 'inf', 'milieu' : 'milieu', 'centreInscrit' : 'centre inscrit',
                         'perp' : 'perpendiculaire', 'media' : 'médiatrice', 'biss' : 'bissectrice', 'rotation' : 'rotation', 'transformation' : 'transformation', 'homothetie' : 'homothetie', 'tangente' : 'tangente',
-                        'cercle' : 'conique tangente à deux droites', 'segment':'segment', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion', 'inversion':'inversion'}.items()}
+                        'cercle' : 'conique tangente à deux droites', 'segment':'segment', 'interpol' : 'interpolation', 'harmonique' : 'harmonique', 'PsurCA' : 'point sur courbe', 'invers' : 'inversion', 'inversion':'inversion', 'cubic':'Cubique isoptique'}.items()}
         self.var1, self.var2, self.var3 = tk.StringVar(), tk.StringVar(), tk.IntVar()
-        self.entree = tk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
+        self.entree = ttk.Entry(self.frame, width = 8, state = 'disabled', textvariable = self.var1)
         self.couleur = ColorChooser(self.frame, self.fenetre, self.var2)
         self.aff = tk.Checkbutton(self.frame, bg = '#ddd', state = 'disabled', variable = self.var3, textvariable = Trad('affichage'))
         self.suppr = tk.Button(self.frame, bg = '#ddd', state = 'disabled', image = self.imgs[1], command = None)
@@ -414,7 +421,7 @@ class EditeurObjets:
 
     def ajouter(self, obj):
         if obj.u:
-            l = [obj.nom, obj.classe, obj.method, list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]]
+            l = [obj.nom, obj.classe, self.nom_methodes[obj.method], list(map(str, obj.args)), obj.color, ('non', 'oui')[obj.vis]]
             self.objets[obj.ide] = l
             self.tableau.insert('', 'end', iid = str(obj.ide), values = l)
 
@@ -425,7 +432,7 @@ class EditeurObjets:
         self.objets = {}
         for objet in self.main.plans[0].objets.values():
             if objet.u:
-                self.objets[objet.ide] = (objet.nom, objet.classe, objet.method,
+                self.objets[objet.ide] = (objet.nom, objet.classe, self.nom_methodes[objet.method],
                                     objet.args, objet.color, ('non', 'oui')[objet.vis])
         for ide, l in self.objets.items():
             self.tableau.insert('', 'end', iid = str(ide),values = l)
@@ -434,10 +441,11 @@ class EditeurObjets:
 
     def clic_entree(self, event):
         if self.selectionne is None: return
-        nom, couleur, aff = self.var1.get(), self.couleur.dernier_correct, self.var3.get()
+        nom, couleur, aff = self.var1.get(), self.couleur.get(), self.var3.get()
         if nom in ('U', 'V'):
             self.label['textvariable'] = Trad('Nom déjà utilisé\n')
             return
+        print(couleur)
         try: self.fenetre.winfo_rgb(couleur)
         except:
             self.label['textvariable'] = Trad('Couleur invalide\n')
@@ -530,10 +538,10 @@ class EtudieurObjets:
         self.main = main
         self.valeur = tk.StringVar()
         self.listvariable = tk.StringVar()
-        self.texte = tk.Label(self.frame, text = Trad('Entrez une valeur pour essayer de determiner une constante, en autorisant les points suivants à varier'))
-        self.entree = tk.Entry(self.frame, textvariable = self.valeur)
-        self.formule = tk.Label(self.frame, text = '')
-        self.bouton = tk.Button(self.frame, text = 'Etude', command = self.etude)
+        self.texte = ttk.Label(self.frame, text = Trad('Entrez une valeur pour essayer de determiner une constante, en autorisant les points suivants à varier'))
+        self.entree = ttk.Entry(self.frame, textvariable = self.valeur)
+        self.formule = ttk.Label(self.frame, text = '')
+        self.bouton = ttk.Button(self.frame, text = 'Etude', command = self.etude)
         self.liste = tk.Listbox(self.frame, listvariable = self.listvariable, selectmode = 'multiple')
         self.texte.grid(row = 0, column = 0, columnspan = 2)
         self.entree.grid(row = 1, column = 0)
@@ -605,12 +613,12 @@ class LanceServeur:
         self.main = main
         self.frame = tk.Toplevel()
         self.frame.protocol('WM_DELETE_WINDOW', self.fermer_fenetre)
-        tk.Label(self.frame, textvariable = Trad('Lancer un serveur')).grid(row = 0, column = 0, columnspan = 3, sticky = 'nsew', pady = 3, padx = 3)
-        tk.Label(self.frame, textvariable = Trad('Mot de passe')).grid(row = 1, column = 0, columnspan = 1, sticky = 'nsew', pady = 3, padx = 3)
-        self.entree = tk.Entry(self.frame)
+        ttk.Label(self.frame, textvariable = Trad('Lancer un serveur')).grid(row = 0, column = 0, columnspan = 3, sticky = 'nsew', pady = 3, padx = 3)
+        ttk.Label(self.frame, textvariable = Trad('Mot de passe')).grid(row = 1, column = 0, columnspan = 1, sticky = 'nsew', pady = 3, padx = 3)
+        self.entree = ttk.Entry(self.frame)
         self.entree.grid(row = 1, column = 1, columnspan = 2, sticky = 'nsew', pady = 3, padx = 3)
-        tk.Button(self.frame, textvariable = Trad('Annuler'), command = self.fermer_fenetre).grid(row = 2, column = 0, columnspan = 2, sticky = 'nsew', pady = 3, padx = 3)
-        tk.Button(self.frame, textvariable = Trad('OK'), command = self.lancer).grid(row = 2, column = 2, columnspan = 1, sticky = 'nsew', pady = 3, padx = 3)
+        ttk.Button(self.frame, textvariable = Trad('Annuler'), command = self.fermer_fenetre).grid(row = 2, column = 0, columnspan = 2, sticky = 'nsew', pady = 3, padx = 3)
+        ttk.Button(self.frame, textvariable = Trad('OK'), command = self.lancer).grid(row = 2, column = 2, columnspan = 1, sticky = 'nsew', pady = 3, padx = 3)
         
         
     def fermer_fenetre(self):
@@ -632,11 +640,11 @@ class ConnectServeur:
         self.vars = []
         for i, text in enumerate((Trad('adresse IP'), Trad('Port'), Trad('Mot de passe'))):
             v = tk.StringVar()
-            tk.Entry(self.frame, textvariable = v).grid(row = i + 1, column = 0, sticky = 'nsew', pady = 3, padx = 3)
-            tk.Label(self.frame, textvariable = text).grid(row = i + 1, column = 1, sticky = 'nsew', pady = 3, padx = 3)
+            ttk.Entry(self.frame, textvariable = v).grid(row = i + 1, column = 0, sticky = 'nsew', pady = 3, padx = 3)
+            ttk.Label(self.frame, textvariable = text).grid(row = i + 1, column = 1, sticky = 'nsew', pady = 3, padx = 3)
             self.vars.append(v)
-        tk.Button(self.frame, text = 'Annuler', command = self.fermer_fenetre).grid(row = 4, column = 0, sticky = 'nsew', pady = 3, padx = 3)
-        tk.Button(self.frame, text = 'OK', command = self.connect).grid(row = 4, column = 1, sticky = 'nsew', pady = 3, padx = 3)
+        ttk.Button(self.frame, text = 'Annuler', command = self.fermer_fenetre).grid(row = 4, column = 0, sticky = 'nsew', pady = 3, padx = 3)
+        ttk.Button(self.frame, text = 'OK', command = self.connect).grid(row = 4, column = 1, sticky = 'nsew', pady = 3, padx = 3)
         
     def fermer_fenetre(self):
         self.main.connecteur_serv = None
@@ -676,31 +684,31 @@ class Parametres:
                   ]
         self.widgets = []
         self.valeurs = []
-        tk.Label(self.frame, text = 'Paramètres').grid(row = 0, column = 0, columnspan = 4)
+        ttk.Label(self.frame, text = 'Paramètres').grid(row = 0, column = 0, columnspan = 4)
         for i, e in enumerate(self.p):
             if e[0] == 'nombre':
                 v = tk.IntVar()
                 w = tk.Spinbox(self.frame, textvariable = v, from_ = e[4][0], to = e[4][1])
             if e[0] == 'choix':
                 v = tk.StringVar()
-                w = Combobox(self.frame, state = 'readonly', textvariable = v, values = e[4])
+                w = ttk.Combobox(self.frame, state = 'readonly', textvariable = v, values = e[4])
             if e[0] == 'texte':
                 v = tk.StringVar()
-                w = tk.Entry(self.frame, textvariable = v)
+                w = ttk.Entry(self.frame, textvariable = v)
             if e[0] == 'couleur':
                 v = tk.StringVar()
                 w = ColorChooser(self.frame, self.fenetre, textvariable = v)
             w.grid(row = i+1, column = 0, sticky = 'nsew')
             self.valeurs.append(v)
             self.widgets.append(w)
-            tk.Label(self.frame, textvariable = e[1]).grid(row = i+1, column = 1, sticky = 'nsew')
-        f = tk.Frame(self.frame, padx = 3, pady = 3)
+            ttk.Label(self.frame, textvariable = e[1]).grid(row = i+1, column = 1, sticky = 'nsew')
+        f = ttk.Frame(self.frame, padx = 3, pady = 3)
         for colonne in range(3):
             f.columnconfigure(colonne, weight = 1)
         f.grid(row = i+2, column = 0, columnspan = 2)
-        tk.Button(f, textvariable = Trad('Reinitialiser'), command = lambda: self.assigner_valeurs([e[3] for e in self.p])).grid(row = 0, column = 0, sticky = 'nsew')
-        tk.Button(f, textvariable = Trad('   Annuler   '), command = self.fermer_fenetre).grid(row = 0, column = 1, sticky = 'nsew')
-        tk.Button(f, textvariable = Trad('     OK     '), command = self.changer_param).grid(row = 0, column = 2, sticky = 'nsew')
+        ttk.Button(f, textvariable = Trad('Reinitialiser'), command = lambda: self.assigner_valeurs([e[3] for e in self.p])).grid(row = 0, column = 0, sticky = 'nsew')
+        ttk.Button(f, textvariable = Trad('   Annuler   '), command = self.fermer_fenetre).grid(row = 0, column = 1, sticky = 'nsew')
+        ttk.Button(f, textvariable = Trad('     OK     '), command = self.changer_param).grid(row = 0, column = 2, sticky = 'nsew')
         self.assigner_valeurs([params[e[2]] for e in self.p[:-1]]+[plan.nom])
             
     def fermer_fenetre(self):
@@ -715,9 +723,8 @@ class Parametres:
             w.set(v)
     
     def changer_param(self):
-        l = [w.get() for w in self.valeurs]
+        l = [w.get() if e[0] == 'couleur' else v.get() for v, w, e in zip(self.valeurs, self.widgets, self.p)]
         for i, e in enumerate(self.p[:-1]):
-            print(i, e, e[2], l[i])
             self.params[e[2]] = l[i]
         plan = self.main.plans[0]
         self.main.menub.configure(text = f'{l[-1]}')
@@ -741,7 +748,7 @@ class Notes:
             self.grande_frame.grid(row = 1, column = 1, sticky = 'ns')
             self.frame = tk.Frame(self.grande_frame, bg = '#ddd')
             self.frame.grid(row = 0, column = 0)
-            tk.Button(self.grande_frame, textvariable = Trad('fermer'), command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
+            ttk.Button(self.grande_frame, textvariable = Trad('fermer'), command = self.supprimer, bg = '#ddd').grid(row = 1, column = 0)
             fenetre.bind('<Return>', self.clic_entree)
         self.texte = tk.Text(self.frame)
         self.texte.grid(row = 0, column = 0, sticky = 'nsew')
