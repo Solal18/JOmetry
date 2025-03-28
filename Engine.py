@@ -404,12 +404,14 @@ class Arbre:
 @dataclass
 class Relation:
     parent: set
-    enfant: set
+    enfants: set
     deg: int = 2
 
     def __str__(self):
-        return f'{[i.nom for i in self.parent]} : {[i.nom for i in self.enfant]}'
+        return f'{[i.nom for i in self.parent]} : {[i.nom for i in self.enfants]}'
 
+    def __hash__(self):
+        return id(self)
 ################################################################################
 ###                        classe Créature                                   ###
 ################################################################################   
@@ -507,7 +509,7 @@ class Creature:
         return {'nom':self.nom, 'col':self.color, 'vis':self.vis}
 
     def copain(self):
-        return {i for i in list(self.relation_parent)[0].enfant}
+        return {i for i in list(self.relation_parent)[0].enfants}
     
     def supprimer(self, canvas = None):
         '''fonction recursive pour supprimer des elements
@@ -549,7 +551,7 @@ class Creature:
                         i.parent.add(self)
                         self.relation_parent |={i}
                     else:
-                        i.enfant.add(self)
+                        i.enfants.add(self)
                         self.relation_enfant |= {i}
                         try:
                             self.relation_parent = {Relation(parent = {self}, enfants={list(i.parent)[0]}, deg=deg)}
@@ -567,9 +569,9 @@ class Creature:
                         if isinstance(i, Creature):
                             i.relation_enfant |= {a}
                             if i.classe=="Point" and self.classe in {'Droite', 'Courbe'}:
-                                list(i.relation_parent)[0].enfant.add(self)
+                                list(i.relation_parent)[0].enfants.add(self)
                             if i.classe=="Droite" and self.classe=="Point":
-                                list(i.relation_parent)[0].enfant.add(self)
+                                list(i.relation_parent)[0].enfants.add(self)
                 else:
                     b= Relation(enfants={i for i in args}, deg=deg)
                     self.relation_enfant |= {b}
@@ -582,13 +584,13 @@ class Creature:
         elif method == "inter2":
             self.relation_parent= {Relation(parent={self}, enfants={args[0], args[1]}, deg=deg)}
             self.relation_enfant = {Relation(parent=set(), enfants=set(), deg=0)}
-            list(args[0].relation_parent)[0].enfant.add(self)
-            list(args[1].relation_parent)[0].enfant.add(self)
+            list(args[0].relation_parent)[0].enfants.add(self)
+            list(args[1].relation_parent)[0].enfants.add(self)
         elif method in {"tangente", "tangente2"}:
-            list(args[1].relation_parent)[0].enfant.add(self)
+            list(args[1].relation_parent)[0].enfants.add(self)
             self.relation_enfant |=  {list(args[1].relation_parent)[0]}
         elif method in {"ProjOrtho", "PsurCA"}:
-            list(args[0].relation_parent)[0].enfant.add(self)
+            list(args[0].relation_parent)[0].enfants.add(self)
             self.relation_enfant |= {list(args[0].relation_parent)[0]}
             self.relation_parent = {Relation(parent={self}, enfants={args[0]}, deg=deg)}
         if self.classe in {"Point", "Droite"} and self.relation_parent==set():
