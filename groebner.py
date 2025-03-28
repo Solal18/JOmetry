@@ -1,3 +1,9 @@
+def norm(coord):
+    '''renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)'''
+    if coord[2]==0:
+        return coord
+    return (coord[0]/coord[2], coord[1]/coord[2], 1)
+
 def ppcm_lm(P, Q):
     p, q = max(P), max(Q)
     return (max(p[0], q[0]), max(p[1], q[1]))
@@ -328,7 +334,7 @@ def resoudre_systeme(P, Q):
     for y in racines:
         p2 = Polynome(base[1]).change_variables()(y)
         for x in p2.resoudre()[0]:
-            l.append((x, y))
+            l.append((x, y, 1))
     l.sort(key = lambda v: abs(P(v[0])(v[1]))+abs(Q(v[0])(v[1])))
     return l[:len(l)//2]
 
