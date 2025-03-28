@@ -297,7 +297,11 @@ class ColorChooser(ttk.Frame):
         couleur = tk_cc.askcolor(parent = self)
         if couleur[1] is not None:
             self.textvariable.set(couleur[1])
-            
+
+    def set(self, valeur):
+        super().set(valeur)
+        self.verifier()
+        
     def verifier(self, ev = None):
         try: self.fenetre.winfo_rgb(self.textvariable.get())
         except tk.TclError:
