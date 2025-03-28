@@ -1,873 +1,1506 @@
-#!/bin/python3
-
-
-print('Chargement  ', end = '')
-
+import numpy
+from math import floor, sqrt, exp, cos, sin, pi, atan2
+import time
+from random import random
+from sympy import groebner, Poly
+import sympy.abc
+import socket
+from groebner import Polynome, resoudre_systeme
+from time import perf_counter_ns as perf
 import threading
-from time import sleep
-chargement = True
-def animate():
-    i = 0
-    l = ('|', '/', '-', '\\')
-    while chargement:
-        c = l[i]
-        i = (i+1)%4
-        print('\b' + c, end = '', flush = 1)
-        sleep(0.1)
-    print('\rC\'est bon !')
-t = threading.Thread(target=animate)
-t.start()
-import tkinter as tk
-from tkinter import filedialog as fd, messagebox as tk_mb, simpledialog as tk_sd
-from tkinter import ttk
-import Engine as Geo
-from PIL import Image, ImageDraw, ImageTk
-from math import sqrt, pi
-import os.path as op
-from Frames import *
-from time import time
-from Engine import txt, val
-from random import random, randint
+from dataclasses import dataclass
 
-fenetre = tk.Tk()
-style = ttk.Style()
-style.theme_use('default')
-s = ttk.Style()
-s.configure('Sans_bordure.TButton', padding = 0)
-fenetre['padx'] = 2
-fenetre['pady'] = 2
-fenetre.title('JOmetry')
+class ID(int): pass
+
+def txt(x):
+    '''transforme une valeur en chaîne de caractères
+    pour la sauvegarde dans un fichier'''
+    if isinstance(x, str): return f"!T{x.replace('!','!!')}!"
+    if isinstance(x, bool):
+        return f'!B{1 if x else 0}!'
+    if isinstance(x, (int, float)):
+        return f'!N{x}!'
+    if isinstance(x, complex):
+        return f'!I{x.real}+{x.imag}!'
+    if isinstance(x, Creature):
+        return f"!C{x.ide}!"
+    if isinstance(x, (tuple, list)):
+        return '[' + ','.join(map(txt, x)) + ']'
+    if isinstance(x, dict):
+        return '{' + ','.join([f'{txt(a)}:{txt(x[a])}' for a in x]) + '}'
+    if x is None:
+        return '!R!'
+    raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
+
+#à executer avant toute modification :
+#txt({Philemon : 34})
+
+def crea_id(x, sens = 0, plan = None):
+    if isinstance(x, (tuple, list)):
+        return [crea_id(e, sens, plan) for e in x]
+    if isinstance(x, dict):
+        return {crea_id(c, sens, plan):crea_id(v, sens, plan) for c, v in x.items()}
+    if isinstance(x, Creature) and sens == 1:
+        return x.ide
+    if isinstance(x, ID) and sens == -1:
+        return plan.objets[x]
+    return x
 
 
-def norm(coord):#renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)
-    return (coord[0]/coord[2], coord[1]/coord[2])
+
+def val(x, objets = None):
+    if (x[0], x[-1]) in (('(',')'), ('[',']'), ('{','}')):
+        l, t, ec, n, v = [], x[1:-1], '', 0, 0
+        while t:
+            if v:
+                if t[0] == '!':
+                    if len(t) == 1 or t[1] != '!':
+                        v = 0
+                        ec += t[0]
+                        t = t[1:] 
+                    else:
+                        ec += '!!'
+                        t = t[2:]  
+                else:
+                    ec += t[0]
+                    t = t[1:] 
+            else:
+                if t[0] in (',',':') and n == 0:
+                    l.append(ec)
+                    ec = ''
+                elif t[0] == '!':
+                    v = 1
+                    ec += t[0]
+                else:
+                    if t[0] in ('[','(','{'):
+                        n += 1
+                    if t[0] in (']',')','}'):
+                        n -= 1
+                    ec += t[0]
+                t = t[1:]
+        l.append(ec)
+        if n != 0: raise ValueError
+        if (x[0], x[-1]) == ('{','}'):
+            return {val(l[2*i], objets):val(l[2*i+1], objets) for i in range(len(l)//2)}
+        return [val(i, objets) for i in l]
+    if (x[0], x[-1]) == ('!','!'):
+        t, typ = x[2:-1], x[1]
+        match typ:
+            case 'C':
+                if objets:
+                    return objets[int(t)]
+                else:
+                    return ID(t)
+            case 'I':
+                r, i = t.split('+')
+                return float(r)+1j*float(i)
+            case 'N':
+                if '.' in t:
+                    return float(t)
+                return int(t)
+            case 'T':
+                 return t.replace('!!','!')
+            case 'B':
+                return bool(int(t))
+            case 'R': return None
+    return ValueError
+
+def xrint(*args):
+    pass 
+
+plan_default = 0
 
 def dist(a, b):
-    return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+    if a[0].imag==a[1].imag== b[0].imag==b[1].imag ==0:
+        return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+    return float("inf")
 
-def image_tk(adresse):
-    return ImageTk.PhotoImage(file = adresse)
+def inverse_m(m):
+    return numpy.linalg.inv(m)
 
-class Tooltip:
-    
-    def __init__(self, bout, texte, main):
-        bout.bind('<Enter>', self.deb)
-        bout.bind('<Motion>', self.deb)
-        bout.bind('<Leave>', self.fin)
-        self.bout = bout
-        self.top = None
-        self.texte = Trad(texte, weak = 1)
-        self.timer = None
-        self.main = main
-        
-    def deb(self, ev = None):
-        self.fin()
-        self.timer = fenetre.after(params['TempsTooltip'], self.aff)
-    
-    def fin(self, ev = None):
-        if self.top is not None: self.top.destroy()
-        if self.timer is not None: fenetre.after_cancel(self.timer)
-    
-    def aff(self):
-        self.top = tk.Toplevel(borderwidth = 1, relief = 'solid',
-                   background = params['ColTooltip'])
-        dx, dy = fenetre.winfo_pointerxy()
-        self.top.overrideredirect(True)
-        self.top.geometry(f'+{dx+15}+{dy+20}')
-        ttk.Label(self.top, textvariable = self.texte).grid(row = 0, column = 0)
-        
+def multi_matrix2(m1, m2):
+    resultat =[[0,0,0], [0,0,0], [0,0,0]]
+    for i in range(3):
+        for j in range(3):
+            for k in range(3):
+                resultat[i][j] += m1[i][k]*m2[k][j]
+    return resultat
 
-class Main:
-    def __init__(self):
-        self.editeur_objets = None
-        self.liste_derniers_clics = []
-        self.plans = [None]
-        self.delai_tooltip = 300
-        self.onglets = ['Ctrl', 'classiques', 'Points', 'Droites', 'Courbes', 'Centres', 'Transformations', 'Frames']
-        self.boutons2 = [['Enregistrer', 'Enregistrer sous', 'Ouvrir', 'Nouveau plan', 'Supprimer le plan', 'Parametres'],
-                         ['Main', 'Point', 'Droite', 'Cercle circonscrit', 'Courbe','Cubique isoptique', 'Soumettre', 'Angle', 'Poubelle'],
-                         ['Point', 'Intersection', 'Milieu', 'Quatrième harmonique', 'Centre', 'Angle'], #Il faudra mettre angle dans une autre categorie
-                         ['Droite', 'Segment', 'Bissectrice', 'Perpendiculaire', 'Paralleles', 'Mediatrice', 'Tangente', 'Tangente passant par un point', 'Tangentes communes'],
-                         ['Courbe', 'Soumettre', 'Caa', 'Cercle circonscrit', 'Cercle inscrit', 'Cercle avec centre', 'Cercle exinscrit', 'Tangente', 'Tangentes communes'],
-                         ['Centre du cercle circonscrit', 'Orthocentre', 'Centre de gravité', 'Centre du cercle inscrit', 'Point de fermat'],
-                         ['Rotation', 'Homothetie', 'Translation', 'Symetrie', 'Inversion', 'Projective', 'Polygone regulier', 'Inversion du plan'],
-                         ['Editeur d\'objets', 'Etude', 'Notes', 'Connection à un serveur', 'Lancer un Serveur', 'Aide'],
-                         ]
-        self.creer_canvas()
-        self.plans[0] = Geo.Plan(self)
-        Geo.plan_default = self.plans[0]
-        self.creer_actions()
-        self.creer_boutons()
-        self.men = None
-        self.langue = langue
-        self.langue_def = langue_def
-        self.langues = langues
-        self.fen_etude = None
-        self.attendus = None
-        self.action_canvas = None
-        self.dernier_bouton = None
-        self.point_move = None
-        self.lanceurserveur = None
-        self.parametres = None
-        self.notes = None
-        self.fenetre_taille = '1x1'
-        self.connecteur_serv = None
-        fenetre.bind('<Configure>', self.configure_fenetre)
-        fenetre.bind('<Return>', self.entree_commande)
-        fenetre.bind('<Button-1>', self.detruire_menu)
-        fenetre.bind('<Button-3>', self.detruire_menu)
-        fenetre.columnconfigure(0, weight = 2)
-        fenetre.columnconfigure(0, weight = 1)
-        fenetre.rowconfigure(1, weight = 1)
-        fenetre.title(f'JOmetry - {self.plans[0].nom}')
-        Trad.set_lang(params['Langue'])
-        
-        
-        
-    def creer_boutons(self):
-        self.barre_haut = ttk.Frame(fenetre)
-        self.barre_haut.grid(row = 0, column = 0, sticky = 'ew')
-        
-        self.frameg = ttk.Frame(self.barre_haut)
-        self.framed = ttk.Frame(self.barre_haut)
-        self.fen_onglets = ttk.Notebook(self.barre_haut)
-        self.frameg.grid(row = 0, column = 0)
-        self.framed.grid(row = 0, column = 2, pady = 3, padx = 3)
-        self.fen_onglets.grid(row = 0, column = 1, padx = 5)
-        
-        self.menub = ttk.Menubutton(self.frameg, text = f'{self.plans[0].nom}', width = 10)
-        self.menu_deroulant = tk.Menu(self.menub, tearoff=0)
-        self.menub.configure(menu = self.menu_deroulant)
-        self.menub.grid(row = 0, column = 0, pady = 5)
-        self.Texte = ttk.Label(self.frameg, text = '', width = 20, anchor = 'n')
-        self.Texte.grid(row = 1, column = 0)
-        
-        def bouton(f, nom):
-            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.png')
-            bout = ttk.Button(f, image = image, style = 'Sans_bordure.TButton')
-            self.boutons.append(bout)
-            bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
-            self.image_boutons.append(image)
-            Tooltip(bout, nom, self)
-            return bout
-        
-        self.boutons = []
-        self.image_boutons = []
-        for i, (ong, bouts) in enumerate(zip(self.onglets, self.boutons2)):
-            f = ttk.Frame(self.fen_onglets)
-            for j, nom in enumerate(bouts):
-                bout = bouton(f, nom)
-                bout.grid(row = 0, column = j)
-            self.fen_onglets.add(f, text = ong)
-            Trad(ong, langue, (self.fen_onglets, i))
-        
-        #self.entree_texte = tk.StringVar()
-        #entree = ttk.Entry(self.barre_haut, text = 'Zone d\'entrée des commandes', textvariable = self.entree_texte)
-        #entree.grid(row = 0, column = 2, padx = 20)
-        
-        for nom, x, y in (('Annuler', 0, 0), ('Retablir', 0, 1), ('Zoom', 1, 0), ('Dezoom', 1, 1)):
-            bout = bouton(self.framed, nom)
-            bout.grid(row = x, column = y)
-            
-        
-        self.maj_menu()
-        self.maj_bouton()
-           
-    def creer_canvas(self):
-        self.panedwindow = ttk.PanedWindow(fenetre, orient = 'horizontal')
-        self.canvas = tk.Canvas(self.panedwindow, relief = 'sunken')
-        self.panedwindow.add(self.canvas, weight = 1)
-        self.limite0 = self.canvas.create_text(-505, 0, text = ' ', tag = 'limite0')
-        self.limite1 = self.canvas.create_text(-510, 0, text = ' ', tag = 'limite1')
-        self.limite2 = self.canvas.create_text(-500, 0, text = ' ', tag = 'limite2')
-        self.panedwindow.grid(row = 1, column = 0, sticky = 'nsew')
-        self.canvas.bind('<Button-1>', self.canvas_clic)
-        fleches = [('<Right>', (1, 0)), ('<Left>', (-1, 0)), ('<Down>', (0, 1)), ('<Up>', (0, -1))]
-        for touche, mouvement in fleches:
-            fenetre.bind(touche, lambda ev, mouv = mouvement: self.decaler(mouv))
-        self.canvas.bind('<ButtonRelease>', self.bouger_point)
+def multi_matrix(m1, m2):
+    '''matrice 3-3 fois matrice 1-1'''
+    x,y,z = m1
+    k,l,m = m2
+    a,b,c = k
+    d,e,f = l
+    g,h,i = m
+    return [a*x+b*y+c*z, d*x+e*y+f*z, g*x+h*y+i*z]
 
-    def creer_actions(self):
-        self.actions = {'Point' : (self.point, 1, ('non',)),
-                        'Cercle circonscrit' : (self.cercle, 1, ('point', 'point', 'point')),
-                        'Courbe' : (self.courbe, 1, ('point',)*90),
-                        'Cubique isoptique' : (self.cubique, 1, ('point','point', 'point', 'point')), 
-                        'Droite' : (self.droite, 1, ('point', 'point')),
-                        'Segment' : (self.segment, 1, ('point', 'point')),
-                        'Zoom' : (self.plus, 0),
-                        'Dezoom' : (self.moins, 0),
-                        'Main' : (self.move, 1, ('point',)),
-                        'Angle' : (self.angle, 1, ('point', 'point', 'point')),
-                        'Intersection' : (self.intersection, 1, ('courbe', 'courbe')),
-                        'Milieu' : (self.milieu, 1, ('point', 'point')),
-                        'Centre' : (self.centre, 1, ('courbe',)),
-                        'Poubelle' : (self.supprimer, 1, ('objet',)),
-                        'Soumettre' : (self.soumettre, 0),
-                        'Enregistrer' : (self.enregistrer, 0),
-                        'Enregistrer sous' : (self.enregistrer_sous, 0),
-                        'Ouvrir' : (self.ouvrir, 0),
-                        'Etude' : (self.etude, 0),
-                        'Lancer un serveur' : (self.serveur, 0),
-                        'Caa' : (self.caa, 0),
-                        'Notes' : (self.notes, 0),
-                        'Cercle avec centre' : (self.cercle_cent, 1, ('point', 'point')),
-                        'Quatrième harmonique' : (self.harmonique, 1, ('point', 'point', 'point')),
-                        'Inversion' : (self.invers, 1, ('objet', 'point', 'point')),
-                        'Inversion du plan' : (self.inv_plan, 1, ('point', 'point')),
-                        'Centre du cercle circonscrit' : (self.circonscrit, 1, ('point', 'point', 'point')),
-                        'Orthocentre' : (self.orthocentre, 1, ('point', 'point', 'point')),
-                        'Centre de gravité' : (self.gravite, 1, ('point', 'point', 'point')),
-                        'Centre du cercle inscrit' : (self.inscrit, 1, ('point', 'point', 'point')),
-                        'Cercle inscrit' : (self.cercle_inscr, 1, ('point', 'point', 'point')),
-                        'Cercle exinscrit' : (self.cercle_ex, 1, ('point', 'point', 'point')),
-                        'Point de fermat' : (self.fermat, 1, ('point', 'point', 'point')),
-                        'Bissectrice' : (self.bissec, 1, ('point', 'point', 'point')),
-                        'Tangente' : (self.tangente, 1, ('courbe', 'point')),
-                        'Tangente passant par un point' : (self.tangente_p, 1, ('courbe', 'point')),
-                        'Tangentes communes' : (self.tangentes_communes, 1, ('courbe', 'courbe')),
-                        'Nouveau plan' : (self.nouv_plan, 0),
-                        'Supprimer le plan' : (self.suppr_plan, 0),
-                        'Editeur d\'objets' : (self.edit_objets, 0),
-                        'Parametres' : (self.parametres, 0),
-                        'Aide' : (self.aide, 0),
-                        'Perpendiculaire' : (self.perp, 1, ('droite', 'point')),
-                        'Mediatrice' : (self.media, 1, ('point', 'point')),
-                        'Paralleles' : (self.para, 1, ('droite', 'point')),
-                        'Annuler' : (self.act_ctrlz, 0),
-                        'Retablir' : (self.act_ctrly, 0),
-                        'Rotation' : (self.rotation, 1, ('objet', 'point', ('nombre', 'Choisissez un angle'))),
-                        'Homothetie' : (self.homothetie, 1, ('objet', 'point', ('nombre', 'Choisissez un rapport'))),
-                        'Translation' : (self.translation, 1, ('objet', 'point', 'point')), 
-                        'Symetrie' : (self.symetrie, 1, ('objet', 'droite')),
-                        'Projective' : (self.projective, 1, ('objet', 'point', 'point', 'point', 'point', 'point', 'point', 'point', 'point')),
-                        'Polygone regulier' : (self.polyregul, 1, ('point', 'point', ('nombre', 'Choisissez le nombre de côtés'))), 
-                        'Connection à un serveur' : (self.connect, 0),
-                        }
-        
-    def act_ctrly(self):
-        self.action('Redo', self.plans[0])
-    def act_ctrlz(self):
-        self.action('Undo', self.plans[0])
-    
-    def notes(self):
-        if self.notes is not None: return
-        self.notes = Notes(self)
-    
-    def liste_objet(self):
-        liste, plan = [], self.plans[0]
-        liste.append((plan.bold, plan.boldP, plan.boldC, txt(plan.focal),
-                            txt(plan.offset_x), txt(plan.offset_y), f'<{plan.nom}>'))
-        liste.append([])
-        for objet in plan.objets.values():
-            liste[1].append((objet.classe, objet.nom, objet.method,
-                                    objet.args,
-                                    objet.deg, objet.color, objet.vis, objet.u))
-        return liste
-    
-    def maj_menu(self):
-        '''Met à jour le menu de selection des plans'''
-        self.menu_deroulant.delete(0, 'end')
-        self.menub.configure(text = f'{self.plans[0].nom}')
-        for i in range(1, len(self.plans)):
-            self.menu_deroulant.add_command(label = self.plans[i].nom, command = lambda i = i: self.passer_plan(i))
-        if len(self.plans) < 2:
-            self.menub.configure(state = 'disabled')
+def translation(p, v):
+    a, b, c = p
+    x1, y1, z1 = norm(v[0])
+    x2, y2, z2 = norm(v[1])
+    return (a + (x2-x1)*c, b + (y2-y1)*c, c)
+
+def translater(args, v):
+    nouv_args = []
+    for i in args:
+        if i[0] == 'Point':
+            nouv_args.append(('Point', translation(i[1], v)))
+        elif i[0] == 'Droite':
+            nouv_args.append(i)
+            #à modifier
         else:
-            self.menub.configure(state = 'normal')
-        self.maj_bouton()
-        if self.editeur_objets: self.editeur_objets.maj()
-    
-    def passer_plan(self, i):
-        plan_act = self.plans[0]
-        self.plans[0] = self.plans.pop(i)
-        Geo.plan_default = self.plans[0]
-        self.plans.insert(1, plan_act)
-        self.maj_menu()
-        self.dessin_canvas()
-        fenetre.title(f'JOmetry - {self.plans[0].nom}')
-        
-    def etude(self):
-        if self.fen_etude is None:
-            self.fen_etude = EtudieurObjets(fenetre, self, 1)
-    
-    def enregistrer(self):
-        if not self.plans[0].dossier_default:
-            return self.enregistrer_sous()
-        f = open(self.plans[0].dossier_default, 'w')
-        f.write(self.plans[0].fichier())
-        f.close()
-        self.plans[0].modifs = (self.plans[0].modifs[0], False)
+            nouv_args.append(i)
+    return nouv_args
 
-    def enregistrer_sous(self):
-        f = fd.asksaveasfilename(initialdir = op.dirname(__file__), title = 'Choisissez un emplacement')
-        if not f: return
-        self.plans[0].dossier_default = f
-        return self.enregistrer()
-    
-    def ouvrir(self):
-        f = fd.askopenfilename(initialdir = op.dirname(__file__), title = 'Choisissez un fichier')
-        if not f: return
-        try:
-            fichier = open(f)
-        except Exception:
-            return ouvrir_erreur()
-        texte = fichier.read()
-        fichier.close()
-        self.nouv_plan()
-        self.plans[0].ouvrir(texte)
-        return 
-        
-        
-    def edit_objets(self):
-        print('??')
-        if self.editeur_objets is None:
-            self.editeur_objets = EditeurObjets(fenetre, self, 0)
-            
-    def bouger_point(self, ev):
-        if self.point_move is None: return
-        x, y = self.coord_canvas(ev.x, ev.y)
-        if isinstance(self.point_move, tuple):
-            mov1, mov2 = x - self.point_move[0], y -self.point_move[1]
-            return self.decaler((mov1/20, mov2/20))
-        if self.point_move.arbre.parents == set():
-            l = self.action('Move', self.point_move.plan, self.point_move, ((x, y, 1),))
+def homothetie(p, c, rapport):
+    x, y, z = c
+    k = [[rapport, 0, 0], [0, rapport, 0], [0, 0, 1]]
+    return translation(multi_matrix(translation(p, (c, (0,0,z))), k), ((0,0,z), c))
+
+def homotheter(args, p, rapport):
+    nouv_args = []
+    if not isinstance(p, tuple):
+        p = p.coords()
+    for i in args:
+        if i[0] == 'Point':
+            nouv_args.append(('Point', homothetie(i[1], p, rapport)))
+        elif i[0] == 'Droite':
+            nouv_args.append(i)
+            #à modifier
         else:
-            l = self.action('Move', self.point_move.plan, self.point_move, (self.point_move.args[0], (x, y, 1)))
-        for obj in l:
-            obj.dessin(1)
-            
-    def nouv_plan(self):
-        i = 1
-        while f'Plan {i}' in [plan.nom for plan in self.plans]: i += 1
-        self.plans.insert(0, Geo.Plan(self, nom = f'Plan {i}'))
-        Geo.plan_default = self.plans[0]
-        fenetre.title(f'JOmetry - {self.plans[0].nom}')
-        self.maj_menu()
-        self.dessin_canvas()
+            nouv_args.append(i)
+    return nouv_args
+
+def circonscrit(a,b,c):
+    return inter(media(a,b), media(b,c))
+
+def orthocentre(a,b,c):
+    return inter(perp(inter(b,c),a), perp(inter(a,c),b))
+
+def inscrit(a,b,c):
+    return centreInscrit(a,b,c)
+
+def gravite(a,b,c):
+    return inter(inter(a, milieu(b,c)), inter(b, milieu(a,c)))
     
-    def suppr_plan(self):
-        result = "wesh"
-        if self.plans[0].modifs[1]:
-            result = tk_mb.askyesnocancel(f'fermeture de {self.plans[0].nom}', 'Voulez-vous enregistrer avant de fermer ?', icon = tk_mb.WARNING)
-            if result == 'yes':
-                self.enregistrer()
-        if result is not None:
-            if len(self.plans) == 1:
-                self.plans[0] = Geo.Plan(self)
-                Geo.plan_default = self.plans[0]
-            else: 
-                self.plans.pop(0)
-            fenetre.title(f'JOmetry - {self.plans[0].nom}')
-            self.maj_menu()
-            self.dessin_canvas()
-    
-    def creer_menu(self, ind, liste, bouton):
-        if len(liste) == 1: return
-        self.men_time = time()
-        liste.remove(self.nom_boutons[ind])
-        posb, posf = bouton.winfo_geometry(), fenetre.geometry()
-        p, x, y = posb.split('+')
-        fx, fy = posf.split('+')[1:]
-        dx, dy = p.split('x')
-        x, y = int(x) + int(fx) + 10, int(y) + int(dy) + int(fy) + 34
-        self.men = tk.Toplevel(borderwidth = 1, relief = 'solid',
-                   background = 'white')
-        self.men.overrideredirect(True)
-        self.men.geometry(f'+{x}+{y}')
-        for i, nom in enumerate(liste):
-            image = image_tk(f'{op.dirname(__file__)}\images\{nom}.png')
-            bout = ttk.Button(self.men, image = image)
-            bout.config(command = lambda n = nom: self.echange(ind, n))
-            self.image_boutons.append(image)
-            bout.grid(row = i, column = 0)
-            bout.bind('<Button-3>', lambda ev: bout.invoke)
-    
-    def serveur(self):
-        if self.lanceurserveur is not None or self.plans[0].serveur is not None: return
-        self.lanceurserveur = LanceServeur(self)
-        
-    def parametres(self):
-        if self.parametres is not None: return
-        self.parametres = Parametres(fenetre, self, Trad, style, params)        
-    
-    def connect(self):
-        if self.plans[0].serveur is not None: return
-        if self.connecteur_serv is not None: return
-        self.connecteur_serv = ConnectServeur(self)
-        
-    def echange(self, ind, nom):
-        self.detruire_menu()
-        self.menu[ind].remove(nom)
-        self.menu[ind].insert(0, nom)
-        self.nom_boutons[ind] = nom
-        self.boutons[ind].destroy()
-        image = image_tk(f'{op.dirname(__file__)}\\images\{nom}.png')
-        bout = ttk.Button(self.barre_haut, image = image)
-        self.boutons[ind] = bout
-        bout.config(command = (lambda n = nom, bout = bout: self.action_bouton(n, bout)))
-        self.image_boutons.append(image)
-        bout.grid(row = 0, column = ind + 1)
-        bout.bind('<Button-3>', lambda ev, ind = ind, bout = bout: self.creer_menu(ind, self.menu[ind].copy(), bout))
-        bout.invoke()
-        
-    def detruire_menu(self, ev = None):
-        if self.men and time() - self.men_time > .1:
-            self.men.destroy()
-    
-    def maj_bouton(self):
-        for bout, liste in ((self.boutons[-4], self.plans[0].ctrl_z), (self.boutons[-3], self.plans[0].ctrl_y)):
-            if len(liste) == 0:
-                bout['state'] = 'disabled'
+def fermat(a,b,c):
+    A=inter(inter(a, rotation(b,c, pi/3)), inter(b, rotation(c,a, pi/3)))
+    B=inter(inter(a, rotation(b,c, -pi/3)), inter(b, rotation(c,a, -pi/3)))
+    x1,y1,z1 = inter(b,c)
+    x2,y2,z2=inter(c,a)
+    x3,y3,z3=inter(a,b)
+    if (A[0]*x1+A[1]*y1+A[2]*z1)*(a[0]*x1+a[1]*y1+a[2]*z1)<=  0 and (A[0]*x2+A[1]*y2+A[2]*z2)*(b[0]*x2+b[1]*y2+b[2]*z2)<=0 and (A[0]*x3+A[1]*y3+A[2]*z3)*(c[0]*x3+c[1]*y3+c[2]*z3)<= 0:
+        print("ui")
+        return A
+    return B
+
+def rotation(p, c, theta):
+    a, b, c = c
+    k = [[cos(theta), sin(theta), 0], [sin(-theta), cos(-theta), 0], [0, 0, 1]]
+    return translation(multi_matrix(translation(p, ((a,b,c), (0,0,c))), k), ((0,0,c), (a,b,c)))
+
+def rotater(args, p, theta):
+    nouv_args = []
+    if not isinstance(p, tuple):
+        p = p.coords()
+    for i in args:
+        if i[0] == 'Point':
+            nouv_args.append(('Point', rotation(i[1], p, theta)))
+        elif i[0] == 'Droite':
+            nouv_args.append(('Droite', rotater(i[1], p, theta)))
+        else:
+            nouv_args.append(i)
+    return nouv_args
+
+def symetrie(A,B):
+    return symetrer([('Point', A)], B)[0][1]
+
+def symetrer(args, B):
+    nouv_args =[]
+    print("symettre")
+    print("symetreeer")
+    print(args)
+    if type(B) is not tuple:
+        B = B.coords()
+    a, b, c = B
+    if b != 0:
+        for i in args:
+            if i[0] == 'Point':
+                d1 = Creature(plan=plan_default, classe="Droite", method='coord', args = B, u= 0)
+                x, y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, ((0, -c/b, 1), (0, 0,1))), u = 0).coords()
+                k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
+                nouv_args.append(('Point', translation(multi_matrix(translation(i[1], ((0, -c/b, 1), (0, 0, 1))), k),((0,0,1), (0, -c/b, 1)))))
+    elif a!=0:
+        for i in args:
+            if i[0] == 'Point':
+                d1 = Creature(plan=plan_default,classe="Droite", method='coord', args = B, u= 0)
+                x,y, z = Creature(plan=plan_default, classe="Droite", method = 'translation', args = (d1, (c/a,0, 1)), u = 0).coords()
+                k = [[(y**2-x**2)/(x**2+y**2) , -2*y*x/(x**2+y**2), 0], [-2*x*y/(x**2+y**2),(x**2-y**2)/(x**2+y**2), 0], [0, 0, 1]]
+                nouv_args.append(('Point',translation(multi_matrix(translation(i[1],(c/a, 0, 1)), k),(-c/a, 0, 1))))
+    return nouv_args
+
+def transfo_p(liste):
+    '''envoie liste sur [1,0,0] et les autres'''
+    p,q,r,s = liste
+    a,b,c = p
+    d,e,f = q
+    g,h,i = r
+    x,y,z = multi_matrix(s, inverse_m([[a,d,g], [b,e,h], [c,f,i]]))
+    return [[a*x, d*y, g*z], [b*x, e*y, h*z], [c*x, f*y, i*z]]
+
+def projective(A, liste1, liste2):
+    return multi_matrix(A, multi_matrix2(transfo_p(liste2), inverse_m(transfo_p(liste1))))
+
+def inversion(p, centre, r, UV = None):
+    if isinstance(r, tuple):
+        r = CAtan2(2, inter(UV[0].coord, centre), inter(UV[1].coord, centre), r, UV[0].coord, UV[1].coord)
+    if centre == p:
+        return (1, 1, 0)
+    d = inter(p, centre)
+    A, B = inter2(d, r, -1)
+    return harmonique(A, B, p)
+
+def inverser(classe, method, deg, args, UV, c, r):
+    nouv_args = []
+    if not isinstance(c, tuple):
+        c = c.coords()
+    if not isinstance(r, tuple):
+        r = r.coords()
+    cercl = CAtan2(2, inter(UV[0], c), inter(UV[1], c), r, UV[0], UV[1])
+    if classe == 'Droite':
+        A, B = args[0][1], args[1][1]
+        d = globals()[method](A, B)
+        a, b, h = d
+        e, f, g = c
+        if abs(a*e+b*f+h*g) < 1e-13:
+            return classe, method, deg, args
+        if method == 'inter':
+            return 'Courbe', 'interpol', 2, [('Point', inversion(A, c, cercl)), ('Point', inversion(B, c, cercl)), ('Point', c), ('Point', UV[0]), ('Point', UV[1])]
+        else:
+            return 'Courbe', 'CAtan1', 2, [('Droite', inter(c, inf(d))), ('Point', c), ('Point', UV[0]), ('Point', UV[1]), ('Point', inversion(B, c, cercl))]
+    if deg >= 1:
+        dico = {UV[0] : 0, UV[1] : 0, c : 0}
+        nouv_args = []
+        for i in args:
+            if i[1] in list(dico.keys()):
+                dico[i[1]] +=1
             else:
-                bout['state'] = 'normal'
+                nouv_args.append(('Point', inversion(i[1], c, cercl)))
+        nouv_args.extend([('Point', c)]*(deg-dico[UV[0]] - dico[UV[1]]))
+        nouv_args.extend([('Point', UV[0])]*(deg-dico[UV[0]] - dico[c]))
+        nouv_args.extend([('Point', UV[1])]*(deg-dico[UV[1]] - dico[c]))
+        return 'Courbe', 'interpol', floor(sqrt(2*lignes([tuple(i[1]) for i in nouv_args])+9/4)-3/2), nouv_args
+    print("Sos il se passe un truc sus dans inversion")
+    return classe, method,deg, nouv_args
+
+transformation = {'translation' : translater, 'rotation' : rotater, 'homothetie' : homotheter, 'symetrie' : symetrer, 'projective' : projective, 'inversion' : inverser}
+
+dico_binom = {(0, 0): 1}
+def binom(n, k):
+    '''calcule en programmation dynamique k parmi n'''
+    if (n, k) in dico_binom:
+        return dico_binom[(n, k)]
+    if n < k: return 0
+    if k == 0: return 1
+    return binom(n-1, k-1) + binom(n-1, k)
+
+permut2=[[2, 0, 0], [0, 2, 0], [0, 0, 2], [1, 1, 0], [0, 1, 1], [1, 0, 1]]
+
+def norm(coord):
+    '''renvoie les coordonnées normalisés (x/Z, y/Z) de (x,y,z)'''
+    if coord[2]==0:
+        return coord
+    return (coord[0]/coord[2], coord[1]/coord[2], 1)
+
+def find_eq_homogene(coords, deg):
+    permut = permutations(deg)
+    stre=""
+    for i in range(len(permut)):
+        stre+= "x"+"**"+str(permut[i][0])+"*"+"y" + "**"+ str(permut[i][1]) + "*" + str((coords[i]).as_integer_ratio())+"+"
+    stre=stre[:len(stre)-1]
+    return stre
+
+def find_eq_courbe(coords, deg, mieux="x", passemuraille_mh=""):
+    coefs = ['']*(deg+1)
+    permut = permutations(deg)
+    if passemuraille_mh == "passemuraille":
+        permut = permut2
+    if mieux == "x":
+        for i in range(len(permut)):
+            coefs[deg-permut[i][0]] += "+" + " "+ "y" + "**"+ str(permut[i][1]) + "*" + str(coords[i])
+    else:
+        for i in range(len(permut)):
+            coefs[deg-permut[i][1]] += "+" + " "+ "x" + "**"+ str(permut[i][0]) + "*" + str(coords[i])
+    xrint(mieux, coefs)
+    return coefs
+
+def determinant(M):
+    '''Determinant de la matrice M
+    Utilise numpy avec une méthode peu précise pour éviter
+    des calculs trop longs si len(M) > 36'''
+    if len(M) <= 36:
+        M = [row[:] for row in M]
+        n, sign, previous_diagonal = len(M), 1, 1
+        for i in range(n-1):
+            if M[i][i] == 0:
+                # Swap this row with another row having non-zero i-th element
+                for j in range(i+1, n):
+                    if M[j][i] != 0:
+                        M[i], M[j], sign = M[j], M[i], -sign
+                        break
+                else:
+                    # All M[*][i] are zero ==> det(M) = 0
+                    return 0
+            for j in range(i+1, n):
+                for k in range(i+1, n):
+                    M[j][k] = M[j][k] * M[i][i] - M[j][i] * M[i][k]
+                    M[j][k] /= previous_diagonal
+            previous_diagonal = M[i][i]
+        return sign * M[-1][-1]
+    else:
+        sign, det_log = numpy.linalg.slogdet(M)
+        return sign * exp(det_log)
     
-    def action_bouton(self, nom, bout):
-        self.dernier_bouton = nom
-        for bouton in self.boutons:
-            bouton.state(('!pressed',))
-        if self.actions[nom][1]:
-            self.attendus = self.actions[nom][2]
-            bout.state(('pressed',))
-            self.action_canvas = self.actions[nom][0]
-        else:
-            self.attendus = None
-            self.actions[nom][0]()
-        self.deselectionner()
-        self.liste_derniers_clics = []
-        self.afficher_attendu()
+def permutations(n):
+    liste=[]
+    for i in range(0, n+1):
+        for j in range(0, n+1-i):
+            liste.append([n-i-j, j, i])
+    return liste
+
+def resoudre(self):
+    roots=[]
+    for i in numpy.roots(self):
+        if numpy.imag(i)==0:
+            roots.append(float(numpy.real(i)))
+    return (roots, [])    
+
+class Arbre:
+
+    def __init__(self, args, objet):
+        self.descendants = set()
+        self.valeur = objet
+        self.parents = set()
+        for i in args:
+            if isinstance(i, Creature):
+                self.parents.add(i)
+                i.arbre.descendants.add(self)
+
+    def descente(self, a = set(), n = 0):
+        a.add((self, n))
+        for i in self.descendants - a:
+            a |= i.descente(a, n+1)
+        return a
         
-    def tangentes_communes(self):
-        c1, c2 = self.liste_derniers_clics
-        tangentes_c1 = [self.action('Creature', self.plans[0], 'Droite', nom = 0, method = 'tangente', args = (c1, p), u = 0) for p in c1.args]
-        tangentes_c2 = [self.action('Creature', self.plans[0], 'Droite', nom = 0, method = 'tangente', args = (c2, p), u = 0) for p in c2.args]
-        c1_dual = self.action('Creature', self.plans[0], 'Courbe', nom = 0, method = 'interpol', deg = '', args = tangentes_c1, u = 0)
-        c2_dual = self.action('Creature', self.plans[0], 'Courbe', nom = 0, method = 'interpol', deg = '', args = tangentes_c2, u = 0)
-        c1_dual.coords()
-        c2_dual.coords()
-        for i in range(c1_dual.deg * c2_dual.deg):
-            self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter2', args = (c1_dual, c2_dual, i), u = 1)
-            
-    def angle(self):
-        A, B, C = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Angle', nom = 1, method = 'angle', args = [A, B, C, self.plans[0].U, self.plans[0].V], u = 1)
-        
-    def harmonique(self):
-        A,B,C = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'harmonique', args = (A, B, C), u = 1)
-
-    def rotation(self):
-        obj, p, angle = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'rotation', args = (obj, p, -angle/180*pi), u = 1)
-
-    def symetrie(self):
-        obj, d = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'symetrie', args = (obj, d), u = 1)
-
-    def projective(self):
-        objet, a,b,c,d,p,q,r,s = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'projective', args = (obj, [a,b,c,d], [p,q,r,s]), u = 1)
-    
-    def homothetie(self):
-        obj, p, rapport = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'homothetie', args = (obj, p, rapport), u = 1)
-
-    def translation(self):
-        obj, p1, p2 = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], obj.classe, nom = 1, method = 'translation', args = (obj, (p1.coords(), p2.coords())), u = 1)
-        
-    def polyregul(self):
-        p1, p2, nombre = self.liste_derniers_clics
-        nombre = int(nombre)
-        for i in range(nombre - 2):
-            p1, p2 = self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'rotation', args = (p2, p1, (nombre-2)/nombre*pi), u = 1), p1
-
-    def circonscrit(self):
-        a,b,c = self.liste_derniers_clics
-        self.action('Creature', self.plans[0], 'Point', nom = 'O', method = 'circonscrit', args = (a,b,c), u = 1)
-
-    def inscrit(self):
-        a,b,c = self.liste_derniers_clics
-        self.action('Creature', self.plans[0], 'Point', nom = 'I', method = 'inscrit', args = (a,b,c), u = 1)
-
-    def orthocentre(self):
-        a,b,c = self.liste_derniers_clics
-        self.action('Creature', self.plans[0], 'Point', nom = 'H', method = 'orthocentre', args = (a,b,c), u = 1)
-
-    def gravite(self):
-        a,b,c = self.liste_derniers_clics
-        self.action('Creature', self.plans[0], 'Point', nom = 'G', method = 'gravite', args = (a,b,c), u = 1)
-
-    def fermat(self):
-        a,b,c = self.liste_derniers_clics
-        self.action('Creature', self.plans[0], 'Point', nom = 'F', method = 'fermat', args = (a,b,c), u = 1)
-
-    def invers(self):
-        obj, centre, rayon = self.liste_derniers_clics
-        if obj.classe == 'Point':
-            self.action('Creature', self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon, (self.plans[0].U, self.plans[0].V)), obj.deg, u = 1)
-        else:
-            self.action('Creature', self.plans[0], obj.classe, 1, 'inversion', (obj, centre, rayon), obj.deg, u = 1)
-            
-    def inv_plan(self):
-        centre, rayon = self.liste_derniers_clics
-        plan = self.plans[0]
-        l = plan.objets.values()
-        self.nouv_plan()
-        n_plan = self.plans[0]
-        for obj in l:
-            if obj.nom in ('U', 'V', 'Inf'): continue
-            if obj.classe == 'Point':
-                self.action('Creature', n_plan, obj.classe, obj.nom + "'", 'inversion', (obj, centre, rayon, (n_plan.U, n_plan.V)), obj.deg, u = 1)
-            else:
-                self.action('Creature', n_plan, obj.classe, obj.nom + "'", 'inversion', (obj, centre, rayon), obj.deg, u = 1)
-            self.action('Creature', n_plan, 'Point', centre.nom + "'", 'rien', (centre, ), 1, u = 1)
-            n_plan.offset_x = plan.offset_x
-            n_plan.offset_y = plan.offset_y
-            n_plan.bold, n_plan.boldP, n_plan.boldC = plan.bold, plan.boldP, plan.boldC
-            n_plan.focal = plan.focal
-            n_plan.plan_trans = plan
-            
-    def point(self):
-        x, y = self.liste_derniers_clics[0]
-        if x=='s':
-            if y=='s':
-                return      
-            pos, obj = y   
-            if obj.classe == 'Droite':
-                return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'ProjOrtho', args = [obj, (pos[0], pos[1], 1)], u = 1)
-            return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'PsurCA', args = [obj, pos], u = 1)
-        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'coord', args = [(x, y, 1)], u = 1)
-
-
-    def cercle(self):
-        points = self.liste_derniers_clics + [self.plans[0].U, self.plans[0].V]
-        return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', args = points, u = 1)
-        
-    def droite(self):
-        A, B = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, B), u = 1)
-    
-    def segment(self):
-        A, B = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'segment', args = (A, B), u = 1)
-        
-    def tangente(self):
-        C, p = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'tangente', args = (C, p), u = 1)
-        
-    def tangente_p(self):
-        C, p = self.liste_derniers_clics
-        for i in range(C.deg):
-            self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'tangente2', args = (C, p,i), u = 1)
-
-    def cercle_cent(self):
-        centre, point =  self.liste_derniers_clics[0], self.liste_derniers_clics[1]
-        U, V = self.plans[0].U, self.plans[0].V
-        return self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
-        
-    def perp(self):
-        d, p = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'perp', args = (d, p), u = 1)
-
-    def caa(self):
-        CA = [self.plans[0].newPoint_coord(1, (self.canvas.winfo_width()/4+random()*self.canvas.winfo_width()*3/4, self.canvas.winfo_height()/4+random()*3/4*self.canvas.winfo_height(),1), u=0) for _ in range([5, 9, 14, 20, 32][randint(0,4)])]
-        if randint(0,3)==2:
-            CA = [self.plans[0].U]+CA
-        if randint(0,3)==2:
-            CA = [self.plans[0].V]+CA
-        self.plans[0].newCA(1, CA).dessin()
-        
-    def media(self):
-        A, B = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'media', args = (A, B), u = 1)
-
-    def milieu(self):
-        A, B = self.liste_derniers_clics
-        return self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'milieu', args = (A, B), u = 1)
-     
-    def centre(self):
-        self.plans[0].newCentre(1, self.liste_derniers_clics)
-
-    def para(self):
-        d, A = self.liste_derniers_clics
-        p = self.action('Creature', self.plans[0], 'Point', nom = 0, method = 'inf', args = (d,), u = 0)
-        return self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (A, p), u = 1)
-
-    def cercle_inscr(self):
-        p1, p2, p3 = self.liste_derniers_clics
-        plan = self.plans[0]
-        centre = self.action('Creature', plan, 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
-        cote = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (p1, p2), u = 0)
-        point =  self.action('Creature', plan, 'Point', nom = 0, method = 'ProjOrtho', args = (cote, centre), u = 0)
-        U, V = plan.U, plan.V
-        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre, point, U, V), u = 1)
-        
-    def cercle_ex(self):
-        p1, p2, p3 = self.liste_derniers_clics
-        plan = self.plans[0]
-        centre = self.action('Creature', plan, 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
-        bp1 = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (centre, p1), u = 0)
-        bp3 = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (centre, p3), u = 0)
-        be1 = self.action('Creature', plan, 'Droite', nom = 0, method = 'perp', args = (bp1, p1), u = 0)
-        be3 = self.action('Creature', plan, 'Droite', nom = 0, method = 'perp', args = (bp3, p3), u = 0)
-        centre2 = self.action('Creature', plan, 'Point', nom = 1, method = 'inter', args = (be1, be3), u = 1)
-        cote = self.action('Creature', plan, 'Droite', nom = 0, method = 'inter', args = (p1, p3), u = 0)
-        point = self.action('Creature', plan, 'Point', nom = 0, method = 'ProjOrtho', args = (cote, centre2), u = 0)
-        U, V = plan.U, plan.V
-        return self.action('Creature', plan, 'Courbe', nom = 1, method = 'cercle', args = (centre2, point, U, V), u = 1)
-    
-    def bissec(self):
-        p1, p2, p3 = self.liste_derniers_clics
-        centre = self.action('Creature', self.plans[0], 'Point', nom = 0, method = 'centreInscrit', args = (p1, p2, p3), u = 0)
-        self.action('Creature', self.plans[0], 'Droite', nom = 1, method = 'inter', args = (centre, p2), u = 1)
-
-    def move(self):
-        p = self.liste_derniers_clics[0]
-        self.point_move = p
-
-    def aide(self):
-        try:
-            f = open('aide.txt')
-            f.close()
-        except FileNotFoundError:
-            return tk_mb.showerror('Aide', "Impossible d'ouvrir l'aide du programme.\nFichier introuvable.")
-        f = open('aide.txt')
-        texte = f.read().split('\n\n')
-        f.close()
-        doc = []
-        for i in texte:
-            a = i.split('\n')
-            doc.append((a[0].split('|'), a[1], a[2]))
-        fen = AideFenetre(fenetre, doc)
-    
-    def moins(self):
-        f = 3/4
-        a, b = self.canvas.winfo_width()/2, self.canvas.winfo_height()/2
-        self.plans[0].offset_x = [self.plans[0].offset_x[0] * f,
-                                  (self.plans[0].offset_x[1] - a) * f + a]
-        self.plans[0].offset_y = [self.plans[0].offset_y[0] * f,
-                                  (self.plans[0].offset_y[1] - b) * f + b]
-        self.canvas.scale('all', a, b, f, f)
-        self.plans[0].modifs = (True, True)
-
-    def plus(self):
-        f = 4/3
-        a, b = self.canvas.winfo_width()/2, self.canvas.winfo_height()/2
-        self.plans[0].offset_x = [self.plans[0].offset_x[0] * f,
-                                  (self.plans[0].offset_x[1] - a) * f + a]
-        self.plans[0].offset_y = [self.plans[0].offset_y[0] * f,
-                                  (self.plans[0].offset_y[1] - b) * f + b]
-        self.canvas.scale('all', a, b, f, f)
-        self.plans[0].modifs = (True, True)
-        
-    def intersection(self):
-        courbe_1, courbe_2 = self.liste_derniers_clics
-        if courbe_1.classe == 'Droite' and courbe_2.classe == 'Droite':
-            return self.action('Creature', self.plans[0], 'Point', nom = 1,
-                               method = 'inter', args = [courbe_1, courbe_2], u = 1)
-        for i in range(courbe_1.deg * courbe_2.deg):
-            self.action('Creature', self.plans[0], 'Point', nom = 1, method = 'inter2', args = [courbe_1, courbe_2, i], u = 1)
-        return None
-            
     def supprimer(self):
-        obj = self.liste_derniers_clics[0]
-        self.action('Supprimer', obj.plan, obj)
-        
-    def soumettre(self):
-        if self.action_canvas == self.courbe and len(self.liste_derniers_clics) >= 2:
-            courbe = self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'interpol', deg = '', args = [i for i in self.liste_derniers_clics], u = 1)
-            self.deselectionner()
-            courbe.dessin()
-            self.action_bouton('Courbe', self.boutons[7])
-        
-    courbe = soumettre
-    
-    def cubique(self):
-        A,B,C,D = self.liste_derniers_clics
-        P=Geo.inter(Geo.inter(A.coords(),C.coords()),Geo.inter(B.coords(),D.coords()))
-        droite = Geo.inter(A.coords(), Geo.symetrie(D.coords(),Geo.bissectrice(Geo.homothetie(B.coords(),A.coords(),-1), A.coords(), C.coords())))
-        droite2 = Geo.inter(B.coords(), Geo.symetrie(C.coords(),Geo.bissectrice(Geo.homothetie(A.coords(),B.coords(),-1), B.coords(), D.coords())))
-        courbe = self.action('Creature', self.plans[0], 'Courbe', nom = 1, method = 'cubic', deg = 3, args = [droite,droite2, A,B,C,D,P,self.plans[0].U,self.plans[0].V], u = 1)
-        self.deselectionner()
-    
-    def entree_commande(self, evenement):
-        commande = self.entree_texte.get()
-        self.entree_texte.set('')
-        print(f"Vous avez essayé d'executer la commande suivante :\n{commande}\nMalheureusement, votre incompetence en informatique vous a empeché d'arriver à vos fins.")
-        if commande[0] == '#':
-            exec(commande[1:])
-    
-    def configure_fenetre(self, evenement):
-        if evenement.widget is not fenetre: return
-        fenetre.update_idletasks()
-        self.fenetre_taille = fenetre.geometry()
-        self.dessin_canvas()
+        for i in self.parents:
+            i.arbre.descendants.remove(self)
 
-    def canvas_clic(self, evenement):
-        if self.attendus is None:
-            return
-        x, y = self.coord_canvas(evenement.x, evenement.y)
-        attendu = self.attendus[len(self.liste_derniers_clics)]
-        if attendu == 'non':
-            objet = self.canvas.find_closest(evenement.x, evenement.y)[0]
-            point=(x,y)
-            a=self.plans[0].tkinter_object[objet]
-            if a.classe=="Droite":
-                if dist((x,y), norm(Geo.ProjOrtho(a.coords(), (x,y,1)))) < 20*self.plans[0].offset_x[0]:
-                    point=("s", ((x,y), a))
-            elif dist((x,y), (self.canvas.coords(objet)[0], self.canvas.coords(objet)[1]))<20 * self.plans[0].offset_x[0]:
-                a=self.plans[0].tkinter_object[objet]
-                if a.classe == "Point":
-                    point=("s","s")
-                if a.classe=="Courbe":
-                    point=("s", ((x,y), a))
-            self.liste_derniers_clics.append(point)
-        if attendu == 'point':    
-            distances = []
-            for i, p in enumerate(self.plans[0].points.values()):
-                if p.u == 0: continue
-                p_x, p_y, p_z = p.coords()
-                if p_z == 0: continue
-                p_x, p_y = norm((p_x, p_y, p_z))
-                if p_x.imag != 0 or p_y.imag != 0: continue
-                distances.append((dist((x, y), (p_x, p_y)), i, p))
-            distances.sort()
-            if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
-                #clic éloigné d'un point
-                if self.dernier_bouton != "Main":
-                    point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
-                    if self.plans[0].serveur is not None:
-                        point = 'fantome'
+################################################################################
+###                        classe Relation                                   ###
+################################################################################   
+
+@dataclass
+class Relation:
+    parent: set
+    enfants: set
+    deg: int = 2
+
+    def __str__(self):
+        return f'{[i.nom for i in self.parent]} : {[i.nom for i in self.enfants]}'
+
+    def __hash__(self):
+        return id(self)
+################################################################################
+###                        classe Créature                                   ###
+################################################################################   
+
+    
+class Creature:
+
+    def __init__(self, plan, classe, nom = '', method = '', args = None, deg = 1, color = "red", vis = 1, u = 0, complexe = False, ide = None):
+        self.plan = plan
+        if args is None: args = []
+        if nom in (0, 1):
+            nom = plan.nouveau_nom(nom, classe)
+        if classe == 'Courbe':
+            if method in ('CAtan1', 'CAtan2', 'cercle'):
+                deg = 2
+            elif method in transformation:
+                deg = args[0].deg 
+            elif deg == '':
+                while 2*lignes(args) != floor(sqrt(2*lignes(args)+9/4)-3/2)**2+3*floor(sqrt(2*lignes(args)+9/4)-3/2):
+                    args.pop(-1)
+                deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
+            else:
+                deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
+                args = args[:(deg**2+3*deg)//2]
+        self.nom = nom
+        self.coord = None
+        self.method = method
+        self.classe = classe
+        self.classe_actuelle = None
+        self.deg_actu = None
+        self.args = args
+        self.deg = deg
+        self.color = color
+        self.vis = vis
+        self.u = u
+        self.relation_parent = set()
+        self.relation_enfant = set()
+        self.complexe = complexe
+        self.tkinter = [None, None] #[cercle, texte] pour les points
+        if ide is None:
+            self.ide = plan.nouv_ide()
+        elif ide not in plan.objets:
+            self.ide = ide
+        else: raise ValueError('Ide déjà utilisé')
+        plan.objets[self.ide] = self
+        plan.noms.append(nom)
+        plan.modifs = (True, True)
+        listes = {'Point' : plan.points, 'Droite' : plan.droites, 'Courbe' : plan.CAs}
+        if classe in listes:
+            listes[classe][nom] = (self)
+        if self.nom != '':
+            self.arbre = Arbre(args, self)
+        if self.plan.main is not None and plan.main.editeur_objets is not None:
+            plan.main.editeur_objets.ajouter(self)
+        else:
+            pass
+        self.dessin()
+        xrint(self.coord)
+        print("go")
+        if nom not in {'U', 'V', 'Inf'}:
+            self.coords()
+        self.relation()
+        print([i for i in self.relation_parent])
+        print([i for i in self.relation_enfant])
+        try:
+            for j in [self]+list(self.args):
+                try:
+                    print(j.nom)
+                    for i in j.relation_parent:
+                        print(i)
+                    for i in j.relation_enfant:
+                        print(i)
+                except:
+                    pass
+        except:
+            for i in self.relation_parent:
+                print(i)
+            for i in self.relation_enfant:
+                print(i)
+        print(f'nouveau {self.classe} {nom} avec méthode {method}, arguments {args}')        
+
+    def __str__(self):
+        return f'Creature classe : {self.classe}|{self.classe_actuelle} nom : {self.nom}'
+    
+    __repr__ = __str__
+
+    def __hash__(self):
+        return id(self)
+    
+    def bougeable(self):
+        return (self.ide > 2 and (self.arbre.parents == set() or self.method in ('PsurCA', 'ProjOrtho')))
+    
+    @property
+    def infos_user(self):
+        return {'nom':self.nom, 'col':self.color, 'vis':self.vis}
+
+    def copain(self):
+        return {i for i in list(self.relation_parent)[0].enfants}
+    
+    def supprimer(self, canvas = None):
+        '''fonction recursive pour supprimer des elements
+        un peu bizarre pour selectionner un element d'un ensemble,
+        mais le plus rapide, j'ai vérifié'''
+        if self.plan.main is not None:
+            if self.plan.main.editeur_objets:
+                self.plan.main.editeur_objets.supprimer_element(self)
+        while self.arbre.descendants:
+            for e in self.arbre.descendants:
+                break
+            e.valeur.supprimer(canvas)
+        self.arbre.supprimer()
+        for i in self.tkinter:
+            if i and canvas:
+                canvas.delete(i)
+                self.plan.tkinter_object.pop(i)
+        for dic in (self.plan.points, self.plan.droites, self.plan.CAs, self.plan.objets):
+            if self.ide in dic:
+                del dic[self.ide]
+        self.plan.noms.remove(self.nom)
+        del self
+      
+    def relation(self):
+        '''relation_parent : un objet défini une relation'''
+        '''relation_enfant : ensemble des relations auxquelles j'appartiens'''
+        '''au début j'ai 0 relation'''
+        method=self.method
+        args=self.args
+        deg=self.deg
+        if method in {"inter","interpol", "harmonique", "milieu"}:
+            s=args[0].relation_enfant
+            for i in args[1:]:
+                s&= i.relation_enfant
+            done=False
+            for i in list(s):
+                if i.deg==deg:
+                    if method=="inter":
+                        i.parent.add(self)
+                        self.relation_parent |={i}
                     else:
-                        self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
+                        i.enfants.add(self)
+                        self.relation_enfant |= {i}
+                        try:
+                            self.relation_parent = {Relation(parent = {self}, enfants={list(i.parent)[0]}, deg=deg)}
+                        except:
+                            pass
+                    done=True
+            if not done:
+                if method in {"inter", "interpol"}:
+                    a=Relation(parent ={self}, enfants={i for i in args}, deg=deg)
+                    print("cest fait")
+                    print(a)
+                    print(self.nom)
+                    self.relation_parent |= {a}
+                    for i in args:
+                        if isinstance(i, Creature):
+                            i.relation_enfant |= {a}
+                            if i.classe=="Point" and self.classe in {'Droite', 'Courbe'}:
+                                list(i.relation_parent)[0].enfants.add(self)
+                            if i.classe=="Droite" and self.classe=="Point":
+                                list(i.relation_parent)[0].enfants.add(self)
                 else:
-                    point = (x,y)
-            else: 
-                if distances[0][1] not in self.liste_derniers_clics:
-                    point = distances[0][2]
-                    self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
-                    self.canvas.tag_raise(point.tkinter[0], self.canvas.find_all()[-1])
-                    self.canvas.tag_raise(point.tkinter[1], self.canvas.find_all()[-1])
-            if point not in self.liste_derniers_clics or self.dernier_bouton == "courbe":
-                self.liste_derniers_clics.append(point)
-            if point != 'fantome' and self.liste_derniers_clics.count(point) not in {0,1} and self.dernier_bouton=="courbe":
-                self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
-        if attendu in ['droite', 'courbe'] and self.plans[0].tkinter_object != {}:
-            objet = self.canvas.find_closest(evenement.x, evenement.y,
-                                             {'droite':self.limite2, 'courbe':self.limite1}[attendu])
-            if len(objet) == 0: return
-            courbe = self.plans[0].tkinter_object[objet[0]]
-            if courbe not in self.liste_derniers_clics:
-                self.liste_derniers_clics.append(courbe)
-        if attendu == 'objet' and self.plans[0].tkinter_object != {}:
-            objet = self.canvas.find_closest(evenement.x, evenement.y)
-            if len(objet) == 0: return
-            objet = self.plans[0].tkinter_object[objet[0]]
-            if objet not in self.liste_derniers_clics and objet.classe != 'Angle':
-                self.liste_derniers_clics.append(objet)
-        nombres = True
-        while len(self.liste_derniers_clics) < len(self.attendus) and isinstance(self.attendus[len(self.liste_derniers_clics)], tuple) and self.attendus[len(self.liste_derniers_clics)][0] == 'nombre' and nombres:
-            texte = Trad(self.attendus[len(self.liste_derniers_clics)][1], weak = 1).get()
-            entier = tk_sd.askfloat("Choix d'un nombre", texte)
-            if entier is None:
-                self.deselectionner()
-                nombres = False
-            else:
-                self.liste_derniers_clics.append(entier)
-        if len(self.liste_derniers_clics) == len(self.attendus):
-            self.fin_clic_canvas()
-        self.afficher_attendu()
-        return
+                    b= Relation(enfants={i for i in args}, deg=deg)
+                    self.relation_enfant |= {b}
+                    for i in args:
+                        i.relation_enfant |={b}
+            if method in {"inter", "interpol"}:
+                for i in args:
+                    if isinstance(i, Creature):
+                        self.relation_enfant |= {list(i.relation_parent)[0]}
+        elif method == "inter2":
+            self.relation_parent= {Relation(parent={self}, enfants={args[0], args[1]}, deg=deg)}
+            self.relation_enfant = {Relation(parent=set(), enfants=set(), deg=0)}
+            list(args[0].relation_parent)[0].enfants.add(self)
+            list(args[1].relation_parent)[0].enfants.add(self)
+        elif method in {"tangente", "tangente2"}:
+            list(args[1].relation_parent)[0].enfants.add(self)
+            self.relation_enfant |=  {list(args[1].relation_parent)[0]}
+        elif method in {"ProjOrtho", "PsurCA"}:
+            list(args[0].relation_parent)[0].enfants.add(self)
+            self.relation_enfant |= {list(args[0].relation_parent)[0]}
+            self.relation_parent = {Relation(parent={self}, enfants={args[0]}, deg=deg)}
+        if self.classe in {"Point", "Droite"} and self.relation_parent==set():
+            self.relation_parent = {Relation(parent={self}, enfants=set(), deg=deg)}
 
-    def fin_clic_canvas(self):
-        if 'fantome' in self.liste_derniers_clics:
-            fenetre.after(50, self.fin_clic_canvas)
-            print('on attend pour un fantome')
-            return
-        self.deselectionner()
-        self.action_canvas()
-        self.liste_derniers_clics = []
-        return
-    
-    def deselectionner(self):
-        for objet in self.liste_derniers_clics:
-            if isinstance(objet, Geo.Creature) and objet.classe != 'Angle':
-                self.canvas.itemconfigure(objet.tkinter[0], fill = objet.color)
-                self.canvas.itemconfigure(objet.tkinter[1], text = objet.nom)
-        self.point_move = None
+    def coords(self, calcul = 0):
+        if self.coord is None or calcul:
+            method = self.method
+            objet = self
+            transformations = []
+            while method in transformation and not objet.classe == 'Point':
+                parent = objet.args[0]
+                transformations.append((method, objet.args[1:]))
+                method = parent.method
+                objet = parent
+            args = [(i.classe, i.coords()) if isinstance(i, Creature) else (0, i) for i in objet.args]
+            classe = self.classe
+            U, V = self.plan.U.coord, self.plan.V.coord
+            deg = self.deg
+            while transformations:
+                method_tr, args_tr = transformations.pop()
+                if method_tr == "inversion":
+                    classe, method, deg, args = transformation["inversion"](self.classe, method, self.deg, args, (self.plan.U.coord, self.plan.V.coord), *args_tr)
+                    if deg == 1:
+                        classe = 'Droite'
+                        method = "inter"
+                else:
+                    args = transformation[method_tr](args, *args_tr)
+            self.classe_actuelle = classe
+            self.deg_actu = deg
+            args = [i[1] for i in args]
+            self.args_actu = args
+            if self.classe == "Point" and method =="inter2":
+                print("vuieizeiaj")
+                args+= [self.args[0].copain(), self.args[1].copain()]
+                print(args)
+                self.coord= inter2(*args)
+            elif self.classe_actuelle == 'Courbe':
+                self.coord = globals()[method](deg, *args)
+            elif self.classe_actuelle == 'Droite' and method == 'inter':
+                self.coord = inter(*args)
+            else:
+                self.coord = globals()[method](*args)
+        if self.complexe and self.coord[2] != 0:
+            self.coord = ((self.coord[0]/self.coord[2]).real, (self.coord[1]/self.coord[2]).real, 1) 
+        return self.coord
+        
+    def set_param(self, nom = None, col = None, vis = None):
+        if nom is None: nom = self.nom
+        if col is None: col = self.color
+        if vis is None: vis = self.vis
+        self.plan.noms.remove(self.nom)
+        self.plan.noms.append(nom)
+        if self.plan.main is None: return
+        edit = self.plan.main.editeur_objets
+        if edit is not None:
+            for item in edit.tableau.get_children():
+                ligne = edit.tableau.item(item)['values']
+                if ligne and ligne[0] == self.nom:
+                    ligne[0] = nom
+                    ligne[4] = col
+                    ligne[5] = ['non', 'oui'][vis]
+                    edit.tableau.item(item, values = ligne)
+        self.nom = nom
+        self.color = col
+        self.vis = vis
+        self.dessin()
+        
+    def dessin(self, calcul = 1):
+        if self.plan.main is None or self.plan is not self.plan.main.plans[0]: return
+        
+        can = self.plan.main.canvas
+        for i in self.tkinter:
+            can.delete(i)
+        
+        if not (self.u and self.vis): return
+        if self.classe_actuelle == 'non': return
+        
+        h, w = can.winfo_height(), can.winfo_width()
+        defocaliser = self.plan.main.coord_canvas
+        (x1, y1), (x2, y2) = defocaliser(0, 0), defocaliser(w, h)
+        w,h = x2-x1, y2-y1
+        self.tkinter=[None, None]
+        
+        
+        def focaliser(coordN): #renvoie le focalisé du point (qui est gentil) coordN par foc
+            return (self.plan.offset_x[0]*coordN[0] + self.plan.offset_x[1], self.plan.offset_y[0]*coordN[1]+self.plan.offset_y[1])
+        
+        coords = self.coords() if (calcul or self.coord is None) else self.coord
+        
+        def dessin_entre(p1, p2, g2, inf, sup, a, b, i = 0, infi = 0):
+            if abs(a[0] - b[0])+abs(a[1] - b[1]) <= 7 or i >= 20:
+                z = can.create_line(a[0], a[1], b[0], b[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
+                self.tkinter.append(z)
+                self.plan.tkinter_object[z]=self
+            else:
+                if infi:
+                    if sup >= -inf:
+                        bo = 10*inf
+                    else:
+                        bo = 10*sup
+                else:
+                    bo = (inf+sup)/2
+                p = focaliser((p1(bo)/g2(bo), p2(bo)/g2(bo)))
+                dessin_entre(p1, p2, g2, inf, bo, a, p, i+1, infi)
+                dessin_entre(p1, p2, g2, bo, sup, p, b, i+1, infi)
+        
+        
+        if self.classe_actuelle == 'Courbe' and self.deg_actu > 1:
+            zzzz=time.time()
+            coords = coords.change_variables32()(1)
+            if self.deg_actu == 2:
+                p1, p2, g2 = coords.parametrisation(self.args_actu[1])
+                coo = [(p1(i)/g2(i), p2(i)/g2(i)) for i in range(-50, 50)]
+                pol = lambda x: focaliser((p1(x)/g2(x), p2(x)/g2(x)))
+                racines = sorted(g2.resoudre()[0])
+                if len(racines) == 2:
+                    r0, r1, r2, r3, r4, r5 = racines[0]-10, racines[0]-1e-2, racines[0]+1e-2, racines[1]-1e-2, racines[1]+1e-2, racines[1]+10
+                    dessin_entre(p1, p2, g2, r0, r5, pol(r0), pol(r5), infi = 1)
+                    dessin_entre(p1, p2, g2, r0, r1, pol(r0), pol(r1))
+                    dessin_entre(p1, p2, g2, r2, r3, pol(r2), pol(r3))
+                    dessin_entre(p1, p2, g2, r4, r5, pol(r4), pol(r5))
+                else:
+                    p_m50, p_m0, p_0, p_50 = pol(50), focaliser((p1(-1e-10)/g2(-1e-10), p2(-1e-10)/g2(-1e-10))), focaliser((p1(1e-10)/g2(1e-10), p2(1e-10)/g2(1e-10))), focaliser((p1(50)/g2(50), p2(50)/g2(50)))
+                    dessin_entre(p1, p2, g2, 1e-10, 50, p_0, p_50)
+                    dessin_entre(p1, p2, g2, -50, -1e-10, p_m50, p_m0)                  
+            else:
+                self.plan.CAst[self.ide]=[]
+                polynomex = coords.change_variables()
+                polynomey = coords
                 
-    def decaler(self, mouvement):
-        if self.dernier_bouton != 'courbe':
-            a,b = [i*20 for i in mouvement]
-            self.plans[0].offset_x = [self.plans[0].offset_x[0],
-                                    (self.plans[0].offset_x[1] + a)]
-            self.plans[0].offset_y = [self.plans[0].offset_y[0] ,
-                                    (self.plans[0].offset_y[1] + b)]
-            self.canvas.move('all', a,b)
-            self.plans[0].modifs = (True, True)
-        else:
-            if self.liste_derniers_clics != []:
-                point=self.liste_derniers_clics[-1]
-                if mouvement == (1,0):
-                    self.liste_derniers_clics.append(point)
-                if mouvement == (-1,0):
-                    self.liste_derniers_clics.remove(point)
-                if self.liste_derniers_clics.count(point) in {0,1}:
-                    self.canvas.itemconfigure(point.tkinter[1], text = point.nom)
-                    if self.liste_derniers_clics.count(point)==0:
-                        self.canvas.itemconfigure(point.tkinter[0], fill = point.color)
-                else:
-                    self.canvas.itemconfigure(point.tkinter[1], text = point.nom + " : " + str(self.liste_derniers_clics.count(point)))
-        
-    def dessin_canvas(self):
-        for t in self.canvas.find_all():
-            if not ('limite1' in self.canvas.gettags(t) or
-                    'limite2' in self.canvas.gettags(t)):
-                self.canvas.delete(t)
-        for nom, objet in self.plans[0].objets.items():
-            objet.dessin(0)
-        
-    def coord_canvas(self, x, y):
-        return ((x - self.plans[0].offset_x[1]) / self.plans[0].offset_x[0],
-                (y - self.plans[0].offset_y[1]) / self.plans[0].offset_y[0])
-    
-    def afficher_attendu(self):
-        if self.attendus is None: return self.Texte.config(text = '')
-        self.texte_att_aff = Trad(self.attendus[len(self.liste_derniers_clics)], weak = 1)
-        self.Texte.config(textvariable = self.texte_att_aff)
-        
-    def action(self, cat, plan, *args, **kwargs):
-        if cat == 'Creature' and 'color' not in kwargs:
-            if args[0] == 'Point':
-                kwargs['color'] = params['ColP']
+                i = x1
+                while i<x2:
+                    polynome2y = polynomey(i)
+                    roots = polynome2y.resoudre()[0]
+                    l_y = []
+                    for y in roots:
+                        if y1 - 50 <= y <= y2 + 50:
+                            l_y.append((i, y))
+                    self.plan.CAst[self.ide].append(l_y)
+                    i += 1
+                print(f'Fin calcul des points. Temps estimé : {time.time()-zzzz}')
+                zzzz = time.time()
+                points = self.plan.CAst[self.ide]
+                for x, l_p in enumerate(points[1:-1]):
+                    p_moins = points[x]
+                    p_plus = points[x+2]
+                    for p in l_p:
+                        d_moins = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_moins] + [(float('inf'), 0)])
+                        d_plus = min([(sqrt(1+(p[1]-p_[1])**2), p_) for p_ in p_plus] + [(float('inf'), 0)])
+                        d_nor = min([(abs(p[1]-p_[1]), p_) for p_ in l_p if p_ != p] + [(float('inf'), 0)])
+                        if d_moins == d_nor == (float('inf'), 0):
+                            continue
+                        a_p = min([d_moins, d_nor])[1]
+                        p, a_p = focaliser(p), focaliser(a_p)
+                        if dist(p, a_p) < 50:
+                            z=can.create_line(p[0], p[1], a_p[0], a_p[1], width = self.plan.boldP, fill = self.color, tag = self.ide)
+                            self.tkinter.append(z)
+                            self.plan.tkinter_object[z]=self
+            can.tag_lower(self.ide, 'limite2')
+            print(f'Fin affichage des points. Temps estimé : {time.time()-zzzz}.')
+
+        if self.classe_actuelle == 'Droite' or (self.classe_actuelle == 'Courbe' and self.deg_actu == 1):
+            if self == self.plan.inf: return
+            if self.method == 'segment':
+                A, B = self.args_actu
+                z = can.create_line(focaliser(A)[:2], focaliser(B)[:2], width=self.plan.bold, fill=self.color, tag = self.ide)
             else:
-                kwargs['color'] = params['ColC']
-        if plan.serveur is None:
-            p = plan.action(cat, *args, **kwargs)
-            self.maj_bouton()
-            return p
+                if isinstance(coords, Polynome):
+                    coords = coords.change_variables32()(1)
+                    coords = (coords.coefs[1][0], coords.coefs[0][1], coords.coefs[0][0])
+                nor = norm(coords)
+                if abs(nor[0]) <= abs(nor[1]): #pour les droites horizontales
+                    z = can.create_line(focaliser((x1, (-1-x1*nor[0])/nor[1])),focaliser((w, (-1-w*nor[0])/nor[1])), width=self.plan.bold, fill=self.color, tag = self.ide)
+                else:
+                    z = can.create_line(focaliser(((-1-nor[1]*y1)/nor[0],y1)), focaliser(((-1 - h*nor[1])/nor[0], h)), width=self.plan.bold, fill=self.color, tag = self.ide)
+            self.tkinter[0] = z
+            self.plan.tkinter_object[z] = self
+            can.tag_lower(z, 'limite1')
+            
+
+        if self.classe_actuelle == 'Point':
+            a = coords
+            if not(a[0].imag == 0 and a[1].imag == 0 and a[2] != 0): return
+            a = (a[0]/a[2], a[1]/a[2],1)
+            c = focaliser([a[0], a[1]])
+            k = can.create_text(c[0], c[1], text = '•', font = "Helvetica " + str(self.plan.boldP*8), fill = self.color, tag = self.ide)
+            z = can.create_text(c[0] + self.plan.boldP*8, c[1], text = self.nom, font = "Helvetica " + str(self.plan.boldP*6), tag = self.ide)
+            self.tkinter[1] = z
+            self.tkinter[0] = k
+            self.plan.tkinter_object[k] = self
+            self.plan.tkinter_object[z] = self
+            can.tag_raise(k, 'limite2')
+            can.tag_raise(z, 'limite2')
+
+        if self.classe_actuelle == 'Angle':
+            #C'est peut etre pas tres beau comme ça mais ça marche
+            a, b, c = [norm(x.coords()) for x in self.args[:3]]
+            v1, v2 = (a[0]-b[0], a[1]-b[1]), (c[0]-b[0], c[1]-b[1])
+            a1, a2 = atan2( *v1)*180/pi, atan2( *v2)*180/pi
+            b = focaliser(b)
+            z = can.create_arc(b[0]-15, b[1]-15, b[0]+15, b[1]+15, fill = self.color, tag = self.ide, start = a1 - 90, extent = (a2 - a1)%360)
+            a, b, c = focaliser(a), b, focaliser(c)
+            a, b, c = [(x[0], x[1], 1) for x in (a,b,c)]
+            biss = bissectrice(a, b, c)
+            per = perp(biss, b)
+            cer = cercle(2, b, (b[0], b[1]+30, 1), self.plan.U.coords(), self.plan.V.coords())
+            p1, p2 = inter2(biss, cer, -1)
+            if sum([x*y for x,y in zip(per,p1)])*sum([x*y for x,y in zip(per,focaliser(a))]) >= 0:
+                p = p1
+            else: p = p2
+            x, y = norm(p)[:2]
+            k = can.create_text(x, y, text = f'{self.nom}={round(coords, 1)}°', font = "Helvetica4", tag = self.ide)
+            self.tkinter[0] = z
+            self.tkinter[1] = k
+            self.plan.tkinter_object[k] = self
+            self.plan.tkinter_object[z] = self
+            can.tag_raise(k, 'limite2')
+            can.tag_raise(z, 'limite2')
+            
+ 
+################################################################################
+###                        Méthodes de calcul                                ###
+################################################################################        
+
+def rien(c): return c
+
+def lignes(liste):
+    dicoArgs={}
+    for i in liste:
+        dicoArgs[i] = dicoArgs.get(i, 0)+1
+    return sum([(i*(i+1))//2 for i in list(dicoArgs.values())])
+
+def coord(c, d = 0, e = 0):
+    """Définition d'un point par ses coordonnées"""
+    if isinstance(c, (tuple, list)):
+        x, y, z = c
+        if x==y==z==0:
+            raise ValueError("Point (0,0,0) impossible")
+        return (x, y, z)
+    return (c, d, e)
+    
+def segment(A, B):
+    return inter(A, B)
+
+def inter(A, B):
+    """Définition d'un point par deux droites"""
+    xA, yA, zA = A
+    xB, yB, zB = B
+    return (yA*zB-yB*zA,
+            zA*xB-zB*xA,
+            xA*yB-xB*yA)
+
+def angle(A, B, C, U, V):
+    '''Calcule l'angle entre (AB) et (BC)'''
+    a = birapport(inf(inter(A, B)), inf(inter(B, C)), U, V)
+    print("angleee")
+    return (atan2(a.imag, a.real)*180/(2*pi))%180
+
+def bissectrice(a, b, c):
+    return inter(b, centreInscrit(a, b, c))
+    
+def birapport(A, B, C, D):
+    return determinant([[0,0,1], list(A), list(C)])*determinant([[0,0,1], list(B), list(D)])/(determinant([[0,0,1], list(A), list(D)])*determinant([[0,0,1], list(B), list(C)]))
+
+def harmonique(A, B, C):
+    liste = [A, B, (14,11,1), (3,4,1)]
+    liste2 =[(-1, 0, 1), (1, 0,1), (14,11,1), (3,4,1)]
+    x,y,z = norm(projective(C, liste, liste2))
+    return projective((1/x, 0, 1), liste2, liste)
+    
+def inter2(courbe1, courbe2, numero, copains1=set(), copains2=set(), z = 1):
+    coooords = (0,0,0)
+    rooot = []
+    droite = None
+    if isinstance(courbe1, (tuple, list)):
+        a, b, c = courbe1
+        if a != 0:
+            droite, courbe = Polynome([-c/a, -b/a]), courbe2.change_variables32()(z)
         else:
-            p = plan.envoi(cat, *args, **kwargs)
-            self.maj_bouton()
-            return p
+            y = -c/b
+            courbe = courbe2.change_variables32()(z).change_variables()
+            rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
+    if isinstance(courbe2, (tuple, list)):
+        a, b, c = courbe2
+        if a != 0:
+            droite, courbe = Polynome([-c/a, -b/a]), courbe1.change_variables32()(z)
+        else:
+            y = -c/b
+            courbe = courbe1.change_variables32()(z).change_variables()
+            rooot = [(x, y, 1) for x in courbe(y).resoudre()[0]]
+    if droite is None and rooot == []:
+        courbe1 = courbe1.change_variables32()(z)
+        courbe2 = courbe2.change_variables32()(z)
+        rooot = resoudre_systeme(courbe1, courbe2)
+        #p1, p2 = courbe1.expr_dict_monomes(), courbe2.expr_dict_monomes()
+        #c = grob([p1, p2])
+        #P2 = Polynome(c[1]).change_variables()
+        #l = {d[1]:e[0]/e[1] for d, e in c[0].items()}
+        #mat = []
+        #for i in range(max(l) + 1):
+        #    mat.append(l[i] if i in l else 0)
+        #racines = Polynome(mat).resoudre()[0]
+        #for r in racines:
+        #    P = P2(r)
+        #    for r2 in P.resoudre()[0]:
+        #        xrint(courbe2(r2)(r))
+        #        if courbe2(r2)(r) < 1e-14:
+        #            rooot.append((r2, r, 1))
+        #stra = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p1.items())
+        #strb = '+'.join(f'x**{i[0]}*y**{i[1]}*{v[0]}/{v[1]}' for i, v in p2.items())
+        #b=groebner([stra, strb], sympy.abc.x, sympy.abc.y)
+        #c=Poly(b[1]).all_coeffs()
+        #root=resoudre(c)[0]
+        #for r in root:
+        #    k = str(b[0]).replace("y","("+ str(r)+")")
+        #    autre_roots = resoudre(Poly(k).all_coeffs())[0]
+        #    for ax in autre_roots:
+        #        rooot.append((ax,r,1))
+        #        print("wesh")
+        #        print((ax,r,1))
+    elif rooot == []:
+        P = courbe(droite)
+        for y in P.resoudre()[0]:
+            rooot.append((droite(y), y, 1))
+    print(rooot)
+    root2 = {}
+    print(root2)
+    for i in copains1 & copains2:
+        if i.coord[0].imag==i.coord[1].imag==0:
+            if rooot != []:
+                root2[rooot.index(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))] = i
+                rooot[rooot.index(min(rooot, key=lambda x : dist(norm(x), norm(i.coords()))))]=(0,0,0)
+    print(rooot)
+    print("the end")
+    if numero == -1:
+        return rooot+list(root2.values())
+    if numero < len(rooot):
+        return rooot[numero]
+    return (0, 0, 0)
+
+def ortho(A):
+    """Point orthogonal de A"""
+    xA, yA, zA = A
+    if zA != 0:
+        raise ValueError("Orthogonal d'un point non à l'infini")
+    return (-yA, xA, 0)
+
+def inf(a):
+    """Point à l'infini d'une droite"""
+    xa, ya, za = a
+    return (-ya, xa, 0)
+
+def milieu(A, B):
+    """Définition du milieu de deux points"""
+    xA, yA, zA = A
+    xB, yB, zB = B
+    return (xA*zB+xB*zA, yA*zB+yB*zA, 2*zA*zB)
+
+def centreInscrit(A, B, C):
+    """Définition du centre du cercle inscrit de trois points"""    
+    A=(norm(A)[0], norm(A)[1], 1)
+    B=(norm(B)[0], norm(B)[1], 1)
+    C=(norm(C)[0], norm(C)[1], 1)
+    xA, yA, zA = A
+    xB, yB, zB = B
+    xC, yC, zC = C
+    a=sqrt((xB-xC)**2+(yB-yC)**2+(zB-zC)**2)
+    b=sqrt((xA-xC)**2+(yA-yC)**2+(zA-zC)**2)
+    c=sqrt((xB-xA)**2+(yB-yA)**2+(zB-zA)**2)
+    return ((a*xA+b*xB+c*xC)/(a+b+c),
+            (a*yA+b*yB+c*yC)/(a+b+c),
+            (a*zA+b*zB+c*zC)/(a+b+c))
+
+def biss(a, b, numero = 1): #numéro vaut 1 ou -1
+    xa, ya, za = a
+    xb, yb, zb = b
+    return (
+            xa*sqrt(xb**2+yb**2)-numero*xb*sqrt(xa**2+ya**2),
+            ya*sqrt(xb**2+yb**2)-numero*yb*sqrt(xa**2+ya**2),
+            za*sqrt(xb**2+yb**2)-numero*zb*sqrt(xa**2+ya**2))
+
+def media(A, B):
+    '''retourne la médiatrice de A et B'''
+    d, p = inter(A, B), milieu(A, B)
+    return perp(d, p)
+
+def tangente(C, p):
+    if isinstance(C, (tuple, list)):
+        return C
+    a, b,c = p
+    polynomex = C.change_variables()
+    polynomey = C
+    polynomez = C.change_variables32()
+    coef1 = polynomex(b).derivee()(a)(c)
+    coef2 = polynomey(a).derivee()(b)(c)
+    coef3 = polynomez.derivee()(c)(a)(b)
+    coords_droite = (coef1, coef2, -coef1*a -coef2*b+coef3*(1-c))
+    return coords_droite
+
+def tangente2(C, p, numero):
+    if isinstance(C, (tuple, list)):
+        return C
+    a, b,c = p
+    coef1 = C.derivee().change_variables32()(1)
+    coef2 = C.change_variables().derivee().change_variables().change_variables32()(1)
+    Solal = coef1*a+coef2*b+((-1)*coef1*Polynome((0,1))+(-1)*(coef2.change_variables()*Polynome((0,1))).change_variables())*c
+    return tangente(C, inter2(Solal, C,numero))
+
+def cubic(deg, *args):#INTERpolation
+    deg=3
+    detConi = []
+    args = [tuple(i) for i in args]
+    permut = permutations(deg)
+    print("ezaj")
+    for i in args[2:]:
+        detConibis=[]
+        a, b, c = i
+        for j in permut:
+            detConibis.append(a**j[0]*b**j[1]*c**j[2])
+        detConi.append(detConibis)
+    for i in range(2):
+        detConibis=[]
+        a,b,c=args[2+i]
+        x,y,z=args[0+i]
+        if c==0:
+            for j in permut:
+                if j[2]==0 and j[1]==0:
+                    detConibis.append(0)
+                elif j[2]==0:
+                    detConibis.append(-100*z*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+                elif j[1]==0:
+                    detConibis.append(100*y*j[2]*c**(j[2]-1)*b**j[1]*a**j[0])
+                else:
+                    detConibis.append(100*y*j[2]*c**(j[2]-1)*b**j[1]*a**j[0]-100*z*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+        else:
+            for j in permut:
+                if j[0]==0 and j[1]==0:
+                    detConibis.append(0)
+                elif j[0]==0:
+                    detConibis.append(10**10*(-x*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+                elif j[1]==0:
+                    detConibis.append(10**10*(y*j[0]*a**(j[0]-1)*b**j[1]*c**j[2]))
+                else:
+                    detConibis.append(10**10*(y*j[0]*a**(j[0]-1)*b**j[1]*c**j[2]-x*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+        detConi.append(detConibis)
+    print("eozake")
+    print(len(detConi))
+    print(detConi)
+    print(detConi[-5])
+    print(detConi[-3])
+    print(detConi[-2])
+    if deg <=7:
+        a = deg + 3
+    else:
+        a = 2*deg - 5
+    print(detConi)
+    return en_poly(detConi, deg)
+
+def interpol(deg, *args):#INTERpolation
+    xrint('Début interpolation')
+    zzzz=time.time()
+    detConi = []
+    dicoArgs ={}
+    args = [tuple(i) for i in args]
+    permut = permutations(deg)
+    for i in args:
+        dicoArgs[i] = dicoArgs.get(i, 0)+1
+    for i in list(dicoArgs.keys()):
+        a, b, c = i
+        detConibis = []
+        for j in permut:
+            detConibis.append(a**j[0]*b**j[1]*c**j[2])
+        detConi.append(detConibis)
+        for k in range(1,(dicoArgs[i]*(dicoArgs[i]+1))//2):
+            detConibis = []
+            if c==0:
+                for j in permut:
+                    if j[2]==0 and j[1]==0:
+                        detConibis.append(0)
+                    elif j[2]==0:
+                        detConibis.append(10**10*((10**7-100*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+                    elif j[1]==0:
+                        detConibis.append(10**10*(k*j[2]*c**(j[2]-1)*b**j[1]*a**j[0]))
+                    else:
+                        detConibis.append(10**10*(k*j[2]*c**(j[2]-1)*b**j[1]*a**j[0]+(10**7-100*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2]))
+            else:
+                for j in permut:
+                    if j[0]==0 and j[1]==0:
+                        detConibis.append(0)
+                    elif j[0]==0:
+                        detConibis.append((10**(2*deg+1)-10**(deg)*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+                    elif j[1]==0:
+                        detConibis.append(k*j[0]*a**(j[0]-1)*b**j[1]*c**j[2])
+                    else:
+                        detConibis.append(k*j[0]*a**(j[0]-1)*b**j[1]*c**j[2]+(10**(2*deg+1)-10**(deg)*k)*j[1]*a**j[0]*b**(j[1]-1)*c**j[2])
+            detConi.append(detConibis)
+    print("wooo")
+    print(detConi)
+    if deg <=7:
+        a = deg + 3
+    else:
+        a = 2*deg - 5
+    for i in range(len(detConi)):
+        for j in range(len(detConi[i])):
+            detConi[i][j] = detConi[i][j]/(10**a)
+    return en_poly(detConi, deg)
+
+def en_poly(detConi, deg):
+    permut = permutations(deg)
+    coords = []
+    for i in range(len(permut)):
+        sousDet = [[detConi[j][k] for k in range(i)]+[detConi[j][k] for k in range(i+1, len(permut))] for j in range(len(detConi))]
+        coords.append(((-1)**(i+1) * determinant(sousDet), (permut[i])))
+    nouv_coords = {}
+    a = 0
+    i = 0
+    while a == 0 and i < len(coords):
+        if coords[i][0] != 0:
+            a = coords[i][0]
+        i+=1
+    if a != 0:
+        for j in range(len(coords)):
+            nouv_coords[tuple(coords[j][1])] = ((coords[j][0] / a).real, 1)
+    poly = Polynome(nouv_coords)
+    return poly
+
+def CAtan1(deg, *args):
+    '''crée une conique tangente à d1 en A passant par les points B, C et D'''
+    d1, A, B, C, D = args[:5]
+    b, c = d1[1], d1[2]
+    detConi =  [[A[0]**2, A[0]*A[1], A[1]**2, A[2]*A[0], A[1]*A[2], A[2]**2],
+                 [0, A[0]*c, 2*c*A[1], -A[0]*b, A[2]*c-A[1]*b, -2*b*A[2]],
+                 [B[0]**2,B[0]*B[1], B[1]**2, B[0]*B[2], B[1]*B[2], B[2]**2],
+                 [C[0]**2,C[0]*C[1], C[1]**2, C[0]*C[2], C[1]*C[2], C[2]**2],
+                 [D[0]**2,D[0]*D[1], D[1]**2, D[0]*D[2], D[1]*D[2], D[2]**2]]
+    return en_poly(detConi, deg)
+
+def CAtan2(deg, *args):
+    ''' crée une conique tangente à d1 en U et à d2 en V passant par le point B
+    permet notamment de faire un cercle de centre c1 si confondu avec c2'''
+    d1, d2 = args[0], args[1]
+    U, V = args[3], args[4]
+    B = args[2]
+    b, c = d1[1], d1[2]
+    d, e = d2[1], d2[2]
+    detConi =  [[U[0]**2, U[0]*U[1], U[1]**2,U[2]*U[0], U[1]*U[2],U[2]**2],
+                 [0, U[0]* c, 2*c*U[1], -U[0]*b, U[2]*c-U[1]*b, -2*b*U[2]],
+                 [V[0]**2, V[0]*V[1], V[1]**2,V[2]*V[0], V[1]*V[2],V[2]**2],
+                 [0, V[0]* e, 2*e*V[1], -V[0]*d, V[2]*e-V[1]*d, -2*d*V[2]],
+                 [B[0]**2, B[0]*B[1],B[1]**2, B[0]*B[2], B[1]*B[2], B[2]**2]]
+    #if tangente1[2] !=0 and tangente1[2] !=0:
+    #detConi =  [[U.coords()[0]**2, U.coords()[0]*U.coords()[1], U.coords()[1]**2,U.coords()[2]*U.coords()[0], U.coords()[1]*U.coords()[2],U.coords()[2]**2],
+    #             [2*U.coords()[0]*b,b*U.coords()[1]-a*U.coords()[0], -2*U.coords()[1]*a, U.coords()[2]*b, -U.coords()[2]*a, 0],
+    #             [V.coords()[0]**2, V.coords()[0]*V.coords()[1], V.coords()[1]**2,V.coords()[2]*V.coords()[0], V.coords()[1]*V.coords()[2],V.coords()[2]**2],
+    #             [2*V.coords()[0]*d,d*V.coords()[1]-c*V.coords()[0], -2*V.coords()[1]*c, V.coords()[2]*d, -V.coords()[2]*c, 0],
+    #             [E.coords()[0]**2, E.coords()[0]*E.coords()[1],E.coords()[1]**2, E.coords()[0]*E.coords()[2], E.coords()[1]*E.coords()[2], E.coords()[2]**2]]
+    return en_poly(detConi, deg)
+
+def perp(d, p):
+    '''args -> Droite, Point; retourne la perpendiculaire'''
+    p1 = inf(d)
+    p2 = ortho(p1)
+    d = inter(p, p2)
+    return d
     
-    def fin(self):
-        for i in range(len(self.plans)):
-            self.suppr_plan()
-        f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8', mode = 'w')
-        f.write(txt(params))
-        f.close()
-        fenetre.destroy()
+def ProjOrtho(d, p):
+    p1 = inf(d)
+    p2 = ortho(p1)
+    d1 = inter(p, p2)
+    return inter(d, d1)
+
+def PsurCA(C, coo):
+    x, y = coo[:2]
+    print(coo)
+    done = False
+    C = C.change_variables32()(1)
+    deriveex = C.derivee()
+    deriveey = C.change_variables().derivee()
+    i = 0
+    while not done:
+        a = x - C(x)(y)/(deriveex(x)(y)**2 + deriveey(y)(x)**2)*deriveex(x)(y)
+        b = y - C(x)(y)/(deriveex(x)(y)**2 + deriveey(y)(x)**2)*deriveey(y)(x)
+        i += 1
+        if abs(a-x) + abs(b-y) < 1e-10 or i > 100:
+            done = True
+        x, y = a, b
+    return (x, y, 1)
+
+def cercle(d, O, A, U, V):
+    d1, d2 = inter(O, U), inter(O, V)
+    return CAtan2(d, d1, d2, A, U, V)
+
+###################################
+###         Classe Plan         ###
+###################################
+
     
+class Plan:
+
+    def __init__(self, main = None, nom = 'Plan 1', dd = None):
+        self.main = main
+        self.noms = []
+        self.objets = {}
+        self.points = {}
+        self.tkinter_object = {}
+        self.droites = {}
+        self.CAs={}
+        self.CAst={}
+        self.U = Creature(self, 'Point', nom="U", method="coord", args=[(1,1j,0)])
+        self.V = Creature(self, 'Point', nom="V", method="coord", args=[(1,-1j,0)])
+        self.inf = Creature(self, 'Droite', nom="Inf", method="inter", args=[self.U, self.V])
+        self.U.coords()
+        self.V.coords()
+        self.inf.coords()
+        self.bold = 3 #largeur d'une droite
+        self.boldP = 3 #rayon d'un point
+        self.boldC = 1 #largeur points des coniques
+        self.focal = ((0,0), 1) #focal par défaut
+        self.offset_x = [1,0]
+        self.offset_y = [1,0]
+        self.nom = nom
+        self.modifs = (False, False) #(depuis la création, depuis la dernière sauvegarde)
+        self.dossier_default = dd
+        self.ctrl_z = []
+        self.ctrl_y = []
+        self.annulation = 0
+        self.derniere_action = None
+        self.serveur = None
+        self.notes = ''
+        self.en_y = 0
+
+    def action(self, cat, *args, x = 0, **kwargs):
+        '''Creature, Supprimer, Modif'''
+        print(f'action : de type {cat}, args : {args}, kwargs : {kwargs}')
+        if cat == 'Creature':
+            r = Creature(self, *args, **kwargs)
+            ca = ('Supprimer', r)
+            if self.main is not None and 'fantome' in self.main.liste_derniers_clics:
+                self.main.liste_derniers_clics[self.main.liste_derniers_clics.index('fantome')] = c
+                if c.classe == 'Point':
+                    self.main.canvas.itemconfigure(c.tkinter[0], fill = 'orange')  
+        if cat == 'Supprimer':
+            c = args[0]
+            ca = ('Creature', c.classe, c.nom, c.method, c.args, c.deg, c.color, c.vis, c.u, c.complexe, int(c.ide))
+            if self.main is None:
+                r = c.supprimer()
+            else:
+                r = c.supprimer(self.main.canvas)
+        if cat == 'Modif':
+            ca = ('Modif', args[0], args[0].infos_user)
+            r = args[0].set_param(**kwargs)
+        if cat == 'Move':
+            ca = ('Move', args[0], crea_id(args[0].args), 1)
+            r = self.move(*args)
+        if cat == 'Undo':
+            act = crea_id(self.ctrl_z.pop(), -1, self)
+            self.ctrl_y.append(self.action( *act, x = 1))
+            return
+        if cat == 'Redo':
+            act = crea_id(self.ctrl_y.pop(), -1, self)
+            self.ctrl_z.append(self.action( *act, x = 1))
+            return
+        if x:
+            return ca
+        else:
+            self.ctrl_y = []
+            self.ctrl_z.append(crea_id(ca, 1))
+            return r 
     
-def ouvrir_erreur():
-    tk_mb.showerror('Erreur', 'Impossible de lire ce fichier.')
+    def envoi(self, cat, *args, **kwargs):
+        print('envoi')
+        self.serveur.send(('JOmetry ' + txt([cat, args, kwargs])).encode('utf-8'))
+    
+    def connecter_serveur(self, adresse, port, mdp, fich = 1):
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        t = perf()
+        connecte = 0
+        print((adresse, port))
+        while perf() - t < 10000000000:
+            try:
+                client.connect((adresse, port))
+                connecte = 1
+                break
+            except ConnectionRefusedError:
+                print('raté')
+        if not connecte: return 
+        print('connexion du client')
+        client.send(f'JOmetry 0 {mdp} {fich}'.encode('utf-8'))
+        reponse = client.recv(2048).decode('utf-8')
+        if reponse == 'JOmetry connecte':
+            self.serveur = client
+            print('authentification du client')
+        else: return
+        if fich:
+            fichier, i = '', 0
+            while fichier[-16:] != ' stop!stop!stop!' and i < 1000:
+                i += 1
+                fichier += client.recv(2048).decode('utf-8')
+            self.ouvrir(fichier[8:-16])
+        if reponse == 'JOmetry 0 non autorisé':
+            return print('mauvais mdp')
+        t = threading.Thread(target = self.ecoute_serveur, args = (client,))
+        t.start()
         
-chargement = False
+    def ecoute_serveur(self, client):
+        while True:
+            reponse = client.recv(2048)
+            msg = reponse.decode('utf-8')
+            if len(msg) < 9 or msg[:8] != 'JOmetry ':
+                continue
+            msg = msg[8:]
+            print(f'message recu : {msg}')
+            self.decode_action(msg)
+        
+    def decode_action(self, msg):
+        a = val(msg, self.objets)
+        cat, args, kwargs = a
+        self.action(cat, *args, **kwargs)
+    
+    def nouveau_nom(self, u = 1, classe = 'Point'):
+        lettre, chiffre = 0, 0
+        nom = 'A'
+        dep = {'Point':65, 'Droite':97, 'Courbe':97, 'Angle':945}[classe]
+        while nom in self.noms:
+            lettre += 1
+            chiffre += lettre//26
+            lettre = lettre%26
+            nom = ('' if u else '_') + chr(dep + lettre) + (str(chiffre) if chiffre else '')
+        return nom
+    
+    def nouv_ide(self):
+        ide = 0
+        while 1:
+            if ide not in self.objets: return ID(ide)
+            ide += 1
+
+    def closest_point(self, point):
+        distances = []
+        a,b = point[0], point[1]
+        for j in self.points.values():
+            try:
+                k=norm(j.coords())
+            except:
+                k=j.coords()
+            if numpy.imag(k[0])==0 and numpy.imag(k[1])==0:
+                distances.append((a-k[0])**2+(b-k[1])**2)
+            else:
+                distances.append(numpy.inf)
+        return (list(self.points.values())[petit(distances)], distances[petit(distances)])
+    
+    def closest_objet(self, canvas, point):
+        liste = self.tkinter_object[int(str(canvas.find_closest(point[0], point[1]))[1:].split(",")[0])]
+        mini=(200,0)
+        for j in liste:
+            if j.deg <= mini[0]:
+                mini = (j.deg, j)
+        return mini[1]
+    
+    def set_bold(self, newBold):
+        if type(newBold) == type(0):
+            if newBold > 0:
+                self.bold = newBold
+            else:
+                raise TypeError("Vous avez donné une largeur de trait négative.")
+        else:
+            raise TypeError("Vous avez donné une largeur de trait non entière.")
+        
+    def set_boldP(self, newBold):
+        if type(newBold) == type(0):
+            if newBold > 0:
+                self.boldPoint = newBold
+            else:
+                raise TypeError("Vous avez donné un rayon de point négative.")                
+        else:
+            raise TypeError("Vous avez donné une largeur de trait non entière.")
+
+    def fichier(self):
+        return txt(((self.nom, self.notes, self.offset_x, self.offset_y),
+                    [[o.ide, o.classe, o.nom, o.method, o.args, o.deg, o.color, o.vis, o.u, o.complexe] for o in self.objets.values()]))
+    
+    def ouvrir(self, texte):
+        while self.objets:
+            list(self.objets.values())[0].supprimer()
+        plan, objets = val(texte)
+        self.nom, self.notes, self.offset_x, self.offset_y = plan[0], plan[1], plan[2], plan[3]
+        ides, parents = [o[0] for o in objets], [o[4] for o in objets]
+        objets = {o[0]:o[1:]+[0] for o in objets}
+        dic = {}
+        for obj, args in zip(ides, parents):
+            dic[obj] = ([arg for arg in args if isinstance(arg, ID)], set())
+        for obj, parents in dic.items():
+            for parent in parents[0]:
+                dic[parent][1].add(obj)
+        ordre = []
+        while dic:
+            s = set()
+            o = next(iter(dic))
+            while dic[o][0]:
+                if o in s:
+                    raise RecursionError
+                s.add(o)
+                o = dic[o][0][0]
+            for enf in dic[o][1]:
+                dic[enf][0].remove(o)
+            del dic[o]
+            ordre.append(o)
+        for ide in ordre:
+            l = objets[ide][:-1]
+            l[3] = [objets[arg][-1] if isinstance(arg, ID) else arg for arg in l[3]]
+            c = Creature(self, *l)
+            objets[ide][-1] = c
+    
+    def move(self, point, coords, dessin = 0):
+        objets = set()
+        if point.bougeable():
+            point.args = coords
+            for i in sorted(list(point.arbre.descente()), key=lambda x: x[1]):
+                i[0].valeur.coords(1)
+                objets.add(i[0].valeur)
+            self.modifs = (True, True)
+        if dessin:
+            for obj in objets:
+                obj.dessin(1)
+        return objets
+    
+    def new_harmonique(self, nom, A,B,C, u = 1):
+        d = Creature(self, 'Point', nom = nom, method = 'harmonique', args = (A,B,C), u = u)
+        return d
+    
+    def new_rotation(self, nom, obj, p, angle, u = 1):
+        d = Creature(self, obj.classe, nom = nom, method = 'rotation', args = (obj, p, angle), u = u)
+        return d
+    
+    def new_homothetie(self, nom, obj, p, rapport, u = 1):
+        d = Creature(self, obj.classe, nom = nom, method = 'homothetie', args = (obj, p, rapport), u = u)
+        return d
+
+    def new_translation(self, nom, obj, vecteur, u = 1):
+        d = Creature(self, obj.classe, nom = nom, method = 'translation', args = (obj, vecteur), u = u)
+        return d
+
+    def new_symetrie(self, nom, obj, droite, u = 1):
+        d = Creature(self, obj.classe, nom = nom, method = 'symetrie', args = (obj, droite), u = u)
+        return d
+    
+    def new_projective(self, nom, obj, liste1, liste2, u = 1):
+        d = Creature(self, obj.classe, nom = nom, method = 'projective', args =(obj, liste1, liste2), u = u)
+        return d
+
+    def newPoint_coord(self, nom, coord, u = 1):#crée un point libre avec les coordonnées suivantes
+        p = Creature(self, 'Point', nom=nom, method="coord", args=[coord], u = u)
+        return p
+
+    def newPoint_objets(self, nom, methode, objet1, objet2, numero, u = 1):#crée l'intersection de deux objets qui n'est pas dans inters
+        p = Creature(self, 'Point', nom = nom, method = methode, args = [objet1, objet2, numero], u = u)
+        return p
+
+    def newDroite(self, nom, args, method, u = 1):
+        d = Creature(self, 'Droite', nom=nom, method=method, args=args, u = u)
+        return d
+
+    def newCA(self, nom, liste, u = 1):
+        a = Creature(self, 'Courbe', nom = nom, method = 'interpol', deg = '', args = liste, u = u)
+        return a
+
+    def newCAtan(self, nom, d1, d2, point, point2, point3, u = 1):
+        a = Creature(self, 'Courbe', nom = nom, method = 'CAtan2', args = [d1, d2, point, point2, point3], u = u)
+        return a
+
+    def newProjectionOrtho(self, nom, args, u = 1):
+        d = self.newPerp(0, args, u = 0)
+        p = Creature(self, 'Point', nom = nom, method = 'inter', args = (args[0], d), u = u)
+        return p
+
+    def newCentreInscrit(self, nom, p1, p2, p3, u = 1):
+        p = Creature(self, 'Point', nom = nom, method = 'centreInscrit', args = (p1, p2, p3), u = u)
+        return p
+
+    def newPerp(self, nom, args, u = 1):
+        '''args -> Droite, Point; retourne la perpendiculaire'''
+        p1 = Creature(self, 'Point', 0, method = 'inf', args = (args[0],), u = 0)
+        p2 = Creature(self, 'Point', 0, method = 'ortho', args = (p1,), u = 0)
+        d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p2), u = u)
+        return d
+    
+    def newMilieu(self, nom, args, u = 1):
+        return Creature(self, 'Point', nom = nom, method = 'milieu', args = (args[0], args[1]), u = u)
+    
+    def newCentre(self, nom, args, u = 1):
+        d1 = Creature(self, 'Droite', 0, method = 'tangente', args = (args[0], self.U), u = 0)
+        d2 = Creature(self, 'Droite', 0, method = 'tangente', args = (args[0], self.V), u = 0)
+        return Creature(self, 'Point', nom = nom, method = 'inter', args = (d1, d2), u = u, complexe = True)
+    
+    def newMedia(self, nom, args, u = 1):
+        d1 = Creature(self, 'Droite', 0, method = 'inter', args = (args[0], args[1]), u = 0)
+        p1 = Creature(self, 'Point', 0, method = 'inf', args = (d1,), u = 0)
+        p2 = Creature(self, 'Point', 0, method = 'ortho', args = (p1,), u = 0)
+        p3= Creature(self, 'Point', 0, method = 'milieu', args = (args[0], args[1]), u = 0)
+        d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (p2, p3), u = u)
+        return d
 
 
-
-if __name__ == '__main__':
-    main = Main()
-    fenetre.protocol('WM_DELETE_WINDOW', main.fin)
-    fenetre.mainloop()
+    def newPsurCA(self, nom, args, u = 1):
+        if args[0].classe == 'Droite':
+            return Creature(self, 'Point', nom = nom, method = 'ProjOrtho', args = [args[0], (args[1][0], args[1][1], 1)], u = u)
+        return Creature(self, 'Point', nom = nom, method = 'PsurCA', args = [args[0], args[0].deg, args[1], self.main], u = u)
+        
+    
+    def newPara(self, nom, args, u = 1):
+        p1 = Creature(self, 'Point', nom = self.nouveau_nom(0), method = 'inf', args = (args[0],), u = 0)
+        d = Creature(self, 'Droite', nom = nom, method = 'inter', args = (args[1], p1), u = u)
+        return d
