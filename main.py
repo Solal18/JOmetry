@@ -859,7 +859,7 @@ class Main:
     def fin(self):
         for i in range(len(self.plans)):
             self.suppr_plan()
-        f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8', mode = 'w')
+        f = open(f'{op.dirname(__file__)}{sep}parametres.txt', encoding = 'utf-8', mode = 'w')
         f.write(txt(params))
         f.close()
         fenetre.destroy()
