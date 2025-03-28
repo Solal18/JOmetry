@@ -32,6 +32,8 @@ from random import random, randint
 fenetre = tk.Tk()
 style = ttk.Style()
 style.theme_use('default')
+s = ttk.Style()
+s.configure('Sans_bordure.TButton', padding = 0)
 fenetre['padx'] = 2
 fenetre['pady'] = 2
 fenetre.title('JOmetry')
@@ -142,7 +144,7 @@ class Main:
         
         def bouton(f, nom):
             image = image_tk(f'{op.dirname(__file__)}\images\{nom}.png')
-            bout = ttk.Button(f, image = image)
+            bout = ttk.Button(f, image = image, style = 'Sans_bordure.TButton')
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
             self.image_boutons.append(image)
