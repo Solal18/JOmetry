@@ -1,4 +1,4 @@
-MIT GPLv3
+GPLv3 license
 
 Copyright (c) 2025 Vidal Oger Martin, Pivron Djeddi Solal, Mao Mickael
 
