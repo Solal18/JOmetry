@@ -445,7 +445,7 @@ class Creature:
         self.color = color
         self.vis = vis
         self.u = u
-        self.relation_parent=set()
+        self.relation_parent = set()
         self.relation_enfant = set()
         self.complexe = complexe
         self.tkinter = [None, None] #[cercle, texte] pour les points
