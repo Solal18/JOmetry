@@ -709,18 +709,21 @@ class Main:
         x, y = self.coord_canvas(evenement.x, evenement.y)
         attendu = self.attendus[len(self.liste_derniers_clics)]
         if attendu == 'non':
-            objet = self.canvas.find_closest(evenement.x, evenement.y)[0]
             point=(x,y)
-            a=self.plans[0].tkinter_object[objet]
-            if a.classe=="Droite":
-                if dist((x,y), norm(Geo.ProjOrtho(a.coords(), (x,y,1)))) < 20*self.plans[0].offset_x[0]:
-                    point=("s", ((x,y), a))
-            elif dist((x,y), (self.canvas.coords(objet)[0], self.canvas.coords(objet)[1]))<20 * self.plans[0].offset_x[0]:
+            try:
+                objet = self.canvas.find_closest(evenement.x, evenement.y)[0]
                 a=self.plans[0].tkinter_object[objet]
-                if a.classe == "Point":
-                    point=("s","s")
-                if a.classe=="Courbe":
-                    point=("s", ((x,y), a))
+                if a.classe=="Droite":
+                    if dist((x,y), norm(Geo.ProjOrtho(a.coords(), (x,y,1)))) < 20*self.plans[0].offset_x[0]:
+                        point=("s", ((x,y), a))
+                elif dist((x,y), (self.canvas.coords(objet)[0], self.canvas.coords(objet)[1]))<20 * self.plans[0].offset_x[0]:
+                    a=self.plans[0].tkinter_object[objet]
+                    if a.classe == "Point":
+                        point=("s","s")
+                    if a.classe=="Courbe":
+                        point=("s", ((x,y), a))
+            except:
+                pass
             self.liste_derniers_clics.append(point)
         if attendu == 'point':    
             distances = []
@@ -734,7 +737,7 @@ class Main:
             distances.sort()
             if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
                 #clic éloigné d'un point
-                if self.dernier_bouton != "Main":
+                if self.dernier_bouton != "main":
                     point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
                     if self.plans[0].serveur is not None:
                         point = 'fantome'
@@ -743,6 +746,7 @@ class Main:
                 else:
                     point = (x,y)
             else: 
+                print("ezoapez")
                 if distances[0][1] not in self.liste_derniers_clics:
                     point = distances[0][2]
                     self.canvas.itemconfigure(point.tkinter[0], fill = 'orange')
