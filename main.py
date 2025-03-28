@@ -24,6 +24,7 @@ import Engine as Geo
 from PIL import Image, ImageDraw, ImageTk
 from math import sqrt, pi
 import os.path as op
+from os import sep
 from Frames import *
 from time import time
 from Engine import txt, val
@@ -142,8 +143,8 @@ class Main:
         self.Texte = ttk.Label(self.frameg, text = '', width = 20, anchor = 'n')
         self.Texte.grid(row = 1, column = 0)
         
-        def bouton(f, nom):
-            image = image_tk(os.sep.join([op.dirname(__file__)}, 'images', f'{nom}.png'])
+        def bouton(f, nom):            
+            image = image_tk(sep.join([op.dirname(__file__), 'images', f'{nom}.png']))
             bout = ttk.Button(f, image = image, style = 'Sans_bordure.TButton')
             self.boutons.append(bout)
             bout.config(command = lambda n = nom, bout = bout : self.action_bouton(n, bout))
