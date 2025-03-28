@@ -737,7 +737,7 @@ class Main:
             distances.sort()
             if len(distances) == 0 or distances[0][0] > 20 * self.plans[0].offset_x[0]:
                 #clic éloigné d'un point
-                if self.dernier_bouton != "main":
+                if self.dernier_bouton != "Main":
                     point = self.action('Creature', self.plans[0], 'Point', nom=1, method='coord', args=[(x, y, 1)], u=1)
                     if self.plans[0].serveur is not None:
                         point = 'fantome'
