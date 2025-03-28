@@ -163,7 +163,7 @@ class Trad(tk.StringVar):
                 elif isinstance(self.noteb[1], tuple):
                     ligne = self.noteb[0].item(self.noteb[1][0])
                     ligne[self.noteb[1][1]] = trad(lang, self.mot)
-                    self.noteb[0].configure(self.noteb[1][0], values = ligne
+                    self.noteb[0].configure(self.noteb[1][0], values = ligne)
         else:
             self.set(trad(lang, self.mot))
     
