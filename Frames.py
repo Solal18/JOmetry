@@ -1,15 +1,16 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from tkinter import colorchooser as tk_cc
-from PIL import Image, ImageTk
+import re
+import Engine as Geo
 import os.path as op
 import weakref
+from tkinter import colorchooser as tk_cc
+from PIL import Image, ImageTk
+from os import sep
 from threading import Thread
 from serveur import Serveur
 from random import randrange
 from numpy import float64
-import re
-import Engine as Geo
         
 def polonaise_inverse(formule, dictionnaire):
     ordre = {'+':1, '-':1, '*':2, '/':2, 'd':3, 'angle':3}
@@ -72,7 +73,7 @@ def polonaise_inverse(formule, dictionnaire):
 
 
 def traduction():
-    f = open(f'{op.dirname(__file__)}\\traduction.txt', encoding = 'utf-8')
+    f = open(f'{op.dirname(__file__)}{sep}traduction.txt', encoding = 'utf-8')
     texte = f.read().split('\n\n')
     f.close()
     langues = []
@@ -117,7 +118,7 @@ except Exception as e:
 
 params = {'BoldP':3, 'BoldC':3, 'Style':'default', 'Langue':langue, 'ColTooltip':'gray', 'ColP':'green', 'ColC':'green', 'TempsTooltip':300}
 try:
-    f = open(f'{op.dirname(__file__)}\\parametres.txt', encoding = 'utf-8')
+    f = open(f'{op.dirname(__file__)}{sep}parametres.txt', encoding = 'utf-8')
     charges = Geo.val(f.read())
     params = params|charges 
     f.close()
