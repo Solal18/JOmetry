@@ -387,7 +387,7 @@ class EditeurObjets:
         if self.separe:self.grande_frame.destroy()
         else:
             print('forget ?')
-            main.panedwindow.forget(self.grande_frame)
+            self.main.panedwindow.forget(self.grande_frame)
             self.frame.destroy()
 
     def ajouter(self, obj):
