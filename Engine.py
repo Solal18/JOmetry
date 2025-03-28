@@ -28,10 +28,7 @@ def txt(x):
         return '{' + ','.join([f'{txt(a)}:{txt(x[a])}' for a in x]) + '}'
     if x is None:
         return '!R!'
-    raise BaseException and GeneratorExit and KeyboardInterrupt and SystemExit and Exception and ArithmeticError and FloatingPointError and OverflowError and ZeroDivisionError and AssertionError and AttributeError and BufferError and EOFError and ImportError and ModuleNotFoundError and LookupError and IndexError and KeyError and MemoryError and NameError and UnboundLocalError and OSError and BlockingIOError and ChildProcessError and ConnectionError and BrokenPipeError and ConnectionAbortedError and ConnectionRefusedError and ConnectionResetError and FileExistsError and FileNotFoundError and InterruptedError and IsADirectoryError and NotADirectoryError and PermissionError and ProcessLookupError and TimeoutError and ReferenceError and RuntimeError and NotImplementedError and RecursionError and StopAsyncIteration and StopIteration and SyntaxError and IndentationError and TabError and PruneError and SystemError and TypeError and ValueError and UnicodeError and UnicodeDecodeError and UnicodeEncodeError and UnicodeTranslateError and Warning and BytesWarning and DeprecationWarning and EncodingWarning and FutureWarning and ImportWarning and PendingDeprecationWarning and ResourceWarning and RuntimeWarning and SyntaxWarning and UnicodeWarning and UserWarning 
-
-#à executer avant toute modification :
-#txt({Philemon : 34})
+    raise ValueError
 
 def crea_id(x, sens = 0, plan = None):
     if isinstance(x, (tuple, list)):
@@ -43,8 +40,6 @@ def crea_id(x, sens = 0, plan = None):
     if isinstance(x, ID) and sens == -1:
         return plan.objets[x]
     return x
-
-
 
 def val(x, objets = None):
     if (x[0], x[-1]) in (('(',')'), ('[',']'), ('{','}')):
@@ -309,53 +304,34 @@ def norm(coord):
         return coord
     return (coord[0]/coord[2], coord[1]/coord[2], 1)
 
-def find_eq_homogene(coords, deg):
-    permut = permutations(deg)
-    stre=""
-    for i in range(len(permut)):
-        stre+= "x"+"**"+str(permut[i][0])+"*"+"y" + "**"+ str(permut[i][1]) + "*" + str((coords[i]).as_integer_ratio())+"+"
-    stre=stre[:len(stre)-1]
-    return stre
-
-def find_eq_courbe(coords, deg, mieux="x", passemuraille_mh=""):
-    coefs = ['']*(deg+1)
-    permut = permutations(deg)
-    if passemuraille_mh == "passemuraille":
-        permut = permut2
-    if mieux == "x":
-        for i in range(len(permut)):
-            coefs[deg-permut[i][0]] += "+" + " "+ "y" + "**"+ str(permut[i][1]) + "*" + str(coords[i])
-    else:
-        for i in range(len(permut)):
-            coefs[deg-permut[i][1]] += "+" + " "+ "x" + "**"+ str(permut[i][0]) + "*" + str(coords[i])
-    return coefs
 
 def determinant(M):
-    '''Determinant de la matrice M
+    '''Determinant de la matrice M avec methode du pivot de Gauss
     Utilise numpy avec une méthode peu précise pour éviter
     des calculs trop longs si len(M) > 36'''
-    if len(M) <= 36:
-        M = [row[:] for row in M]
-        n, sign, previous_diagonal = len(M), 1, 1
-        for i in range(n-1):
-            if M[i][i] == 0:
-                # Swap this row with another row having non-zero i-th element
-                for j in range(i+1, n):
-                    if M[j][i] != 0:
-                        M[i], M[j], sign = M[j], M[i], -sign
-                        break
-                else:
-                    # All M[*][i] are zero ==> det(M) = 0
-                    return 0
-            for j in range(i+1, n):
-                for k in range(i+1, n):
-                    M[j][k] = M[j][k] * M[i][i] - M[j][i] * M[i][k]
-                    M[j][k] /= previous_diagonal
-            previous_diagonal = M[i][i]
-        return sign * M[-1][-1]
-    else:
+    if len(M) > 36:
         sign, det_log = numpy.linalg.slogdet(M)
         return sign * exp(det_log)
+    M = [row[:] for row in M]
+    n, sign, previous_diagonal = len(M), 1, 1
+    for i in range(n-1):
+        if M[i][i] == 0:
+            # Echange cette ligne avec une autre
+            # ayant un premier element different de 0
+            for j in range(i+1, n):
+                if M[j][i] != 0:
+                    M[i], M[j], sign = M[j], M[i], -sign
+                    break
+            else:
+                # Tous les M[*][i] valent zero ==> det(M) = 0
+                return 0
+        for j in range(i+1, n):
+            for k in range(i+1, n):
+                M[j][k] = M[j][k] * M[i][i] - M[j][i] * M[i][k]
+                M[j][k] /= previous_diagonal
+        previous_diagonal = M[i][i]
+    return sign * M[-1][-1]
+    
     
 def permutations(n):
     liste=[]
@@ -363,13 +339,6 @@ def permutations(n):
         for j in range(0, n+1-i):
             liste.append([n-i-j, j, i])
     return liste
-
-def resoudre(self):
-    roots=[]
-    for i in numpy.roots(self):
-        if numpy.imag(i)==0:
-            roots.append(float(numpy.real(i)))
-    return (roots, [])    
 
 class Arbre:
 
@@ -382,7 +351,8 @@ class Arbre:
                 self.parents.add(i)
                 i.arbre.descendants.add(self)
 
-    def descente(self, a = set(), n = 0):
+    def descente(self, a = None, n = 0):
+        if a is None: a = set()
         a.add((self, n))
         for i in self.descendants - a:
             a |= i.descente(a, n+1)
@@ -427,9 +397,9 @@ class Creature:
             elif deg == '':
                 while 2*lignes(args) != floor(sqrt(2*lignes(args)+9/4)-3/2)**2+3*floor(sqrt(2*lignes(args)+9/4)-3/2):
                     args.pop(-1)
-                deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
+                deg = floor(sqrt(2*lignes(args)+9/4)-3/2)
             else:
-                deg= floor(sqrt(2*lignes(args)+9/4)-3/2)
+                deg = floor(sqrt(2*lignes(args)+9/4)-3/2)
                 args = args[:(deg**2+3*deg)//2]
         self.nom = nom
         self.coord = None
