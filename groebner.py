@@ -330,7 +330,7 @@ class Polynome:
 def resoudre_systeme(P, Q):
     p, q = P.expr_dict_monomes(), Q.expr_dict_monomes()
     base = grob([p, q])
-    p1 = Polynome([base[0][(0, e)][0]/base[0][(0, e)][1] for e in range(len(base[0]))])
+    p1 = Polynome([base[0][(0, e)][0]/base[0][(0, e)][1] if (0,e) in base[0] else 0 for e in range(len(base[0]))])
     racines = p1.resoudre()[0]
     l = []
     for y in racines:
