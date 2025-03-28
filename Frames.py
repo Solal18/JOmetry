@@ -249,7 +249,7 @@ class AideFenetre:
             idx1, idx2, idx3 = texte.index('['), texte.index('|'), texte.index(']')
             liens[(idx1, idx2 - 1)] = texte[idx2 + 1:idx3]
             texte = texte[:idx1]+texte[idx1+1:idx2]+texte[idx3+1:]
-        return texte, lien
+        return texte, liens
 
     def mettre_a_jour_resultats(self, event=None):
         texte_recherche = self.entree.get()
