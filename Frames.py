@@ -416,13 +416,13 @@ class EditeurObjets:
         if self.selectionne is None: return
         nom, couleur, aff = self.var1.get(), self.couleur.dernier_correct, self.var3.get()
         if nom in ('U', 'V'):
-            self.label['text'] = Trad('Nom déjà utilisé')+'\n'
+            self.label['textvariable'] = Trad('Nom déjà utilisé\n')
             return
         try: self.fenetre.winfo_rgb(couleur)
         except:
-            self.label['text'] = Trad('Couleur invalide')+'\n'
+            self.label['textvariable'] = Trad('Couleur invalide\n')
             return
-        self.label['text'] = '\n'
+        self.label['textvariable'] = Trad('\n')
         ide = self.selectionne.ide
         self.main.action('Modif', self.selectionne.plan, self.selectionne, nom = nom, col = couleur, vis = aff)
         for item in self.tableau.get_children():
