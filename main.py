@@ -207,7 +207,7 @@ class Main:
                         'Enregistrer sous' : (self.enregistrer_sous, 0),
                         'Ouvrir' : (self.ouvrir, 0),
                         'Etude' : (self.etude, 0),
-                        'Lancer un serveur' : (self.serveur, 0),
+                        'Lancer un Serveur' : (self.serveur, 0),
                         'Caa' : (self.caa, 0),
                         'Notes' : (self.notes, 0),
                         'Cercle avec centre' : (self.cercle_cent, 1, ('point', 'point')),
