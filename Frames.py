@@ -331,7 +331,7 @@ class EditeurObjets:
            static unsigned char colorpicker_bits[] = {\
              0xc0, 0x01, 0xe0, 0x03, 0xe0, 0x03, 0xd8, 0x03, 0xb0, 0x01,\
              0x78, 0x00, 0x5c, 0x00, 0x0e, 0x00, 0x07, 0x00, 0x03, 0x00 };'),
-                     ImageTk.PhotoImage(file = f'{op.dirname(__file__)}\images\poubelle2.bmp'))
+                     ImageTk.PhotoImage(file = f'{op.dirname(__file__)}\images\poubelle2.png'))
         self.main = main
         self.frame_t = ttk.Frame(self.frame)
         self.frame_t.grid(row = 0, column = 0, columnspan = 4, sticky = 'nsew')
@@ -399,15 +399,17 @@ class EditeurObjets:
             self.tableau.insert('', 'end', iid = str(obj.ide), values = l)
 
     def maj(self):
+        self.trads = set()
         for item in self.tableau.get_children():
             self.tableau.delete(item)
         self.objets = {}
         for objet in self.main.plans[0].objets.values():
             if objet.u:
-                self.objets[objet.ide] = (objet.nom, objet.classe, self.nom_methodes[objet.method],
+                self.objets[objet.ide] = (objet.nom, objet.classe, objet.method,
                                     objet.args, objet.color, ('non', 'oui')[objet.vis])
         for ide, l in self.objets.items():
             self.tableau.insert('', 'end', iid = str(ide),values = l)
+            self.trads.add(Trad(t, params['Langue'], (self.tableau, (str(ide), i), weak = 1)))
         self.deselectionner()
 
     def clic_entree(self, event):
